@@ -92,14 +92,29 @@ final class StartupCoordinator: ObservableObject {
             async let subscriptionTask: Void = self.subscriptionRepository.refresh(force: false)
             async let foodTask: Bool = self.foodRepository.refresh(force: false)
             async let logsTask: Void = self.dayLogsRepository.refresh(date: dayLogs.selectedDate, force: false)
+            // Load active training program at startup so Plan tab is ready
+            async let programTask: Void = self.loadActiveProgram(email: email)
 
             _ = await profileTask
             _ = await subscriptionTask
             _ = await foodTask
             _ = await logsTask
+            _ = await programTask
 
             self.state = .ready
             self.resumeContinuations()
+        }
+    }
+
+    /// Load active training program at startup
+    private func loadActiveProgram(email: String) async {
+        do {
+            _ = try await ProgramService.shared.fetchActiveProgram(userEmail: email)
+            // CRITICAL: After program loads, tell WorkoutManager to sync Today's workout
+            // This ensures Today tab shows the program workout, not a stale cached workout
+            WorkoutManager.shared.refreshTodayWorkoutFromProgram()
+        } catch {
+            print("[StartupCoordinator] Failed to load active program: \(error)")
         }
     }
 

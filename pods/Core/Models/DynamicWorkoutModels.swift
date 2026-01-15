@@ -673,7 +673,14 @@ struct TodayWorkout: Codable, Hashable, Identifiable {
     let difficulty: Int
     let warmUpExercises: [TodayWorkoutExercise]?
     let coolDownExercises: [TodayWorkoutExercise]?
-    
+    // Optional: Program day ID if this workout is from an active training program
+    let programDayId: Int?
+
+    /// Returns true if this workout is from a training program
+    var isFromProgram: Bool {
+        programDayId != nil
+    }
+
     // Convenience initializer for backward compatibility
     init(
         id: UUID = UUID(),
@@ -685,7 +692,8 @@ struct TodayWorkout: Codable, Hashable, Identifiable {
         fitnessGoal: FitnessGoal,
         difficulty: Int,
         warmUpExercises: [TodayWorkoutExercise]? = nil,
-        coolDownExercises: [TodayWorkoutExercise]? = nil
+        coolDownExercises: [TodayWorkoutExercise]? = nil,
+        programDayId: Int? = nil
     ) {
         self.id = id
         self.date = date
@@ -697,6 +705,7 @@ struct TodayWorkout: Codable, Hashable, Identifiable {
         self.difficulty = difficulty
         self.warmUpExercises = warmUpExercises
         self.coolDownExercises = coolDownExercises
+        self.programDayId = programDayId
     }
 }
 

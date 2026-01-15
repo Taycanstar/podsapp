@@ -100,10 +100,15 @@ struct WorkoutGenerationParameters {
 @MainActor
 class WorkoutManager: ObservableObject {
     static let shared = WorkoutManager()
-    
+
     // MARK: - Core Workout State (private(set) for controlled access)
+    // todayWorkout is the working copy displayed in the Today tab
+    // It's automatically synced from ProgramService when the active program changes
     @Published private(set) var todayWorkout: TodayWorkout?
     @Published private(set) var currentWorkout: TodayWorkout? // Active workout in progress
+
+    /// Refresh trigger - views observe this to force view updates when workout changes
+    @Published private(set) var workoutRefreshTrigger = UUID()
     @Published private(set) var isGeneratingWorkout = false
     @Published private(set) var generationMessage = "Creating your workout..."
     @Published private(set) var generationError: WorkoutGenerationError?
@@ -322,8 +327,74 @@ class WorkoutManager: ObservableObject {
                 self?.refreshDailyCompletionFlag()
             }
             .store(in: &cancellables)
+
+        // Listen for program creation/activation to notify SwiftUI
+        // Since todayWorkout is now computed from ProgramService, we need to trigger
+        // Observe ProgramService.activeProgram changes to sync todayWorkout
+        // This is the CORE mechanism that ensures Today tab always shows correct workout
+        ProgramService.shared.$activeProgram
+            .receive(on: RunLoop.main)
+            .sink { [weak self] newProgram in
+                guard let self else { return }
+                self.syncTodayWorkoutWithProgram()
+            }
+            .store(in: &cancellables)
+
+        // Also listen for explicit program activation notification
+        NotificationCenter.default.publisher(for: .trainingProgramCreated)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                print("📋 Training program notification received")
+                self.syncTodayWorkoutWithProgram()
+            }
+            .store(in: &cancellables)
     }
-    
+
+    /// Notify views that the effective workout has changed
+    private func triggerWorkoutRefresh() {
+        workoutRefreshTrigger = UUID()
+        print("🔄 Triggered workout refresh (new trigger: \(workoutRefreshTrigger))")
+    }
+
+    /// Sync todayWorkout with the active program's today workout
+    /// This is the SINGLE SOURCE OF TRUTH mechanism - program workout ALWAYS takes priority
+    /// Called whenever activeProgram changes or trainingProgramCreated notification fires
+    private func syncTodayWorkoutWithProgram() {
+        print("📋 [syncTodayWorkoutWithProgram] CALLED - current todayWorkout.title='\(todayWorkout?.title ?? "nil")'")
+        let programWorkout = ProgramService.shared.todayProgramWorkout
+        print("📋 [syncTodayWorkoutWithProgram] programWorkout from ProgramService: '\(programWorkout?.title ?? "nil")'")
+
+        if let programWorkout = programWorkout {
+            // ALWAYS assign the program workout - no comparison, no caching logic
+            // This ensures Today tab immediately shows the correct workout
+            print("📋 Setting todayWorkout from program (day ID: \(programWorkout.programDayId ?? -1), title: \(programWorkout.title))")
+            todayWorkout = programWorkout
+            print("📋 [syncTodayWorkoutWithProgram] AFTER assignment: todayWorkout.title='\(todayWorkout?.title ?? "nil")'")
+            saveTodayWorkout()
+            triggerWorkoutRefresh()
+        } else if todayWorkout?.isFromProgram == true {
+            // We had a program workout but now there isn't one (program deactivated/rest day)
+            // Clear it so we can generate a new workout
+            print("📋 Program workout no longer available, clearing cached program workout")
+            todayWorkout = nil
+            triggerWorkoutRefresh()
+            // Trigger generation of a new workout
+            Task { await generateTodayWorkout() }
+        }
+        // If todayWorkout is not from program and there's no program workout, keep current
+    }
+
+    /// Public method to refresh today's workout from program
+    /// Call this after program loading completes to ensure Today tab shows correct workout
+    func refreshTodayWorkoutFromProgram() {
+        print("🔄 WorkoutManager: refreshTodayWorkoutFromProgram called")
+        print("🔄 WorkoutManager: activeProgram=\(ProgramService.shared.activeProgram?.name ?? "nil")")
+        print("🔄 WorkoutManager: todayProgramWorkout=\(ProgramService.shared.todayProgramWorkout?.title ?? "nil")")
+        syncTodayWorkoutWithProgram()
+        print("🔄 WorkoutManager: After sync, todayWorkout=\(todayWorkout?.title ?? "nil")")
+    }
+
     // MARK: - Dynamic Programming Properties
     
     /// Session phase computed directly from fitness goal (single source of truth)
@@ -494,23 +565,20 @@ class WorkoutManager: ObservableObject {
     }
 
     /// Generate today's workout with dynamic programming (1 second simple loading)
-    /// First checks for an active program's today workout, falls back to dynamic generation
+    /// NOTE: Program workouts are now handled by ProgramService.todayProgramWorkout
+    /// This method only generates the fallback workout for non-program days
     func generateTodayWorkout() async {
         assertMainActor("generateTodayWorkout")
         let startTime = Date()
-        await setGenerating(true, message: "Loading workout")
 
-        // Check for active program workout first
-        if let programWorkout = await loadTodayWorkoutFromProgram() {
-            self.todayWorkout = programWorkout
-            saveTodayWorkout()
+        // If there's already a program workout for today, no need to generate
+        // The computed todayWorkout property will return the program workout
+        if ProgramService.shared.todayProgramWorkout != nil {
+            print("📋 Program workout exists for today, skipping generation")
             generationError = nil
-            print("📋 Loaded today's workout from active program: \(programWorkout.title)")
-            await setGenerating(false)
             return
         }
 
-        // No active program workout, generate dynamically
         await setGenerating(true, message: "Generating workout")
 
         do {
@@ -519,14 +587,14 @@ class WorkoutManager: ObservableObject {
                 currentPhase: effectiveSessionPhase,
                 lastFeedback: PerformanceFeedbackService.shared.feedbackHistory.last
             )
-            
+
             // Generate base workout structure (reuse existing logic)
             let baseResult = try await generateBaseWorkout()
             let baseWorkout = baseResult.workout
-            
+
             // Apply dynamic programming
             let dynamicWorkout = await applyDynamicProgramming(to: baseWorkout, parameters: dynamicParams)
-            
+
             // Update state (but DON'T override the synced session phase)
             self.dynamicParameters = dynamicParams
             // Keep legacy exercises for compatibility, but also attach blocks for unified architecture
@@ -551,14 +619,13 @@ class WorkoutManager: ObservableObject {
             self.todayWorkoutRecoverySnapshot = captureCurrentRecoverySnapshot()
             self.todayWorkoutTrainingSplit = userProfileService.trainingSplit.rawValue
             self.todayWorkoutBodyweightOnly = userProfileService.bodyweightOnlyWorkouts
-            // REMOVED: self.sessionPhase = dynamicParams.sessionPhase (this was overriding our sync!)
 
             saveTodayWorkout()
             generationError = nil
-            
+
             print("🎯 Generated dynamic workout: \(sessionPhase.displayName)")
             print("🎯 Dynamic exercises: \(dynamicWorkout.dynamicExercises.count)")
-            
+
         } catch {
             print("⚠️ Dynamic workout generation failed: \(error)")
             generationError = .generationFailed(error.localizedDescription)
@@ -570,91 +637,8 @@ class WorkoutManager: ObservableObject {
             let remainingTime = 1.0 - elapsed
             try? await Task.sleep(nanoseconds: UInt64(remainingTime * 1_000_000_000))
         }
-        
+
         await setGenerating(false)
-    }
-
-    /// Check for today's workout from active program and convert to TodayWorkout
-    private func loadTodayWorkoutFromProgram() async -> TodayWorkout? {
-        let userEmail = UserDefaults.standard.string(forKey: "userEmail") ?? ""
-        guard !userEmail.isEmpty else { return nil }
-
-        do {
-            // Fetch today's workout from active program
-            let response = try await NetworkManagerTwo().fetchTodayWorkout(userEmail: userEmail)
-
-            // Check if there's an active program with today's workout
-            guard response.hasProgram,
-                  let programDay = response.today,
-                  programDay.dayType == .workout,
-                  let workoutSession = programDay.workout,
-                  let exercises = workoutSession.exercises else {
-                return nil
-            }
-
-            // Convert ProgramExercise to TodayWorkoutExercise
-            let todayExercises: [TodayWorkoutExercise] = exercises.compactMap { programExercise in
-                // Try to find the exercise in the database
-                if let exerciseData = ExerciseDatabase.findExercise(byId: programExercise.exerciseId) {
-                    let trackingType = ExerciseClassificationService.determineTrackingType(for: exerciseData)
-                    return TodayWorkoutExercise(
-                        exercise: exerciseData,
-                        sets: programExercise.targetSets ?? 3,
-                        reps: programExercise.targetReps ?? 10,
-                        weight: nil,
-                        restTime: 90,
-                        notes: nil,
-                        warmupSets: nil,
-                        flexibleSets: nil,
-                        trackingType: trackingType
-                    )
-                } else {
-                    // Create a basic ExerciseData from the program exercise
-                    let basicExercise = ExerciseData(
-                        id: programExercise.exerciseId,
-                        name: programExercise.exerciseName,
-                        exerciseType: "Strength",
-                        bodyPart: "",
-                        equipment: "Unknown",
-                        gender: "unisex",
-                        target: "",
-                        synergist: ""
-                    )
-                    return TodayWorkoutExercise(
-                        exercise: basicExercise,
-                        sets: programExercise.targetSets ?? 3,
-                        reps: programExercise.targetReps ?? 10,
-                        weight: nil,
-                        restTime: 90,
-                        notes: nil,
-                        warmupSets: nil,
-                        flexibleSets: nil,
-                        trackingType: .repsWeight
-                    )
-                }
-            }
-
-            guard !todayExercises.isEmpty else { return nil }
-
-            // Create TodayWorkout from program day
-            let todayWorkout = TodayWorkout(
-                id: UUID(),
-                date: Date(),
-                title: programDay.workoutLabel,
-                exercises: todayExercises,
-                blocks: nil,
-                estimatedDuration: workoutSession.estimatedDurationMinutes,
-                fitnessGoal: effectiveFitnessGoal,
-                difficulty: 5,
-                warmUpExercises: nil,
-                coolDownExercises: nil
-            )
-
-            return todayWorkout
-        } catch {
-            print("⚠️ Failed to load today's workout from program: \(error)")
-            return nil
-        }
     }
 
     /// Generate static workout with current preferences (1 second simple loading)
@@ -3274,7 +3258,46 @@ class WorkoutManager: ObservableObject {
         if hasBodyweightPreferenceChanged() {
             return true
         }
+        // Check if program state has changed (active program's today workout differs from cached)
+        // This is a robust check that compares actual program day IDs rather than using flags
+        if hasProgramStateChanged(cachedWorkout: workout) {
+            return true
+        }
         return false
+    }
+
+    /// Check if the cached workout's program day differs from the active program's today workout
+    /// This is a FALLBACK check - the primary mechanism is the reactive observer on ProgramService.activeProgram
+    private func hasProgramStateChanged(cachedWorkout: TodayWorkout) -> Bool {
+        // Use the centralized sync method's logic
+        let programWorkout = ProgramService.shared.todayProgramWorkout
+        let cachedProgramDayId = cachedWorkout.programDayId
+        let activeProgramDayId = programWorkout?.programDayId
+
+        // Case 1: Cached is not from program, but there's now an active program workout
+        if cachedProgramDayId == nil && activeProgramDayId != nil {
+            return true
+        }
+
+        // Case 2: Cached is from a different program day
+        if let cached = cachedProgramDayId, let active = activeProgramDayId, cached != active {
+            return true
+        }
+
+        // Case 3: Cached is from program but program no longer has workout for today
+        if cachedProgramDayId != nil && activeProgramDayId == nil && ProgramService.shared.activeProgram != nil {
+            // Program exists but today might be rest day - check
+            if ProgramService.shared.isProgramRestDayToday {
+                return true
+            }
+        }
+
+        return false
+    }
+
+    /// Legacy method kept for backwards compatibility - no longer needed with reactive sync
+    func markProgramCreated() {
+        // The reactive observer on ProgramService.activeProgram handles this now
     }
 
     private func hasTrainingSplitChanged() -> Bool {
@@ -3461,25 +3484,54 @@ class WorkoutManager: ObservableObject {
         assertMainActor("loadTodayWorkout")
         refreshDailyCompletionFlag()
         loadTodayWorkoutMetadata()
+
+        print("📱 [loadTodayWorkout] CALLED - checking for program workout first")
+        print("📱 [loadTodayWorkout] ProgramService.activeProgram = \(ProgramService.shared.activeProgram?.name ?? "nil")")
+
+        // CRITICAL: Check for program workout FIRST - program is source of truth
+        if let programWorkout = ProgramService.shared.todayProgramWorkout {
+            print("📱 WorkoutManager: Active program has today's workout - using '\(programWorkout.title)'")
+            todayWorkout = programWorkout
+            saveTodayWorkout()
+            triggerWorkoutRefresh()
+            checkForAbandonedSession()
+            return
+        } else {
+            print("📱 [loadTodayWorkout] No program workout found - will use cache or generate")
+        }
+
+        // No program workout - fall back to cached or generate new
         let key = profileStorageKey(todayWorkoutKey)
-        
+        print("📱 [loadTodayWorkout] Checking UserDefaults for key: \(key)")
+
         if let data = UserDefaults.standard.data(forKey: key),
            let workout = try? JSONDecoder().decode(TodayWorkout.self, from: data) {
             let sanitized = sanitizeWarmupsIfNeeded(workout)
-            todayWorkout = sanitized
-            
-            if shouldRegenerateWorkout(using: sanitized) {
-                print("📱 WorkoutManager: Regenerating workout due to recovery or schedule changes")
+            print("📱 [loadTodayWorkout] Found cached workout: '\(sanitized.title)', isFromProgram=\(sanitized.isFromProgram)")
+
+            // If cached workout is from a program but no program workout exists now,
+            // don't use it - generate a new one
+            if sanitized.isFromProgram {
+                print("📱 WorkoutManager: Cached workout is from program but no program workout now - regenerating")
+                todayWorkout = nil
                 Task { await generateTodayWorkout() }
-            } else if let currentWorkout = todayWorkout {
-                restoreActiveSessionIfNeeded(for: currentWorkout)
-                print("📱 WorkoutManager: Loaded existing workout from storage")
+            } else {
+                todayWorkout = sanitized
+                print("📱 [loadTodayWorkout] Using cached workout: '\(sanitized.title)'")
+
+                if shouldRegenerateWorkout(using: sanitized) {
+                    print("📱 WorkoutManager: Regenerating workout due to recovery or schedule changes")
+                    Task { await generateTodayWorkout() }
+                } else if let currentWorkout = todayWorkout {
+                    restoreActiveSessionIfNeeded(for: currentWorkout)
+                    print("📱 WorkoutManager: Loaded existing workout from storage: '\(currentWorkout.title)'")
+                }
             }
         } else {
             print("📱 WorkoutManager: No existing workout found, will generate new one")
             Task { await generateTodayWorkout() }
         }
-        
+
         checkForAbandonedSession()
     }
 
@@ -4078,4 +4130,7 @@ enum CustomWorkoutError: LocalizedError {
 
 extension Notification.Name {
     static let workoutCompletedNeedsFeedback = Notification.Name("workoutCompletedNeedsFeedback")
+    static let trainingProgramCreated = Notification.Name("trainingProgramCreated")
+    static let openCreateProgram = Notification.Name("openCreateProgram")
+    static let openCreateWorkout = Notification.Name("openCreateWorkout")
 }

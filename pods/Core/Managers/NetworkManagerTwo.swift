@@ -5959,4 +5959,25 @@ class NetworkManagerTwo {
         return responsePayload.day
     }
 
+    func activateProgram(programId: Int, userEmail: String) async throws -> TrainingProgram {
+        guard let url = URL(string: "\(baseUrl)/api/programs/\(programId)/activate/") else { throw NetworkError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = ["user_email": userEmail]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validate(response: response, data: data)
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let responsePayload = try decoder.decode(ProgramResponse.self, from: data)
+        guard let program = responsePayload.program else {
+            throw NetworkError.invalidResponse
+        }
+        return program
+    }
+
 }

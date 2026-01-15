@@ -203,7 +203,7 @@ struct LogWorkoutView: View {
     enum WorkoutTab: String, CaseIterable, Hashable {
         case today = "Today"
         case plan = "Plan"
-        case saved = "Saved"
+        case saved = "Library"
 
         var title: String { rawValue }
     }
@@ -313,6 +313,9 @@ struct LogWorkoutView: View {
             }
             .sheet(item: workoutSummaryBinding) { summary in
                 WorkoutSummarySheet(summary: summary)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .openCreateWorkout)) { _ in
+                navigationPath.append(WorkoutNavigationDestination.createWorkout)
             }
             .fullScreenCover(item: $currentWorkout) { workout in
                 WorkoutInProgressView(
@@ -1357,10 +1360,13 @@ private struct TodayWorkoutView: View {
     
     // Get the workout to display
     private var workoutToShow: TodayWorkout? {
-        return workoutManager.todayWorkout
+        let workout = workoutManager.todayWorkout
+        print("🎯 [TodayWorkoutView] workoutToShow accessed: title='\(workout?.title ?? "nil")', programDayId=\(workout?.programDayId ?? -1)")
+        return workout
     }
 
     var body: some View {
+        let _ = print("🎯 [TodayWorkoutView] body rendering, todayWorkout.title='\(workoutManager.todayWorkout?.title ?? "nil")'")
         content
             .background(Color("primarybg").ignoresSafeArea(edges: [.top, .horizontal]))
             .overlay(alignment: .bottom) {
@@ -1447,17 +1453,13 @@ private struct TodayWorkoutView: View {
         // Ensure we only surface the logging sheet when a workout is in progress
         currentWorkout = nil
 
-        if workoutManager.todayWorkout != nil {
-            return
+        // Program workouts are now synced reactively via ProgramService observer
+        // Just ensure we have SOME workout (program or generated)
+        if workoutManager.todayWorkout == nil {
+            Task {
+                await workoutManager.generateTodayWorkout()
+            }
         }
-
-        if let cachedWorkout = workoutManager.cachedTodayWorkout() {
-            workoutManager.setTodayWorkout(cachedWorkout)
-            return
-        }
-
-        guard !workoutManager.isGeneratingWorkout else { return }
-        requestTodayWorkoutGeneration()
     }
 
     private func requestTodayWorkoutGeneration() {
@@ -2459,9 +2461,9 @@ private struct WorkoutDetailFullScreenView: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 20) {
                             header
+                                .padding(.horizontal, 20)
                             exerciseGroupsContent
                         }
-                        .padding(.horizontal, 20)
                         .padding(.top, 28)
                         .padding(.bottom, 120)
                     }
@@ -2643,6 +2645,7 @@ private struct WorkoutDetailFullScreenView: View {
                             .font(.title3)
                             .foregroundColor(.primary)
                             .fontWeight(.semibold)
+                            .padding(.horizontal, 20)
 
                         exerciseGroupCard(entries: entries)
                     }
@@ -2674,12 +2677,11 @@ private struct WorkoutDetailFullScreenView: View {
                     )
 
                     if idx != entries.count - 1 {
-                        Divider().opacity(0.08)
+                        Divider()
+                            .padding(.leading, 92)  // Align with text after thumbnail
                     }
                 }
             }
-            .background(Color("containerbg"))
-            .cornerRadius(24)
         }
     }
 
@@ -3371,12 +3373,11 @@ private extension View {
                             useBackground: false
                         )
                         if idx != uniqueExercises.count - 1 {
-                            Divider().opacity(0.08)
+                            Divider()
+                                .padding(.leading, 92)  // Align with text after thumbnail
                         }
                     }
                     .padding(.vertical, 4)
-                    .background(Color("containerbg"))
-                    .cornerRadius(24)
                     .listRowInsets(EdgeInsets(top: idx == 0 ? 16 : 8, leading: 16, bottom: idx == uniqueExercises.count - 1 ? 8 : 0, trailing: 16))
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
@@ -3440,13 +3441,12 @@ private extension View {
                                 useBackground: false
                             )
                             if idx != ordered.count - 1 {
-                                Divider().opacity(0.08)
+                                Divider()
+                                    .padding(.leading, 92)  // Align with text after thumbnail
                             }
                         }
                     }
                 }
-                .background(Color("containerbg"))
-                .cornerRadius(24)
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
@@ -3471,13 +3471,12 @@ private extension View {
                             useBackground: false
                         )
                         if exercise.exercise.id != nonGroupedExercisesList.last?.exercise.id {
-                            Divider().opacity(0.08)
+                            Divider()
+                                .padding(.leading, 92)  // Align with text after thumbnail
                         }
                     }
                 }
             }
-            .background(Color("containerbg"))
-            .cornerRadius(24)
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16))

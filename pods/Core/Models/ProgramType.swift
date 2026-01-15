@@ -152,11 +152,12 @@ struct ProgramDay: Codable, Identifiable {
     let completedAt: String?
     let workoutSessionId: Int?
     let workout: ProgramWorkoutSession?
+    // MacroFactor-style cycle position for "next incomplete" lookup
+    // Workout days have position 1, 2, 3, etc. Rest days are nil.
+    let cyclePosition: Int?
 
     var dateValue: Date? {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withFullDate]
-        return formatter.date(from: date)
+        parseProgramDate(date)
     }
 
     var isToday: Bool {
@@ -209,15 +210,11 @@ struct TrainingProgram: Codable, Identifiable {
     let weeks: [ProgramWeek]?
 
     var startDateValue: Date? {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withFullDate]
-        return formatter.date(from: startDate)
+        parseProgramDate(startDate)
     }
 
     var endDateValue: Date? {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withFullDate]
-        return formatter.date(from: endDate)
+        parseProgramDate(endDate)
     }
 
     var currentWeekNumber: Int? {
@@ -235,6 +232,30 @@ struct TrainingProgram: Codable, Identifiable {
     var fitnessGoalEnum: ProgramFitnessGoal? {
         ProgramFitnessGoal(rawValue: fitnessGoal)
     }
+}
+
+private func parseProgramDate(_ value: String) -> Date? {
+    let formatter = DateFormatter()
+    formatter.calendar = Calendar(identifier: .gregorian)
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = TimeZone.current
+    formatter.dateFormat = "yyyy-MM-dd"
+    if let date = formatter.date(from: value) {
+        return date
+    }
+
+    let isoFormatter = ISO8601DateFormatter()
+    isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    if let date = isoFormatter.date(from: value) {
+        return Calendar.current.startOfDay(for: date)
+    }
+
+    isoFormatter.formatOptions = [.withInternetDateTime]
+    if let date = isoFormatter.date(from: value) {
+        return Calendar.current.startOfDay(for: date)
+    }
+
+    return nil
 }
 
 // MARK: - API Response Models

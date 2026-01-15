@@ -20,6 +20,8 @@ struct PlanView: View {
     @ObservedObject private var programService = ProgramService.shared
     @State private var selectedWeekNumber: Int = 1
     @State private var selectedWorkoutDay: ProgramDay?
+    @State private var showAllPlans = false
+    @State private var showCreateProgram = false
 
     private var userEmail: String {
         UserDefaults.standard.string(forKey: "userEmail") ?? ""
@@ -47,6 +49,15 @@ struct PlanView: View {
                     selectedWorkoutDay = nil
                 }
             )
+        }
+        .sheet(isPresented: $showAllPlans) {
+            AllPlansView()
+        }
+        .sheet(isPresented: $showCreateProgram) {
+            CreateProgramView(userEmail: userEmail)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openCreateProgram)) { _ in
+            showCreateProgram = true
         }
     }
 
@@ -92,28 +103,87 @@ struct PlanView: View {
     @ViewBuilder
     private func programContentView(program: TrainingProgram) -> some View {
         ScrollView {
-            VStack(spacing: 16) {
-                // Header with title and week selector
-                planHeader(program: program)
+            VStack(spacing: 0) {
+                // Program name header
+                Text(program.name)
+                    .font(.title2.bold())
+                    .foregroundColor(.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 20)
 
-                // All days for selected week (including rest days)
-                if let weeks = program.weeks,
-                   let selectedWeek = weeks.first(where: { $0.weekNumber == selectedWeekNumber }),
-                   let days = selectedWeek.days {
-                    VStack(spacing: 12) {
-                        ForEach(days.sorted(by: { $0.dayNumber < $1.dayNumber })) { day in
-                            if day.dayType == .workout {
-                                ProgramWorkoutCard(day: day) {
-                                    selectedWorkoutDay = day
+                // Active Plan section with week selector
+                VStack(alignment: .leading, spacing: 10) {
+                    // Section header with Active Plan label and week selector
+                    HStack {
+                        Text("Active Plan")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                            .foregroundColor(.secondary)
+                            .padding(.leading, 16)
+
+                        Spacer()
+
+                        weekSelector(program: program)
+                    }
+                    .padding(.horizontal, 16)
+
+                    // All days for selected week (including rest days)
+                    if let weeks = program.weeks,
+                       let selectedWeek = weeks.first(where: { $0.weekNumber == selectedWeekNumber }),
+                       let days = selectedWeek.days {
+                        VStack(spacing: 12) {
+                            ForEach(days.sorted(by: { $0.dayNumber < $1.dayNumber })) { day in
+                                if day.dayType == .workout {
+                                    ProgramWorkoutCard(day: day) {
+                                        selectedWorkoutDay = day
+                                    }
+                                } else {
+                                    // Rest day card
+                                    RestDayCard()
                                 }
-                            } else {
-                                // Rest day card
-                                RestDayCard()
                             }
                         }
+                        .padding(.horizontal, 16)
+                    }
+                }
+
+                // Divider and action buttons
+                VStack(spacing: 12) {
+                    Divider()
+                        .padding(.horizontal, 16)
+
+                    // New Workout button
+                    Button {
+                        HapticFeedback.generate()
+                        NotificationCenter.default.post(name: .openCreateWorkout, object: nil)
+                    } label: {
+                        Text("New Workout")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(Color(.systemBackground))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color.primary)
+                            .clipShape(Capsule())
+                    }
+                    .padding(.horizontal, 16)
+
+                    // See All Plans button
+                    Button {
+                        showAllPlans = true
+                    } label: {
+                        Text("See All Plans")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.primary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color("containerbg"))
+                            .clipShape(Capsule())
                     }
                     .padding(.horizontal, 16)
                 }
+                .padding(.top, 24)
             }
             .padding(.vertical, 16)
         }
@@ -129,49 +199,35 @@ struct PlanView: View {
         }
     }
 
-    // MARK: - Plan Header
+    // MARK: - Week Selector
 
-    private func planHeader(program: TrainingProgram) -> some View {
-        HStack {
-            Text("Active Plan")
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(.primary)
+    private func weekSelector(program: TrainingProgram) -> some View {
+        Menu {
+            ForEach(1...program.totalWeeks, id: \.self) { weekNum in
+                let isDeload = program.weeks?.first(where: { $0.weekNumber == weekNum })?.isDeload ?? false
 
-            Spacer()
-
-            // Week selector dropdown menu
-            Menu {
-                ForEach(1...program.totalWeeks, id: \.self) { weekNum in
-                    let isDeload = program.weeks?.first(where: { $0.weekNumber == weekNum })?.isDeload ?? false
-
-                    Button(action: { selectedWeekNumber = weekNum }) {
-                        HStack {
-                            Text("Week \(weekNum)")
-                            if isDeload {
-                                Text("(Deload)")
-                                    .foregroundColor(.secondary)
-                            }
-                            if weekNum == selectedWeekNumber {
-                                Image(systemName: "checkmark")
-                            }
+                Button(action: { selectedWeekNumber = weekNum }) {
+                    HStack {
+                        Text("Week \(weekNum)")
+                        if isDeload {
+                            Text("(Deload)")
+                                .foregroundColor(.secondary)
+                        }
+                        if weekNum == selectedWeekNumber {
+                            Image(systemName: "checkmark")
                         }
                     }
                 }
-            } label: {
-                HStack(spacing: 4) {
-                    Text("Week \(selectedWeekNumber)")
-                        .font(.system(size: 15, weight: .medium))
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 12, weight: .semibold))
-                }
-                .foregroundColor(.primary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(Color("containerbg"))
-                .cornerRadius(8)
             }
+        } label: {
+            HStack(spacing: 4) {
+                Text("Week \(selectedWeekNumber)")
+                    .font(.system(size: 15, weight: .medium))
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+            }
+            .foregroundColor(.secondary)
         }
-        .padding(.horizontal, 16)
     }
 
     // MARK: - Actions
@@ -335,9 +391,55 @@ struct ProgramWorkoutDetailView: View {
     @State private var showSkipConfirmation = false
     @State private var isSkipping = false
     @State private var isSavingName = false
+    @State private var loggingContext: LogExerciseSheetContext?
 
     private var userEmail: String {
         UserDefaults.standard.string(forKey: "userEmail") ?? ""
+    }
+
+    /// Convert all program exercises to TodayWorkoutExercise for logging context
+    private var todayWorkoutExercises: [TodayWorkoutExercise] {
+        guard let workout = day.workout, let exercises = workout.exercises else {
+            return []
+        }
+        return exercises.compactMap { programExercise in
+            if let exerciseData = ExerciseDatabase.findExercise(byId: programExercise.exerciseId) {
+                let trackingType = ExerciseClassificationService.determineTrackingType(for: exerciseData)
+                return TodayWorkoutExercise(
+                    exercise: exerciseData,
+                    sets: programExercise.targetSets ?? 3,
+                    reps: programExercise.targetReps ?? 10,
+                    weight: nil,
+                    restTime: 90,
+                    notes: nil,
+                    warmupSets: nil,
+                    flexibleSets: nil,
+                    trackingType: trackingType
+                )
+            } else {
+                let basicExercise = ExerciseData(
+                    id: programExercise.exerciseId,
+                    name: programExercise.exerciseName,
+                    exerciseType: "Strength",
+                    bodyPart: "",
+                    equipment: "Unknown",
+                    gender: "unisex",
+                    target: "",
+                    synergist: ""
+                )
+                return TodayWorkoutExercise(
+                    exercise: basicExercise,
+                    sets: programExercise.targetSets ?? 3,
+                    reps: programExercise.targetReps ?? 10,
+                    weight: nil,
+                    restTime: 90,
+                    notes: nil,
+                    warmupSets: nil,
+                    flexibleSets: nil,
+                    trackingType: .repsWeight
+                )
+            }
+        }
     }
 
     var body: some View {
@@ -362,23 +464,40 @@ struct ProgramWorkoutDetailView: View {
                                             .cornerRadius(12)
                                     }
                                 }
+                                .padding(.horizontal, 20)
                             }
 
                             // Exercise list
                             VStack(spacing: 0) {
                                 ForEach(Array(exercises.enumerated()), id: \.element.id) { index, exercise in
-                                    ProgramExerciseRow(exercise: exercise)
+                                    ProgramExerciseRow(
+                                        exercise: exercise,
+                                        onTap: {
+                                            // Open exercise logging sheet
+                                            let allExercises = todayWorkoutExercises
+                                            if index < allExercises.count {
+                                                loggingContext = LogExerciseSheetContext(
+                                                    exercise: allExercises[index],
+                                                    allExercises: allExercises,
+                                                    index: index
+                                                )
+                                            }
+                                        },
+                                        onReplace: {
+                                            // TODO: Implement replace exercise
+                                        },
+                                        onHistory: {
+                                            // TODO: Navigate to exercise history
+                                        }
+                                    )
 
                                     if index < exercises.count - 1 {
                                         Divider()
-                                            .padding(.leading, 88)
+                                            .padding(.leading, 92)
                                     }
                                 }
                             }
-                            .background(Color("containerbg"))
-                            .cornerRadius(12)
                         }
-                        .padding(.horizontal, 20)
                         .padding(.top, 20)
                         .padding(.bottom, 120)
                     }
@@ -511,6 +630,19 @@ struct ProgramWorkoutDetailView: View {
                     .tint(.white)
             }
         }
+        .fullScreenCover(item: $loggingContext) { ctx in
+            ExerciseLoggingView(
+                exercise: ctx.exercise,
+                allExercises: ctx.allExercises,
+                onSetLogged: nil,
+                isFromWorkoutInProgress: false,
+                initialCompletedSetsCount: nil,
+                initialRIRValue: nil,
+                onExerciseReplaced: { _ in },
+                onWarmupSetsChanged: { _ in },
+                onExerciseUpdated: { _ in }
+            )
+        }
     }
 
     private func switchToProfile(_ workoutProfile: WorkoutProfile) {
@@ -600,55 +732,85 @@ struct EditWorkoutNameSheet: View {
 
 struct ProgramExerciseRow: View {
     let exercise: ProgramExercise
+    let onTap: () -> Void
+    let onReplace: () -> Void
+    let onHistory: () -> Void
 
     private var thumbnailImageName: String {
         String(format: "%04d", exercise.exerciseId)
     }
 
-    var body: some View {
-        HStack(spacing: 12) {
-            // Exercise thumbnail
-            Group {
-                if let image = UIImage(named: thumbnailImageName) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } else {
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.3))
-                        .overlay(
-                            Image(systemName: "dumbbell")
-                                .foregroundColor(.gray)
-                                .font(.system(size: 16))
-                        )
-                }
-            }
-            .frame(width: 60, height: 60)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-
-            // Exercise info
-            VStack(alignment: .leading, spacing: 4) {
-                Text(exercise.exerciseName)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.primary)
-                    .lineLimit(2)
-
-                if let sets = exercise.targetSets, let reps = exercise.targetReps {
-                    Text("\(sets) sets × \(reps) reps")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-
-            Spacer()
-
-            // Completion indicator
-            Image(systemName: exercise.isCompleted ? "checkmark.circle.fill" : "circle")
-                .font(.system(size: 20))
-                .foregroundColor(exercise.isCompleted ? .green : .secondary.opacity(0.3))
+    private var setsAndRepsDisplay: String {
+        if let sets = exercise.targetSets, let reps = exercise.targetReps {
+            let setsLabel = sets == 1 ? "set" : "sets"
+            return "\(sets) \(setsLabel) • \(reps) reps"
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        return ""
+    }
+
+    var body: some View {
+        ZStack(alignment: .trailing) {
+            Button(action: onTap) {
+                HStack(spacing: 12) {
+                    // Exercise thumbnail with rounded container
+                    Group {
+                        if let image = UIImage(named: thumbnailImageName) {
+                            Image(uiImage: image)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } else {
+                            Rectangle()
+                                .fill(Color.gray.opacity(0.3))
+                                .overlay(
+                                    Image(systemName: "dumbbell")
+                                        .foregroundColor(.gray)
+                                        .font(.system(size: 16))
+                                )
+                        }
+                    }
+                    .frame(width: 60, height: 60)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                    // Exercise info
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(exercise.exerciseName)
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.primary)
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(2)
+
+                        if !setsAndRepsDisplay.isEmpty {
+                            Text(setsAndRepsDisplay)
+                                .font(.system(size: 14))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    Spacer(minLength: 32)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(PlainButtonStyle())
+
+            // Ellipsis menu
+            Menu {
+                Button("Exercise History") {
+                    onHistory()
+                }
+
+                Button("Replace") {
+                    onReplace()
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .frame(width: 24, height: 24)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 8)
     }
 }
 
@@ -660,7 +822,7 @@ struct CreateProgramView: View {
 
     let userEmail: String
 
-    @State private var programName: String = ""
+    @State private var programName: String = "My Plan"
     @State private var selectedGoal: ProgramFitnessGoal = .hypertrophy
     @State private var selectedType: ProgramType = .upperLower
     @State private var selectedExperience: ProgramExperienceLevel = .intermediate
@@ -676,98 +838,112 @@ struct CreateProgramView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                // Program Name
-                Section {
-                    TextField("Program Name", text: $programName)
-                }
-
-                // Training Goal
-                Section {
-                    Picker("Training Goal", selection: $selectedGoal) {
-                        ForEach(ProgramFitnessGoal.allCases, id: \.self) { goal in
-                            VStack(alignment: .leading) {
-                                Text(goal.displayName)
-                            }
-                            .tag(goal)
-                        }
+            ZStack {
+                Form {
+                    // Plan Name
+                    Section {
+                        TextField("Name", text: $programName)
                     }
-                    .pickerStyle(.inline)
-                    .labelsHidden()
-                } header: {
-                    Text("Training Goal")
-                } footer: {
-                    Text(selectedGoal.description)
-                }
 
-                // Training Split
-                Section {
-                    HStack {
-                        Text("Split")
-                        Spacer()
-                        Menu {
-                            ForEach(ProgramType.allCases, id: \.self) { type in
-                                Button {
-                                    selectedType = type
-                                } label: {
-                                    if selectedType == type {
-                                        Label(type.displayName, systemImage: "checkmark")
-                                    } else {
-                                        Text(type.displayName)
+                    // Training Goal
+                    Section {
+                        Picker("Training Goal", selection: $selectedGoal) {
+                            ForEach(ProgramFitnessGoal.allCases, id: \.self) { goal in
+                                VStack(alignment: .leading) {
+                                    Text(goal.displayName)
+                                }
+                                .tag(goal)
+                            }
+                        }
+                        .pickerStyle(.inline)
+                        .labelsHidden()
+                    } header: {
+                        Text("Training Goal")
+                    } footer: {
+                        Text(selectedGoal.description)
+                    }
+
+                    // Training Split
+                    Section {
+                        HStack {
+                            Text("Split")
+                            Spacer()
+                            Menu {
+                                ForEach(ProgramType.allCases, id: \.self) { type in
+                                    Button {
+                                        selectedType = type
+                                    } label: {
+                                        if selectedType == type {
+                                            Label(type.displayName, systemImage: "checkmark")
+                                        } else {
+                                            Text(type.displayName)
+                                        }
                                     }
                                 }
+                            } label: {
+                                HStack {
+                                    Text(selectedType.displayName)
+                                        .foregroundColor(.primary)
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
                             }
-                        } label: {
-                            HStack {
-                                Text(selectedType.displayName)
-                                    .foregroundColor(.primary)
-                                Image(systemName: "chevron.up.chevron.down")
+                        }
+                    } header: {
+                        Text("Training Split")
+                    }
+
+                    // Duration
+                    Section {
+                        Stepper("\(sessionDuration) min per session", value: $sessionDuration, in: 30...120, step: 15)
+                        Stepper("\(totalWeeks) weeks", value: $totalWeeks, in: 4...12)
+                        Toggle(isOn: $includeDeload) {
+                            VStack(alignment: .leading) {
+                                Text("Include Deload Week")
+                                Text("Recovery week at the end")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
                         }
+                    } header: {
+                        Text("Duration")
                     }
-                } header: {
-                    Text("Training Split")
-                }
 
-                // Duration
-                Section {
-                    Stepper("\(sessionDuration) min per session", value: $sessionDuration, in: 30...120, step: 15)
-                    Stepper("\(totalWeeks) weeks", value: $totalWeeks, in: 4...12)
-                    Toggle(isOn: $includeDeload) {
-                        VStack(alignment: .leading) {
-                            Text("Include Deload Week")
-                            Text("Recovery week at the end")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                } header: {
-                    Text("Duration")
-                }
-
-                // Experience Level
-                Section {
-                    Picker("Experience Level", selection: $selectedExperience) {
-                        ForEach(ProgramExperienceLevel.allCases, id: \.self) { level in
-                            Text(level.displayName).tag(level)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .controlSize(.large)
-                } header: {
-                    Text("Experience Level")
-                }
-
-                // Error Message
-                if let error = error {
+                    // Experience Level
                     Section {
-                        Text(error)
-                            .foregroundColor(.red)
+                        Picker("Experience Level", selection: $selectedExperience) {
+                            ForEach(ProgramExperienceLevel.allCases, id: \.self) { level in
+                                Text(level.displayName).tag(level)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .controlSize(.large)
+                    } header: {
+                        Text("Experience Level")
                     }
+
+                    // Error Message
+                    if let error = error {
+                        Section {
+                            Text(error)
+                                .foregroundColor(.red)
+                        }
+                    }
+                }
+                .opacity(isGenerating ? 0 : 1)
+
+                if isGenerating {
+                    ProgramGenerationView(
+                        programName: programName,
+                        splitName: selectedType.displayName,
+                        goalName: selectedGoal.displayName,
+                        weeks: totalWeeks
+                    )
+                    .transition(.opacity)
                 }
             }
+            .animation(.easeInOut(duration: 0.3), value: isGenerating)
             .navigationTitle("New Plan")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -780,9 +956,7 @@ struct CreateProgramView: View {
                     .disabled(isGenerating)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    if isGenerating {
-                        ProgressView()
-                    } else {
+                    if !isGenerating {
                         Button {
                             Task { await generateProgram() }
                         } label: {
@@ -796,7 +970,9 @@ struct CreateProgramView: View {
     }
 
     private func generateProgram() async {
-        isGenerating = true
+        withAnimation {
+            isGenerating = true
+        }
         error = nil
 
         do {
@@ -810,12 +986,424 @@ struct CreateProgramView: View {
                 totalWeeks: totalWeeks,
                 includeDeload: includeDeload
             )
+            // Notify WorkoutManager to refresh today's workout with the new program
+            NotificationCenter.default.post(name: .trainingProgramCreated, object: nil)
             dismiss()
         } catch {
+            withAnimation {
+                isGenerating = false
+            }
             self.error = error.localizedDescription
         }
+    }
+}
 
-        isGenerating = false
+// MARK: - Program Generation View
+
+private struct ProgramGenerationView: View {
+    let programName: String
+    let splitName: String
+    let goalName: String
+    let weeks: Int
+
+    @State private var currentStep = 0
+    @State private var completedSteps: Set<Int> = []
+
+    private let steps: [(icon: String, title: String, subtitle: String)] = [
+        ("person.fill", "Analyzing Profile", "Experience & fitness level"),
+        ("dumbbell.fill", "Selecting Exercises", "Goal-optimized movements"),
+        ("figure.strengthtraining.traditional", "Building Structure", "Weekly periodization"),
+        ("chart.line.uptrend.xyaxis", "Smart Progression", "Volume & intensity curves"),
+        ("calendar", "Scheduling Workouts", "Organizing your weeks"),
+        ("checkmark.seal.fill", "Finalizing Plan", "Almost ready...")
+    ]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            // Header
+            VStack(spacing: 12) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 44))
+                    .foregroundStyle(.linearGradient(
+                        colors: [.blue, .purple],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ))
+                    .symbolEffect(.pulse, options: .repeating)
+
+                Text("Building Your Plan")
+                    .font(.system(size: 28, weight: .bold))
+
+                Text("\(weeks)-Week \(goalName) • \(splitName)")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.bottom, 48)
+
+            // Steps
+            VStack(spacing: 0) {
+                ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
+                    GenerationStepRow(
+                        icon: step.icon,
+                        title: step.title,
+                        subtitle: step.subtitle,
+                        state: stepState(for: index),
+                        isLast: index == steps.count - 1
+                    )
+                }
+            }
+            .padding(.horizontal, 32)
+
+            Spacer()
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(UIColor.systemGroupedBackground))
+        .onAppear {
+            startAnimation()
+        }
+    }
+
+    private func stepState(for index: Int) -> GenerationStepState {
+        if completedSteps.contains(index) {
+            return .completed
+        } else if index == currentStep {
+            return .inProgress
+        } else {
+            return .pending
+        }
+    }
+
+    private func startAnimation() {
+        // Animate through steps with more natural timing
+        // Each step takes about 1-1.5 seconds to complete, making the total ~8-10 seconds
+        // which better matches typical program generation time
+        let stepDurations: [(start: Double, complete: Double)] = [
+            (0.3, 1.2),    // Step 1: Analyzing Profile
+            (1.5, 2.8),    // Step 2: Selecting Exercises
+            (3.1, 4.6),    // Step 3: Building Structure
+            (4.9, 6.2),    // Step 4: Smart Progression
+            (6.5, 7.8),    // Step 5: Scheduling Workouts
+            (8.1, -1)      // Step 6: Finalizing (stays in progress until API returns)
+        ]
+
+        for (index, timing) in stepDurations.enumerated() {
+            // Start step
+            DispatchQueue.main.asyncAfter(deadline: .now() + timing.start) {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    currentStep = index
+                }
+            }
+
+            // Complete step (except the last one which stays in progress)
+            if timing.complete > 0 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + timing.complete) {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                        _ = completedSteps.insert(index)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Generation Step State
+
+private enum GenerationStepState {
+    case pending
+    case inProgress
+    case completed
+}
+
+// MARK: - Generation Step Row
+
+private struct GenerationStepRow: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let state: GenerationStepState
+    let isLast: Bool
+
+    var body: some View {
+        HStack(spacing: 16) {
+            // Icon/Status indicator
+            ZStack {
+                Circle()
+                    .fill(backgroundColor)
+                    .frame(width: 44, height: 44)
+
+                if state == .completed {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.white)
+                        .transition(.scale.combined(with: .opacity))
+                } else if state == .inProgress {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .scaleEffect(0.8)
+                } else {
+                    Image(systemName: icon)
+                        .font(.system(size: 18))
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            // Text
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 16, weight: state == .inProgress ? .semibold : .medium))
+                    .foregroundColor(state == .pending ? .secondary : .primary)
+
+                Text(subtitle)
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+        }
+        .padding(.vertical, 12)
+        .opacity(state == .pending ? 0.5 : 1.0)
+        .animation(.easeInOut(duration: 0.3), value: state)
+    }
+
+    private var backgroundColor: Color {
+        switch state {
+        case .completed:
+            return .blue
+        case .inProgress:
+            return .blue
+        case .pending:
+            return Color(UIColor.systemGray5)
+        }
+    }
+}
+
+// MARK: - All Plans View
+
+struct AllPlansView: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var programService = ProgramService.shared
+    @State private var allPrograms: [TrainingProgram] = []
+    @State private var isLoading = true
+    @State private var isActivating = false
+    @State private var isEditMode = false
+    @State private var programToDelete: TrainingProgram?
+
+    private var userEmail: String {
+        UserDefaults.standard.string(forKey: "userEmail") ?? ""
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color("primarybg")
+                    .ignoresSafeArea()
+
+                if isLoading {
+                    ProgressView()
+                } else if allPrograms.isEmpty {
+                    VStack(spacing: 16) {
+                        Image(systemName: "doc.text")
+                            .font(.system(size: 48))
+                            .foregroundColor(.secondary)
+                        Text("No plans yet")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                    }
+                } else {
+                    List {
+                        ForEach(allPrograms) { program in
+                            PlanListRow(
+                                program: program,
+                                isActive: program.id == programService.activeProgram?.id,
+                                isEditMode: isEditMode,
+                                onSelect: {
+                                    if !isEditMode {
+                                        activateProgram(program)
+                                    }
+                                }
+                            )
+                            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                        }
+                        .onDelete(perform: isEditMode ? deletePrograms : nil)
+                        .onMove(perform: isEditMode ? movePrograms : nil)
+                    }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .environment(\.editMode, .constant(isEditMode ? .active : .inactive))
+                }
+            }
+            .navigationTitle("All Plans")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
+                }
+
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Menu {
+                        Button {
+                            withAnimation {
+                                isEditMode.toggle()
+                            }
+                        } label: {
+                            Label(isEditMode ? "Done Editing" : "Edit Plans", systemImage: "pencil")
+                        }
+
+                        Button {
+                            dismiss()
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                NotificationCenter.default.post(name: .openCreateProgram, object: nil)
+                            }
+                        } label: {
+                            Label("New Plan", systemImage: "plus")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
+                }
+            }
+            .overlay {
+                if isActivating {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                    ProgressView()
+                        .tint(.white)
+                }
+            }
+        }
+        .task {
+            await loadAllPrograms()
+        }
+        .confirmationDialog(
+            "Delete Plan",
+            isPresented: .init(
+                get: { programToDelete != nil },
+                set: { if !$0 { programToDelete = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                if let program = programToDelete {
+                    Task { await deleteProgram(program) }
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                programToDelete = nil
+            }
+        } message: {
+            Text("Are you sure you want to delete this plan? This cannot be undone.")
+        }
+    }
+
+    private func loadAllPrograms() async {
+        isLoading = true
+        do {
+            allPrograms = try await programService.listPrograms(userEmail: userEmail)
+        } catch {
+            print("Error loading programs: \(error)")
+        }
+        isLoading = false
+    }
+
+    private func activateProgram(_ program: TrainingProgram) {
+        guard program.id != programService.activeProgram?.id else { return }
+
+        isActivating = true
+        Task {
+            do {
+                _ = try await programService.activateProgram(programId: program.id, userEmail: userEmail)
+                dismiss()
+            } catch {
+                print("Error activating program: \(error)")
+            }
+            isActivating = false
+        }
+    }
+
+    private func deletePrograms(at offsets: IndexSet) {
+        guard let index = offsets.first else { return }
+        programToDelete = allPrograms[index]
+    }
+
+    private func deleteProgram(_ program: TrainingProgram) async {
+        do {
+            try await programService.deleteProgram(id: program.id, userEmail: userEmail)
+            allPrograms.removeAll { $0.id == program.id }
+        } catch {
+            print("Error deleting program: \(error)")
+        }
+    }
+
+    private func movePrograms(from source: IndexSet, to destination: Int) {
+        allPrograms.move(fromOffsets: source, toOffset: destination)
+        // Note: Reordering is visual only - no backend persistence yet
+    }
+}
+
+// MARK: - Plan List Row
+
+private struct PlanListRow: View {
+    let program: TrainingProgram
+    let isActive: Bool
+    var isEditMode: Bool = false
+    let onSelect: () -> Void
+
+    var body: some View {
+        Button(action: onSelect) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        Text(program.name)
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(.primary)
+
+                        if isActive {
+                            Text("Active")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(Color.blue)
+                                .clipShape(Capsule())
+                        }
+                    }
+
+                    Text("\(program.totalWeeks) weeks • \(program.programTypeEnum?.displayName ?? program.programType)")
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                if !isEditMode {
+                    if isActive {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 22))
+                            .foregroundColor(.blue)
+                    } else {
+                        Image(systemName: "circle")
+                            .font(.system(size: 22))
+                            .foregroundColor(.secondary.opacity(0.3))
+                    }
+                }
+            }
+            .padding(16)
+            .background(Color("containerbg"))
+            .cornerRadius(12)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .disabled(isEditMode)
     }
 }
 
