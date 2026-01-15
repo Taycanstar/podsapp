@@ -3325,7 +3325,7 @@ private extension View {
                 )
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+                .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 0))
             }
         }
     }
@@ -3378,7 +3378,7 @@ private extension View {
                         }
                     }
                     .padding(.vertical, 4)
-                    .listRowInsets(EdgeInsets(top: idx == 0 ? 16 : 8, leading: 16, bottom: idx == uniqueExercises.count - 1 ? 8 : 0, trailing: 16))
+                    .listRowInsets(EdgeInsets(top: idx == 0 ? 16 : 8, leading: 0, bottom: idx == uniqueExercises.count - 1 ? 8 : 0, trailing: 0))
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                 }
@@ -3450,7 +3450,7 @@ private extension View {
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 8, trailing: 16))
+            .listRowInsets(EdgeInsets(top: 16, leading: 0, bottom: 8, trailing: 0))
         }
     }
 
@@ -3479,7 +3479,7 @@ private extension View {
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16))
+            .listRowInsets(EdgeInsets(top: 16, leading: 0, bottom: 16, trailing: 0))
         }
     }
 
@@ -3512,7 +3512,7 @@ private extension View {
                 )
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+                .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 0))
             }
         }
     }

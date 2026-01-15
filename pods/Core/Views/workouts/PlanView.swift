@@ -1223,13 +1223,15 @@ struct AllPlansView: View {
                                     if !isEditMode {
                                         activateProgram(program)
                                     }
+                                },
+                                onDelete: {
+                                    programToDelete = program
                                 }
                             )
                             .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
                         }
-                        .onDelete(perform: isEditMode ? deletePrograms : nil)
                         .onMove(perform: isEditMode ? movePrograms : nil)
                     }
                     .listStyle(.plain)
@@ -1250,26 +1252,40 @@ struct AllPlansView: View {
                 }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Menu {
+                    if isEditMode {
                         Button {
                             withAnimation {
-                                isEditMode.toggle()
+                                isEditMode = false
                             }
                         } label: {
-                            Label(isEditMode ? "Done Editing" : "Edit Plans", systemImage: "pencil")
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 16, weight: .semibold))
                         }
+                        .buttonStyle(.bordered)
+                        .buttonBorderShape(.circle)
+                        .tint(.blue)
+                    } else {
+                        Menu {
+                            Button {
+                                withAnimation {
+                                    isEditMode = true
+                                }
+                            } label: {
+                                Label("Edit Plans", systemImage: "pencil")
+                            }
 
-                        Button {
-                            dismiss()
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                NotificationCenter.default.post(name: .openCreateProgram, object: nil)
+                            Button {
+                                dismiss()
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                    NotificationCenter.default.post(name: .openCreateProgram, object: nil)
+                                }
+                            } label: {
+                                Label("New Plan", systemImage: "plus")
                             }
                         } label: {
-                            Label("New Plan", systemImage: "plus")
+                            Image(systemName: "ellipsis")
+                                .font(.system(size: 16, weight: .semibold))
                         }
-                    } label: {
-                        Image(systemName: "ellipsis")
-                            .font(.system(size: 16, weight: .semibold))
                     }
                 }
             }
@@ -1331,11 +1347,6 @@ struct AllPlansView: View {
         }
     }
 
-    private func deletePrograms(at offsets: IndexSet) {
-        guard let index = offsets.first else { return }
-        programToDelete = allPrograms[index]
-    }
-
     private func deleteProgram(_ program: TrainingProgram) async {
         do {
             try await programService.deleteProgram(id: program.id, userEmail: userEmail)
@@ -1358,52 +1369,66 @@ private struct PlanListRow: View {
     let isActive: Bool
     var isEditMode: Bool = false
     let onSelect: () -> Void
+    var onDelete: (() -> Void)?
 
     var body: some View {
-        Button(action: onSelect) {
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 8) {
-                        Text(program.name)
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.primary)
+        HStack(spacing: 12) {
+            if isEditMode {
+                Button {
+                    onDelete?()
+                } label: {
+                    Image(systemName: "minus.circle.fill")
+                        .font(.system(size: 22))
+                        .foregroundColor(.red)
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
 
+            Button(action: onSelect) {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 8) {
+                            Text(program.name)
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundColor(.primary)
+
+                            if isActive {
+                                Text("Active")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(Color.blue)
+                                    .clipShape(Capsule())
+                            }
+                        }
+
+                        Text("\(program.totalWeeks) weeks • \(program.programTypeEnum?.displayName ?? program.programType)")
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+
+                    if !isEditMode {
                         if isActive {
-                            Text("Active")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .background(Color.blue)
-                                .clipShape(Capsule())
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 22))
+                                .foregroundColor(.blue)
+                        } else {
+                            Image(systemName: "circle")
+                                .font(.system(size: 22))
+                                .foregroundColor(.secondary.opacity(0.3))
                         }
                     }
-
-                    Text("\(program.totalWeeks) weeks • \(program.programTypeEnum?.displayName ?? program.programType)")
-                        .font(.system(size: 14))
-                        .foregroundColor(.secondary)
                 }
-
-                Spacer()
-
-                if !isEditMode {
-                    if isActive {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 22))
-                            .foregroundColor(.blue)
-                    } else {
-                        Image(systemName: "circle")
-                            .font(.system(size: 22))
-                            .foregroundColor(.secondary.opacity(0.3))
-                    }
-                }
+                .padding(16)
+                .background(Color("containerbg"))
+                .cornerRadius(12)
             }
-            .padding(16)
-            .background(Color("containerbg"))
-            .cornerRadius(12)
+            .buttonStyle(PlainButtonStyle())
+            .disabled(isEditMode)
         }
-        .buttonStyle(PlainButtonStyle())
-        .disabled(isEditMode)
     }
 }
 
