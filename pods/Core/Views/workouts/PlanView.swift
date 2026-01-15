@@ -233,6 +233,10 @@ struct PlanView: View {
     // MARK: - Actions
 
     private func loadData() async {
+        // Skip fetch if we already have the active program loaded
+        // This prevents request cancellation when tab switching causes view recreation
+        guard programService.activeProgram == nil else { return }
+
         do {
             _ = try await programService.fetchActiveProgram(userEmail: userEmail)
         } catch {
