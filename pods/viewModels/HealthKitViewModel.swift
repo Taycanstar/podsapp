@@ -99,12 +99,15 @@ final class HealthKitViewModel: ObservableObject {
     func sleepSummary(for date: Date) -> SleepSummary? {
         let dayKey = calendar.startOfDay(for: date)
         if let cached = sleepSummaryCache[dayKey] {
+            print("⏱️ [SleepSummary] cache hit dayKey=\(dayKey) total=\(cached.totalSleepMinutes)")
             return cached
         }
         let currentKey = calendar.startOfDay(for: currentDate)
         if calendar.isDate(dayKey, inSameDayAs: currentKey) {
+            print("⏱️ [SleepSummary] using latest dayKey=\(dayKey) latest=\(latestSleepSummary != nil)")
             return latestSleepSummary
         }
+        print("⏱️ [SleepSummary] no summary dayKey=\(dayKey)")
         return nil
     }
     

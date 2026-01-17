@@ -125,6 +125,7 @@ final class DayLogsViewModel: ObservableObject {
   @Published var weeklyNutritionSummaries: [DailyNutritionSummary] = []
   @Published var weightConsistency: HabitConsistencyData?
   @Published var foodConsistency: HabitConsistencyData?
+  @Published var timelineEvents: [TimelineEvent] = []
   var energyBalanceWeek: [EnergyBalancePoint] {
     let calendar = Calendar.current
     let today = calendar.startOfDay(for: Date())
@@ -155,6 +156,8 @@ final class DayLogsViewModel: ObservableObject {
   private var notificationCancellables: Set<AnyCancellable> = []
   private var goalsStoreCancellable: AnyCancellable?
   private var consistencyTask: Task<Void, Never>?
+  private let timelineService = TimelineService()
+  private var timelineCancellable: AnyCancellable?
 
   enum ScheduledLogAction: String {
     case log
@@ -174,6 +177,11 @@ final class DayLogsViewModel: ObservableObject {
     if !email.isEmpty {
       configureRepository(for: email)
       fetchNutritionGoals()
+    }
+
+    // Set up timeline publisher if healthViewModel is provided
+    if healthViewModel != nil {
+      setupTimelinePublisher()
     }
   }
 
@@ -214,6 +222,56 @@ final class DayLogsViewModel: ObservableObject {
   
   func setHealthViewModel(_ healthViewModel: HealthKitViewModel) {
     self.healthViewModel = healthViewModel
+    setupTimelinePublisher()
+  }
+
+  /// Sets up Combine pipeline to rebuild timeline events when dependencies change.
+  /// This keeps timeline computation out of SwiftUI body evaluation.
+  private func setupTimelinePublisher() {
+    // Cancel any existing subscription
+    timelineCancellable?.cancel()
+
+    guard let healthVM = healthViewModel else {
+      // Without health view model, just observe our own properties
+      timelineCancellable = Publishers.CombineLatest3(
+        $selectedDate,
+        $logs,
+        $healthMetricsSnapshot
+      )
+      .debounce(for: .milliseconds(100), scheduler: DispatchQueue.main)
+      .sink { [weak self] date, logs, snapshot in
+        self?.rebuildTimeline(for: date, logs: logs, snapshot: snapshot, sleepSummary: nil)
+      }
+      return
+    }
+
+    // Combine all dependencies including HealthKitViewModel's sleep summary
+    timelineCancellable = Publishers.CombineLatest4(
+      $selectedDate,
+      $logs,
+      $healthMetricsSnapshot,
+      healthVM.$latestSleepSummary
+    )
+    .debounce(for: .milliseconds(100), scheduler: DispatchQueue.main)
+    .sink { [weak self] date, logs, snapshot, _ in
+      guard let self else { return }
+      let sleepSummary = healthVM.sleepSummary(for: date)
+      self.rebuildTimeline(for: date, logs: logs, snapshot: snapshot, sleepSummary: sleepSummary)
+    }
+  }
+
+  private func rebuildTimeline(
+    for date: Date,
+    logs: [CombinedLog],
+    snapshot: NetworkManagerTwo.HealthMetricsSnapshot?,
+    sleepSummary: SleepSummary?
+  ) {
+    timelineEvents = timelineService.buildTimelineEvents(
+      for: date,
+      logs: logs,
+      healthMetricsSnapshot: snapshot,
+      sleepSummary: sleepSummary
+    )
   }
 
   private func configureRepository(for email: String) {
