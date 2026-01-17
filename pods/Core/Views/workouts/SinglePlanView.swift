@@ -248,16 +248,13 @@ private struct SinglePlanExerciseRow: View {
         String(format: "%04d", exercise.exerciseId)
     }
 
-    // Get muscle info from ExerciseDatabase
+    // Get muscle info from ExerciseDatabase - use bodyPart for general muscle groups
     private var muscleChips: [String] {
         if let exerciseData = ExerciseDatabase.findExercise(byId: exercise.exerciseId) {
-            var muscles: [String] = []
-            if !exerciseData.target.isEmpty { muscles.append(exerciseData.target) }
-            // Add synergists (split by comma)
-            if !exerciseData.synergist.isEmpty {
-                muscles.append(contentsOf: exerciseData.synergist.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) })
+            // Use bodyPart for general muscle group (e.g., "Chest", "Back")
+            if !exerciseData.bodyPart.isEmpty {
+                return [exerciseData.bodyPart]
             }
-            return Array(muscles.prefix(3)) // Max 3 chips
         }
         return []
     }
@@ -297,7 +294,7 @@ private struct SinglePlanExerciseRow: View {
                             ForEach(muscleChips, id: \.self) { muscle in
                                 Text(muscle)
                                     .font(.system(size: 11))
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.primary)
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 4)
                                     .background(Color("containerbg"))
@@ -308,8 +305,11 @@ private struct SinglePlanExerciseRow: View {
 
                     // Sets per week (horizontal scroll with numbered rows)
                     if !weeklyData.isEmpty {
+                        // Calculate max sets for uniform card height
+                        let maxSets = weeklyData.map { $0.sets }.max() ?? 0
+
                         ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(alignment: .top, spacing: 16) {
+                            HStack(alignment: .top, spacing: 8) {
                                 ForEach(weeklyData) { data in
                                     VStack(alignment: .leading, spacing: 4) {
                                         // Week header
@@ -317,19 +317,23 @@ private struct SinglePlanExerciseRow: View {
                                             .font(.system(size: 11, weight: .medium))
                                             .foregroundColor(.secondary)
 
-                                        // Numbered set rows
-                                        ForEach(1...data.sets, id: \.self) { setNum in
+                                        // Numbered set rows (use maxSets for uniform height)
+                                        ForEach(1...max(maxSets, 1), id: \.self) { setNum in
                                             HStack(spacing: 6) {
                                                 Text("\(setNum)")
                                                     .font(.system(size: 12, weight: .medium))
-                                                    .foregroundColor(.secondary)
+                                                    .foregroundColor(setNum <= data.sets ? .secondary : .clear)
                                                     .frame(width: 14, alignment: .leading)
                                                 Text("\(data.reps) reps")
                                                     .font(.system(size: 12))
-                                                    .foregroundColor(.primary)
+                                                    .foregroundColor(setNum <= data.sets ? .primary : .clear)
                                             }
                                         }
                                     }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(Color("containerbg"))
+                                    .clipShape(RoundedRectangle(cornerRadius: 28))
                                 }
                             }
                         }
@@ -341,11 +345,8 @@ private struct SinglePlanExerciseRow: View {
 
             // Divider (starts after thumbnail position)
             if showDivider {
-                HStack(spacing: 0) {
-                    Color.clear
-                        .frame(width: 62) // 50 thumbnail + 12 spacing
-                    Divider()
-                }
+                Divider()
+                    .padding(.leading, 62) // 50 thumbnail + 12 spacing
             }
         }
     }
@@ -436,13 +437,25 @@ private struct PlanSettingsSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 15, weight: .semibold))
+                    }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     if isSaving {
                         ProgressView()
                     } else {
-                        Button("Save") { saveSettings() }
+                        Button {
+                            saveSettings()
+                        } label: {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 15, weight: .semibold))
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .buttonBorderShape(.circle)
                     }
                 }
             }
