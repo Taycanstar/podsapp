@@ -210,19 +210,6 @@ struct NewHomeView: View {
         let stored = UserDefaults.standard.double(forKey: "dailyWaterGoalOz")
         return stored > 0 ? stored : 80
     }
-    private var timelinePreviewEvents: [TimelineEvent] {
-        timelineEvents
-    }
-
-    private var timelineEvents: [TimelineEvent] {
-        var items: [TimelineEvent] = []
-        let targetDate = vm.selectedDate
-        if let wake = wakeTimelineEvent(for: targetDate) {
-            items.append(wake)
-        }
-        items.append(contentsOf: timelineEventsFromLogs(for: targetDate))
-        return items.sorted { $0.date < $1.date }
-    }
     private var isYesterday : Bool { Calendar.current.isDateInYesterday(vm.selectedDate) }
 
   private var calorieGoal : Double { vm.calorieGoal }
@@ -260,13 +247,12 @@ private var remainingCal: Double { vm.remainingCalories }
 
     
 
-    @ViewBuilder
     private var timelineSection: some View {
         VStack {
             TimelineSectionView(
-                events: timelinePreviewEvents,
+                events: vm.timelineEvents,
                 selectedDate: vm.selectedDate,
-                onShowAll: timelineEvents.count > timelinePreviewEvents.count ? { showTimelineSheet = true } : nil,
+                onShowAll: nil,  // Timeline now managed by ViewModel
                 onAddActivity: { showAddActivitySheet = true },
                 onScanMeal: onBarcodeTapped,
                 onCoachEditTap: { coachMessage in
@@ -687,12 +673,17 @@ private var remainingCal: Double { vm.remainingCalories }
             Text(quickActivityErrorMessage ?? "")
         }
         .onAppear {
+            // Connect HealthKitViewModel to DayLogsViewModel for timeline updates
+            vm.setHealthViewModel(healthViewModel)
+
             // Avoid re-fetching when returning to this view in the same app session with data already loaded
             if homeInitialLoadDone && onboarding.email == vm.email && !vm.logs.isEmpty {
                 return
             }
 
-            guard !hasRunInitialAppear else { return }
+            guard !hasRunInitialAppear else {
+                return
+            }
             hasRunInitialAppear = true
 
             configureOnAppear()
@@ -752,7 +743,7 @@ private var remainingCal: Double { vm.remainingCalories }
                     handleHealthMetricsLoadingChange(vm.isLoadingHealthMetrics)
                 }
             }
-            .onChange(of: vm.logs) { newLogs in
+            .onChange(of: vm.logs) { _ in
                 vm.refreshWeeklyNutritionSummaries(endingAt: vm.selectedDate)
             }
             .onChange(of: vm.isLoadingHealthMetrics) { isLoading in
@@ -1124,13 +1115,8 @@ private extension NewHomeView {
         )
     }
 
-    @ViewBuilder
     private var dashboardHeaderCards: some View {
         VStack(spacing: 16) {
-            // HIDDEN FOR MVP: Oura scores card (readiness, sleep, activity, stress)
-            // healthMetricsCard
-            //     .padding(.top, 10)
-
             nutritionSummaryCard
                 .padding(.top, 10)
         }
@@ -1536,12 +1522,9 @@ private extension NewHomeView {
     }
 
     var nutritionSummaryCard: some View {
-        //padding 8
         VStack(spacing: 3) {
             VStack(spacing: 4) {
                 TabView(selection: $nutritionCarouselSelection) {
-                    // Using AnyView to reduce SwiftUI type complexity and prevent stack overflow
-                    // from deeply nested generic view types (TabView + VStack + CardViews)
                     dailyIntakePage
                         .tag(0)
 
@@ -1563,31 +1546,10 @@ private extension NewHomeView {
 
             workoutHighlightsCarousel
 
-            // HIDDEN FOR MVP: Body composition section
-            // bodyCompositionSection
-            //     .padding(.top, 15)
-
             if shouldShowHealthMetricsSection {
                 healthMetricsSection
                     .padding(.top, 15)
             }
-
-            // HIDDEN FOR MVP: Consistency section
-            // ConsistencySection(
-            //     weightData: vm.weightConsistency,
-            //     foodData: vm.foodConsistency,
-            //     onShowAll: {}
-            // )
-            // .padding(.top, 20)
-
-            // HIDDEN FOR MVP: Analytics & Insights section
-            // if !analyticsCardModels.isEmpty {
-            //     AnalyticsInsightsSection(
-            //         cards: analyticsCardModels,
-            //         onShowAll: {}
-            //     )
-            //     .padding(.top, 20)
-            // }
 
             if hasDailyEssentials {
                 DailyEssentialsSection(
@@ -1734,13 +1696,15 @@ private extension NewHomeView {
     }
 
     private var healthMetricsSection: some View {
-        HealthMetricsSection(
-            tiles: healthMetricTiles,
-            isAuthorized: healthViewModel.isAuthorized,
-            onShowAll: showAllHealthMetrics
+        AnyView(
+            HealthMetricsSection(
+                tiles: healthMetricTiles,
+                isAuthorized: healthViewModel.isAuthorized,
+                onShowAll: showAllHealthMetrics
+            )
+            .padding(.top, 10)
+            .padding(.bottom, 16)
         )
-        .padding(.top, 10)
-        .padding(.bottom, 16)
     }
 
     private var healthMetricTiles: [HealthMetricTileModel] {
@@ -2951,7 +2915,8 @@ private struct RecoveryRingView: View {
     }
 
     private var readinessTimelineScore: Int? {
-        readinessMetricValue.map { Int($0.rounded()) }
+        guard let value = readinessMetricValue, value.isFinite, value >= 0, value <= 100 else { return nil }
+        return Int(value.rounded())
     }
 
     private var healthMetricItems: [(title: String, icon: String, value: Double?)] {
@@ -3288,188 +3253,6 @@ private struct RecoveryRingView: View {
         return false
     }
 
-    // MARK: - Timeline helpers
-
-    private func wakeTimelineEvent(for date: Date) -> TimelineEvent? {
-        let calendar = Calendar.current
-
-        let summary = healthViewModel.sleepSummary(for: date)
-
-        if let summary,
-           let wakeDate = wakeDate(from: summary),
-           calendar.isDate(wakeDate, inSameDayAs: date) {
-            let readiness = readinessTimelineScore
-            let sleepQuality = vm.healthMetricsSnapshot?.sleep.map { Int($0.rounded()) }
-            return makeWakeEvent(
-                date: wakeDate,
-                durationMinutes: summary.totalSleepMinutes,
-                readinessScore: readiness,
-                sleepQuality: sleepQuality
-            )
-        }
-
-        guard let snapshot = vm.healthMetricsSnapshot,
-              let raw = snapshot.rawMetrics else {
-            return nil
-        }
-
-        let readiness = readinessSignalsSatisfied(in: snapshot) ? readinessTimelineScore : nil
-        let sleepQuality = snapshot.sleep.map { Int($0.rounded()) } ?? raw.sleepScore.map { Int($0.rounded()) }
-        let durationMinutes = timelineSleepDuration(from: raw)
-
-        if let derivedWakeDate = wakeDateFromSnapshot(snapshot,
-                                                    raw: raw,
-                                                    durationMinutes: durationMinutes,
-                                                    matching: date) {
-            return makeWakeEvent(
-                date: derivedWakeDate,
-                durationMinutes: durationMinutes,
-                readinessScore: readiness,
-                sleepQuality: sleepQuality
-            )
-        }
-
-        if let fallbackDateString = raw.fallbackSleepDate,
-           let fallbackDate = parseISODate(fallbackDateString),
-           calendar.isDate(fallbackDate, inSameDayAs: date) {
-            return makeWakeEvent(
-                date: fallbackDate,
-                durationMinutes: durationMinutes,
-                readinessScore: readiness,
-                sleepQuality: sleepQuality
-            )
-        }
-
-        return nil
-    }
-
-    private func wakeDateFromSnapshot(_ snapshot: NetworkManagerTwo.HealthMetricsSnapshot,
-                                      raw: NetworkManagerTwo.HealthMetricRawMetrics,
-                                      durationMinutes: Double?,
-                                      matching date: Date) -> Date? {
-        guard snapshotSleepSourceMatches(snapshot, date: date),
-              let midpoint = raw.sleepMidpointMinutes,
-              let duration = durationMinutes else {
-            return nil
-        }
-
-        let wakeMinutes = midpoint + (duration / 2.0)
-        return timelineDate(for: date, minutesFromStart: wakeMinutes)
-    }
-
-    private func wakeDate(from summary: SleepSummary) -> Date? {
-        if let offset = summary.sleepOffset {
-            return offset
-        }
-        if let onset = summary.sleepOnset {
-            return onset.addingTimeInterval(summary.totalSleepMinutes * 60.0)
-        }
-        return nil
-    }
-
-    private func snapshotSleepSourceMatches(_ snapshot: NetworkManagerTwo.HealthMetricsSnapshot, date: Date) -> Bool {
-        let sourceString = snapshot.sleepSourceDate ?? snapshot.date
-        let selectedString = iso8601DayFormatter.string(from: date)
-        return sourceString == selectedString
-    }
-
-    private func timelineSleepDuration(from raw: NetworkManagerTwo.HealthMetricRawMetrics) -> Double? {
-        if let total = raw.totalSleepMinutes, total > 0 { return total }
-        if let hours = raw.sleepHours, hours > 0 { return hours * 60.0 }
-        if let stageTotal = sleepStageDuration(from: raw.sleepStageMinutes) { return stageTotal }
-        if let inBed = raw.inBedMinutes, inBed > 0 { return inBed }
-        return nil
-    }
-
-    private func sleepStageDuration(from stages: NetworkManagerTwo.HealthMetricRawMetrics.SleepStageMinutes?) -> Double? {
-        guard let stages else { return nil }
-        let totals = [stages.core, stages.deep, stages.rem].compactMap { $0 }
-        let sum = totals.reduce(0, +)
-        return sum > 0 ? sum : nil
-    }
-
-    private func timelineDate(for baseDate: Date, minutesFromStart: Double) -> Date? {
-        guard minutesFromStart.isFinite else { return nil }
-        let calendar = Calendar.current
-        let startOfDay = calendar.startOfDay(for: baseDate)
-        let dayOffset = Int(floor(minutesFromStart / 1440.0))
-        let normalizedMinutes = minutesFromStart - Double(dayOffset) * 1440.0
-        guard let dayAdjusted = calendar.date(byAdding: .day, value: dayOffset, to: startOfDay) else { return nil }
-        return calendar.date(byAdding: .minute, value: Int(round(normalizedMinutes)), to: dayAdjusted)
-    }
-
-    private func makeWakeEvent(date: Date, durationMinutes: Double?, readinessScore: Int?, sleepQuality: Int?) -> TimelineEvent {
-        let durationText = durationMinutes.map { formatSleepDuration(minutes: $0) }
-        let details = TimelineEventDetails(
-            sleepDurationText: durationText,
-            sleepQuality: sleepQuality,
-            readinessScore: readinessScore
-        )
-        return TimelineEvent(date: date, type: .wake, title: "Woke up", details: details, log: nil)
-    }
-
-    private func timelineEventsFromLogs(for date: Date) -> [TimelineEvent] {
-        let calendar = Calendar.current
-
-        // Separate food logs from other logs
-        var foodLogsByTime: [Date: [CombinedLog]] = [:]
-        var otherEvents: [TimelineEvent] = []
-
-        for log in vm.logs {
-            guard let eventDate = timelineDate(for: log),
-                  calendar.isDate(eventDate, inSameDayAs: date) else {
-                continue
-            }
-
-            switch log.type {
-            case .food, .meal, .recipe:
-                // Group food logs by minute (ignore seconds for grouping)
-                let roundedDate = calendar.date(
-                    from: calendar.dateComponents([.year, .month, .day, .hour, .minute], from: eventDate)
-                ) ?? eventDate
-                foodLogsByTime[roundedDate, default: []].append(log)
-            case .activity, .workout:
-                if let event = timelineEvent(from: log, at: eventDate) {
-                    otherEvents.append(event)
-                }
-            }
-        }
-
-        // Convert grouped food logs to timeline events
-        var foodEvents: [TimelineEvent] = []
-        for (eventDate, logs) in foodLogsByTime {
-            if logs.count == 1, let log = logs.first {
-                // Single food log - use original behavior
-                if let event = timelineEvent(from: log, at: eventDate) {
-                    foodEvents.append(event)
-                }
-            } else {
-                // Multiple food logs at same time - create grouped event
-                let totalCalories = logs.reduce(0) { $0 + Int($1.displayCalories.rounded()) }
-                let totalProtein = logs.reduce(0) { sum, log in
-                    sum + (macroDetails(for: log).protein ?? 0)
-                }
-                let totalCarbs = logs.reduce(0) { sum, log in
-                    sum + (macroDetails(for: log).carbs ?? 0)
-                }
-                let totalFat = logs.reduce(0) { sum, log in
-                    sum + (macroDetails(for: log).fat ?? 0)
-                }
-
-                let title = logs.count == 1 ? timelineTitle(for: logs[0]) : "\(logs.count) items"
-                let details = TimelineEventDetails(
-                    calories: totalCalories,
-                    protein: totalProtein,
-                    carbs: totalCarbs,
-                    fat: totalFat
-                )
-                foodEvents.append(TimelineEvent(date: eventDate, type: .food, title: title, details: details, logs: logs))
-            }
-        }
-
-        return (foodEvents + otherEvents).sorted { $0.date < $1.date }
-    }
-
     private func openAgentChat(with coachMessage: CoachMessage) {
         pendingCoachMessageText = coachMessage.fullText
         showAgentChat = true
@@ -3553,102 +3336,6 @@ private struct RecoveryRingView: View {
         }
         recentQuickActivities = updated
         UserDefaults.standard.set(updated, forKey: "recentQuickActivities")
-    }
-
-    private func timelineEvent(from log: CombinedLog, at date: Date) -> TimelineEvent? {
-        switch log.type {
-        case .food, .meal, .recipe:
-            let macros = macroDetails(for: log)
-            let details = TimelineEventDetails(
-                calories: Int(log.displayCalories.rounded()),
-                protein: macros.protein,
-                carbs: macros.carbs,
-                fat: macros.fat
-            )
-            return TimelineEvent(date: date, type: .food, title: timelineTitle(for: log), details: details, log: log)
-        case .activity:
-            guard let activity = log.activity else { return nil }
-            let durationMinutes = Int((activity.duration / 60).rounded())
-            let distanceMiles = activity.totalDistance.map { $0 * 0.000621371 }
-            let calories = Int((activity.totalEnergyBurned ?? log.calories).rounded())
-            let details = TimelineEventDetails(
-                calories: calories,
-                durationMinutes: durationMinutes,
-                distanceMiles: distanceMiles
-            )
-            let eventType: TimelineEvent.EventType = activity.isDistanceActivity ? .cardio : .workout
-            return TimelineEvent(date: date, type: eventType, title: activity.displayName, details: details, log: log)
-        case .workout:
-            guard let workout = log.workout else { return nil }
-            let duration = workout.durationMinutes
-                ?? workout.durationSeconds.map { max(1, Int(round(Double($0) / 60.0))) }
-            let details = TimelineEventDetails(
-                calories: Int(log.calories.rounded()),
-                durationMinutes: duration,
-                exercises: workout.exercisesCount
-            )
-            return TimelineEvent(date: date, type: .workout, title: workout.title, details: details, log: log)
-        }
-    }
-
-    private func timelineDate(for log: CombinedLog) -> Date? {
-        if let scheduled = log.scheduledAt { return scheduled }
-        if let mealDate = log.meal?.scheduledAt { return mealDate }
-        if let recipeDate = log.recipe?.scheduledAt { return recipeDate }
-        if let activityDate = log.activity?.startDate { return activityDate }
-        if let workoutDate = log.workout?.scheduledAt { return workoutDate }
-        return nil
-    }
-
-    private func timelineTitle(for log: CombinedLog) -> String {
-        switch log.type {
-        case .food:
-            return log.food?.displayName ?? log.message
-        case .meal:
-            return log.meal?.title ?? log.message
-        case .recipe:
-            return log.recipe?.title ?? log.message
-        case .activity:
-            return log.activity?.displayName ?? log.message
-        case .workout:
-            return log.workout?.title ?? log.message
-        }
-    }
-
-    private func macroDetails(for log: CombinedLog) -> (protein: Int?, carbs: Int?, fat: Int?) {
-        func normalized(_ value: Double?) -> Int? {
-            guard let value = value, value > 0 else { return nil }
-            return Int(value.rounded())
-        }
-
-        let protein = log.food?.protein ?? log.meal?.protein ?? log.recipe?.protein
-        let carbs = log.food?.carbs ?? log.meal?.carbs ?? log.recipe?.carbs
-        let fat = log.food?.fat ?? log.meal?.fat ?? log.recipe?.fat
-        return (
-            normalized(protein),
-            normalized(carbs),
-            normalized(fat)
-        )
-    }
-
-    private func parseISODate(_ string: String) -> Date? {
-        if let value = iso8601WithFractionalFormatter.date(from: string) {
-            return value
-        }
-        if let value = iso8601BasicFormatter.date(from: string) {
-            return value
-        }
-        return iso8601DayFormatter.date(from: string)
-    }
-
-    private func formatSleepDuration(minutes: Double) -> String {
-        let hours = Int(minutes) / 60
-        let mins = Int(minutes) % 60
-        if hours > 0 {
-            return "\(hours)h \(mins)m"
-        } else {
-            return "\(mins)m"
-        }
     }
 
     private func formattedLastEntryText(from entries: [BodyCompositionEntry]) -> String? {
@@ -5005,75 +4692,7 @@ private struct BodyCompositionSparkline: View {
     }
 }
 
-private struct TimelineEvent: Identifiable {
-    enum EventType {
-        case wake
-        case food
-        case workout
-        case cardio
-        case water
-    }
-
-    struct Details {
-        var calories: Int?
-        var protein: Int?
-        var carbs: Int?
-        var fat: Int?
-        var durationMinutes: Int?
-        var exercises: Int?
-        var distanceMiles: Double?
-        var amountText: String?
-        var milestoneText: String?
-        var sleepDurationText: String?
-        var sleepQuality: Int?
-        var readinessScore: Int?
-    }
-
-    let id = UUID()
-    let date: Date
-    let type: EventType
-    let title: String
-    let details: Details
-    let log: CombinedLog?
-    let logs: [CombinedLog]  // For grouped food events
-
-    init(date: Date, type: EventType, title: String, details: Details, log: CombinedLog?) {
-        self.date = date
-        self.type = type
-        self.title = title
-        self.details = details
-        self.log = log
-        self.logs = log.map { [$0] } ?? []
-    }
-
-    init(date: Date, type: EventType, title: String, details: Details, logs: [CombinedLog]) {
-        self.date = date
-        self.type = type
-        self.title = title
-        self.details = details
-        self.log = logs.first
-        self.logs = logs
-    }
-
-    var iconName: String {
-        switch type {
-        case .wake:
-            return "sun.max.fill"
-        case .food:
-            return "fork.knife"
-        case .workout, .cardio:
-            return "flame.fill"
-        case .water:
-            return "drop.fill"
-        }
-    }
-
-    var isGroupedFood: Bool {
-        type == .food && logs.count > 1
-    }
-}
-
-private typealias TimelineEventDetails = TimelineEvent.Details
+// TimelineEvent is now defined in /Pods/Core/Models/TimelineEvent.swift
 
 private struct TimelineSectionView: View {
     let events: [TimelineEvent]
@@ -5379,30 +4998,30 @@ private struct TimelineEventRow: View {
 
     private func makeTimelineEvent(from log: CombinedLog) -> TimelineEvent {
         let title: String
-        let calories: Int
+        let calories: Int?
         var protein: Int?
         var carbs: Int?
         var fat: Int?
 
         // Use CombinedLog's displayCalories which handles all types consistently
-        calories = Int(log.displayCalories.rounded())
+        calories = safeRoundedInt(log.displayCalories)
 
         switch log.type {
         case .food:
             title = log.food?.displayName ?? log.message
-            protein = log.food?.protein.map { Int($0.rounded()) }
-            carbs = log.food?.carbs.map { Int($0.rounded()) }
-            fat = log.food?.fat.map { Int($0.rounded()) }
+            protein = safeRoundedInt(log.food?.protein)
+            carbs = safeRoundedInt(log.food?.carbs)
+            fat = safeRoundedInt(log.food?.fat)
         case .meal:
             title = log.meal?.title ?? log.message
-            protein = log.meal?.protein.map { Int($0.rounded()) }
-            carbs = log.meal?.carbs.map { Int($0.rounded()) }
-            fat = log.meal?.fat.map { Int($0.rounded()) }
+            protein = safeRoundedInt(log.meal?.protein)
+            carbs = safeRoundedInt(log.meal?.carbs)
+            fat = safeRoundedInt(log.meal?.fat)
         case .recipe:
             title = log.recipe?.title ?? log.message
-            protein = log.recipe?.protein.map { Int($0.rounded()) }
-            carbs = log.recipe?.carbs.map { Int($0.rounded()) }
-            fat = log.recipe?.fat.map { Int($0.rounded()) }
+            protein = safeRoundedInt(log.recipe?.protein)
+            carbs = safeRoundedInt(log.recipe?.carbs)
+            fat = safeRoundedInt(log.recipe?.fat)
         default:
             title = log.message
         }
@@ -5415,6 +5034,11 @@ private struct TimelineEventRow: View {
         )
 
         return TimelineEvent(date: event.date, type: .food, title: title, details: details, log: log)
+    }
+
+    private func safeRoundedInt(_ value: Double?, minimum: Double = 0) -> Int? {
+        guard let value, value.isFinite, value >= minimum else { return nil }
+        return Int(value.rounded())
     }
 
     @ViewBuilder

@@ -3,4 +3,22 @@
    uuid = "171FBDAE-0044-4E7A-81EE-E8F4E85F7B6F"
    type = "0"
    version = "2.0">
+   <Breakpoints>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "5C662716-DCAB-4E14-9A1C-4698FD8E1B87"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "pods/Core/Views/dashboard/NewHomeView.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "3408"
+            endingLineNumber = "3408"
+            landmarkName = "respiratoryRateStatus(for:)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+   </Breakpoints>
 </Bucket>

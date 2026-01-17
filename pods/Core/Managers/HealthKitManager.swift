@@ -902,7 +902,8 @@ class HealthKitManager {
                 latencyMinutes: latencyMinutes
             )
 
-            DispatchQueue.main.async { completion(summary, nil) }
+            let sanitized = self.sanitizeSleepSummary(summary, for: date)
+            DispatchQueue.main.async { completion(sanitized, nil) }
         }
         
         healthStore.execute(query)
@@ -1076,6 +1077,65 @@ class HealthKitManager {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
         return HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay, options: .strictStartDate)
+    }
+
+    private func sanitizeSleepSummary(_ summary: SleepSummary, for targetDate: Date) -> SleepSummary? {
+        let maxMinutes = 2_880.0
+        func debugLog(_ message: @autoclosure () -> String) {
+            print("⏱️ [SleepSummary] \(message())")
+        }
+        func cleanMinutes(_ value: Double?) -> Double? {
+            guard let value, value.isFinite else { return nil }
+            return min(max(value, 0), maxMinutes)
+        }
+        func cleanDate(_ date: Date?) -> Date? {
+            guard let date else { return nil }
+            guard date.timeIntervalSinceReferenceDate.isFinite else { return nil }
+            let delta = abs(date.timeIntervalSince(targetDate))
+            return delta <= 60 * 60 * 36 ? date : nil
+        }
+
+        guard let total = cleanMinutes(summary.totalSleepMinutes), total > 0 else {
+            debugLog("dropping summary: total=\(summary.totalSleepMinutes) targetDate=\(targetDate)")
+            return nil
+        }
+
+        let inBed = cleanMinutes(summary.inBedMinutes) ?? total
+        let core = cleanMinutes(summary.coreMinutes) ?? 0
+        let deep = cleanMinutes(summary.deepMinutes) ?? 0
+        let rem = cleanMinutes(summary.remMinutes) ?? 0
+        let awake = cleanMinutes(summary.awakeMinutes) ?? 0
+        let onset = cleanDate(summary.sleepOnset)
+        let offset = cleanDate(summary.sleepOffset)
+        let latency = cleanMinutes(summary.latencyMinutes)
+
+        if let onset, let offset, offset < onset {
+            debugLog("dropping onset/offset: onset=\(onset) offset=\(offset) targetDate=\(targetDate)")
+            return SleepSummary(
+                totalSleepMinutes: total,
+                inBedMinutes: inBed,
+                coreMinutes: core,
+                deepMinutes: deep,
+                remMinutes: rem,
+                awakeMinutes: awake,
+                sleepOnset: nil,
+                sleepOffset: nil,
+                latencyMinutes: latency
+            )
+        }
+
+        debugLog("accepted summary: total=\(total) inBed=\(inBed) onset=\(String(describing: onset)) offset=\(String(describing: offset)) targetDate=\(targetDate)")
+        return SleepSummary(
+            totalSleepMinutes: total,
+            inBedMinutes: inBed,
+            coreMinutes: core,
+            deepMinutes: deep,
+            remMinutes: rem,
+            awakeMinutes: awake,
+            sleepOnset: onset,
+            sleepOffset: offset,
+            latencyMinutes: latency
+        )
     }
 
     private func fetchAverageQuantity(
