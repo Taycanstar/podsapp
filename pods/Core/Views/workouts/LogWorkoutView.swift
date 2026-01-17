@@ -4,24 +4,24 @@
 //
 //  Created by Dimi Nunez on 6/5/25.
 //
-//  WORKOUT SESSION DURATION PERSISTENCE:
-//  
-//  This view implements a two-tier duration system similar to Fitbod:
-//  
-//  1. DEFAULT DURATION (selectedDuration):
-//     - User's permanent preference stored in UserDefaults + server
-//     - Updated when "Set as default" is pressed
-//     - Syncs with UserProfileService and backend
+//  WORKOUT SESSION DURATION PERSISTENCE (MacroFactor-style):
+//
+//  This view implements a two-tier duration system:
+//
+//  1. PLAN DURATION:
+//     - User's preference stored on the active training plan
+//     - Updated when "Set for plan" is pressed
+//     - Syncs via ProgramService.updatePlanPreference() to backend
+//     - Future workouts inherit the new value
 //
 //  2. SESSION DURATION (sessionDuration):
-//     - Temporary override for current workout session
-//     - Persists across app restarts until workout is completed
+//     - Temporary override for current workout session only
 //     - Updated when "Set for this workout" is pressed
 //     - Stored in UserDefaults with date validation (clears old sessions)
 //     - Automatically cleared when workout is completed
 //
-//  The effectiveDuration computed property returns sessionDuration ?? selectedDuration
-//  ensuring session overrides take precedence over defaults.
+//  The effectiveDuration computed property returns sessionDuration ?? planDuration
+//  ensuring session overrides take precedence over plan defaults.
 //
 
 import SwiftUI
@@ -406,23 +406,17 @@ struct LogWorkoutView: View {
     private var durationPickerSheet: some View {
         WorkoutDurationPickerView(
             selectedDuration: .constant(workoutManager.effectiveDuration),
-                onSetDefault: { newDuration in
-                    // Update WorkoutManager and UserProfileService
-                    workoutManager.setDefaultDuration(newDuration)
-                    
-                    // Update server
-                    if let email = UserDefaults.standard.string(forKey: "userEmail") {
-                        updateServerWorkoutDuration(email: email, durationMinutes: newDuration.minutes)
-                    }
-                    
-                    showingDurationPicker = false
-                },
-                onSetForWorkout: { newDuration in
-                    // Update WorkoutManager session duration
-                    workoutManager.setSessionDuration(newDuration)
-                    showingDurationPicker = false
-                }
-            )
+            onSetForPlan: { newDuration in
+                // Update plan via ProgramService (setForPlanDuration handles the API call)
+                workoutManager.setForPlanDuration(newDuration)
+                showingDurationPicker = false
+            },
+            onSetForWorkout: { newDuration in
+                // Update WorkoutManager session duration
+                workoutManager.setSessionDuration(newDuration)
+                showingDurationPicker = false
+            }
+        )
     }
     
     @ViewBuilder
@@ -450,83 +444,52 @@ struct LogWorkoutView: View {
     @ViewBuilder
     private var fitnessGoalPickerSheet: some View {
         FitnessGoalPickerView(
-                selectedFitnessGoal: .constant(workoutManager.effectiveFitnessGoal),
-                onSetDefault: { newGoal in
-                    workoutManager.setDefaultFitnessGoal(newGoal)
-                    
-                    if let email = UserDefaults.standard.string(forKey: "userEmail") {
-                        updateServerFitnessGoal(email: email, fitnessGoal: newGoal)
-                    }
-                    
-                    showingFitnessGoalPicker = false
-                },
-                onSetForWorkout: { newGoal in
-                    workoutManager.setSessionFitnessGoal(newGoal)
-                    showingFitnessGoalPicker = false
-                }
-            )
+            selectedFitnessGoal: .constant(workoutManager.effectiveFitnessGoal),
+            onSetForPlan: { newGoal in
+                // Update plan via ProgramService (setForPlanFitnessGoal handles the API call)
+                workoutManager.setForPlanFitnessGoal(newGoal)
+                showingFitnessGoalPicker = false
+            },
+            onSetForWorkout: { newGoal in
+                workoutManager.setSessionFitnessGoal(newGoal)
+                showingFitnessGoalPicker = false
+            }
+        )
     }
     
     @ViewBuilder
     private var fitnessLevelPickerSheet: some View {
         FitnessLevelPickerView(
-                selectedFitnessLevel: .constant(workoutManager.effectiveFitnessLevel),
-                onSetDefault: { newLevel in
-                    workoutManager.setDefaultFitnessLevel(newLevel)
-                    
-                    if let email = UserDefaults.standard.string(forKey: "userEmail") {
-                        updateServerFitnessLevel(email: email, fitnessLevel: newLevel)
-                    }
-                    
-                    showingFitnessLevelPicker = false
-                },
-                onSetForWorkout: { newLevel in
-                    workoutManager.setSessionFitnessLevel(newLevel)
-                    showingFitnessLevelPicker = false
-                }
-            )
+            selectedFitnessLevel: .constant(workoutManager.effectiveFitnessLevel),
+            onSetForPlan: { newLevel in
+                // Update plan via ProgramService (setForPlanFitnessLevel handles the API call)
+                workoutManager.setForPlanFitnessLevel(newLevel)
+                showingFitnessLevelPicker = false
+            },
+            onSetForWorkout: { newLevel in
+                workoutManager.setSessionFitnessLevel(newLevel)
+                showingFitnessLevelPicker = false
+            }
+        )
     }
     
     @ViewBuilder
     private var flexibilityPickerSheet: some View {
         FlexibilityPickerView(
-                warmUpEnabled: .constant(effectiveFlexibilityPreferences.warmUpEnabled),
-                coolDownEnabled: .constant(effectiveFlexibilityPreferences.coolDownEnabled),
-                onSetDefault: { warmUp, coolDown in
-                    let newPrefs = FlexibilityPreferences(warmUpEnabled: warmUp, coolDownEnabled: coolDown)
-                    workoutManager.setDefaultFlexibilityPreferences(newPrefs)
-                    
-                    // Update server if email exists
-                    let emailToUse = userEmail.isEmpty ? (UserDefaults.standard.string(forKey: "userEmail") ?? "") : userEmail
-                    
-                    if !emailToUse.isEmpty {
-                        Task {
-                            NetworkManagerTwo.shared.updateFlexibilityPreferences(
-                                email: emailToUse,
-                                warmUpEnabled: warmUp,
-                                coolDownEnabled: coolDown
-                            ) { result in
-                                DispatchQueue.main.async {
-                                    switch result {
-                                    case .success:
-                                        showingFlexibilityPicker = false
-                                    case .failure:
-                                        break
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        showingFlexibilityPicker = false
-                    }
-                },
-                onSetForWorkout: { warmUp, coolDown in
-                    let newPrefs = FlexibilityPreferences(warmUpEnabled: warmUp, coolDownEnabled: coolDown)
-                    workoutManager.setSessionFlexibilityPreferences(newPrefs)
-
-                    showingFlexibilityPicker = false
-                }
-            )
+            warmUpEnabled: .constant(effectiveFlexibilityPreferences.warmUpEnabled),
+            coolDownEnabled: .constant(effectiveFlexibilityPreferences.coolDownEnabled),
+            onSetForPlan: { warmUp, coolDown in
+                // Update plan via ProgramService (setForPlanFlexibilityPreferences handles the API call)
+                let newPrefs = FlexibilityPreferences(warmUpEnabled: warmUp, coolDownEnabled: coolDown)
+                workoutManager.setForPlanFlexibilityPreferences(newPrefs)
+                showingFlexibilityPicker = false
+            },
+            onSetForWorkout: { warmUp, coolDown in
+                let newPrefs = FlexibilityPreferences(warmUpEnabled: warmUp, coolDownEnabled: coolDown)
+                workoutManager.setSessionFlexibilityPreferences(newPrefs)
+                showingFlexibilityPicker = false
+            }
+        )
     }
     
 
@@ -1192,16 +1155,27 @@ struct LogWorkoutView: View {
                             .contentShape(Circle())
                     }
                 case .plan:
-                    Button(action: {
-                        HapticFeedback.generate()
-                        showingCreateProgramSheet = true
-                    }) {
+                    Menu {
+                        Button {
+                            HapticFeedback.generate()
+                            navigationPath.append(WorkoutNavigationDestination.createWorkout)
+                        } label: {
+                            Label("Workout", systemImage: "dumbbell")
+                        }
+
+                        Button {
+                            HapticFeedback.generate()
+                            showingCreateProgramSheet = true
+                        } label: {
+                            Label("Plan", systemImage: "calendar")
+                        }
+                    } label: {
                         Image(systemName: "plus")
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(.primary)
-                            .frame(width: toolbarButtonDiameter, height: toolbarButtonDiameter)
-                            .contentShape(Circle())
                     }
+                    .buttonStyle(.bordered)
+                    .buttonBorderShape(.circle)
                 case .saved:
                     if #available(iOS 26, *) {
                         Button("New") {
@@ -4050,14 +4024,14 @@ struct WorkoutControlButton: View {
 struct WorkoutDurationPickerView: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var selectedDuration: WorkoutDuration
-    let onSetDefault: (WorkoutDuration) -> Void
-    let onSetForWorkout: (WorkoutDuration) -> Void // Updated to pass the selected duration
-    
+    let onSetForPlan: (WorkoutDuration) -> Void
+    let onSetForWorkout: (WorkoutDuration) -> Void
+
     @State private var tempSelectedDuration: WorkoutDuration
-    
-    init(selectedDuration: Binding<WorkoutDuration>, onSetDefault: @escaping (WorkoutDuration) -> Void, onSetForWorkout: @escaping (WorkoutDuration) -> Void) {
+
+    init(selectedDuration: Binding<WorkoutDuration>, onSetForPlan: @escaping (WorkoutDuration) -> Void, onSetForWorkout: @escaping (WorkoutDuration) -> Void) {
         self._selectedDuration = selectedDuration
-        self.onSetDefault = onSetDefault
+        self.onSetForPlan = onSetForPlan
         self.onSetForWorkout = onSetForWorkout
         self._tempSelectedDuration = State(initialValue: selectedDuration.wrappedValue)
     }
@@ -4173,17 +4147,17 @@ struct WorkoutDurationPickerView: View {
     
     private var actionButtons: some View {
         HStack(spacing: 0) {
-            Button("Set as default") {
+            Button("Set for plan") {
                 selectedDuration = tempSelectedDuration
-                onSetDefault(tempSelectedDuration)
+                onSetForPlan(tempSelectedDuration)
             }
             .font(.system(size: 14, weight: .semibold))
             .foregroundColor(.primary)
-            
+
             Spacer()
-            
+
             Button("Set for this workout") {
-                onSetForWorkout(tempSelectedDuration) // Pass the selected duration
+                onSetForWorkout(tempSelectedDuration)
             }
             .font(.system(size: 14, weight: .semibold))
             .foregroundColor(Color(.systemBackground))
@@ -4192,20 +4166,19 @@ struct WorkoutDurationPickerView: View {
             .background(Color.primary)
             .cornerRadius(24)
         }
-        
     }
-    
+
     private func getSliderProgress(_ totalWidth: CGFloat) -> CGFloat {
         let currentIndex = WorkoutDuration.allCases.firstIndex(of: tempSelectedDuration) ?? 0
         let labelWidth = totalWidth / CGFloat(WorkoutDuration.allCases.count)
         return (CGFloat(currentIndex) + 0.5) * labelWidth
     }
-    
+
     private func updateDurationFromSlider(_ xPosition: CGFloat, totalWidth: CGFloat) {
         let labelWidth = totalWidth / CGFloat(WorkoutDuration.allCases.count)
         let stepIndex = Int(round(xPosition / labelWidth))
         let clampedIndex = max(0, min(stepIndex, WorkoutDuration.allCases.count - 1))
-        
+
         tempSelectedDuration = WorkoutDuration.allCases[clampedIndex]
     }
 }
@@ -4226,27 +4199,31 @@ extension View {
 struct FitnessGoalPickerView: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var selectedFitnessGoal: FitnessGoal
-    let onSetDefault: (FitnessGoal) -> Void
+    let onSetForPlan: (FitnessGoal) -> Void
     let onSetForWorkout: (FitnessGoal) -> Void
-    
+
     @State private var tempSelectedGoal: FitnessGoal
-    
-    static let canonicalGoals: [FitnessGoal] = [
-        .strength,
+
+    // Simplified 3-option picker matching Plan creation (MacroFactor-style)
+    static let pickerGoals: [FitnessGoal] = [
         .hypertrophy,
-        .circuitTraining,
-        .general,
-        .powerlifting,
-        .olympicWeightlifting
+        .strength,
+        .balanced
     ]
 
-    init(selectedFitnessGoal: Binding<FitnessGoal>, onSetDefault: @escaping (FitnessGoal) -> Void, onSetForWorkout: @escaping (FitnessGoal) -> Void) {
+    init(selectedFitnessGoal: Binding<FitnessGoal>, onSetForPlan: @escaping (FitnessGoal) -> Void, onSetForWorkout: @escaping (FitnessGoal) -> Void) {
         self._selectedFitnessGoal = selectedFitnessGoal
-        self.onSetDefault = onSetDefault
+        self.onSetForPlan = onSetForPlan
         self.onSetForWorkout = onSetForWorkout
-        // Start from canonical goal (map legacy: tone/endurance→circuitTraining, sport→general, power→strength)
-        let initialGoal = selectedFitnessGoal.wrappedValue.normalized
-        self._tempSelectedGoal = State(initialValue: initialGoal)
+        // Map legacy/advanced goals to closest simplified option
+        let initial = selectedFitnessGoal.wrappedValue
+        let mapped: FitnessGoal = switch initial {
+        case .hypertrophy, .tone: .hypertrophy
+        case .strength, .power, .powerlifting: .strength
+        case .balanced: .balanced
+        default: .balanced  // general, circuitTraining, olympicWeightlifting → balanced
+        }
+        self._tempSelectedGoal = State(initialValue: mapped)
     }
     
     var body: some View {
@@ -4275,78 +4252,72 @@ struct FitnessGoalPickerView: View {
                 .padding(.horizontal)
                 .padding(.bottom, 20)
 
-            // Scrollable content
-            ScrollView {
-                VStack(spacing: 16) {
-                    // Fitness Goal List
-                    VStack(spacing: 0) {
-                        ForEach(FitnessGoalPickerView.canonicalGoals, id: \.self) { goal in
-                            Button(action: {
-                                tempSelectedGoal = goal
-                            }) {
-                                HStack(spacing: 16) {
-                                    // Radio button
-                                    Image(systemName: tempSelectedGoal == goal ? "largecircle.fill.circle" : "circle")
-                                        .font(.system(size: 20))
-                                        .foregroundColor(tempSelectedGoal == goal ? .accentColor : .secondary)
+            // Fitness Goal List (simplified 3-option)
+            VStack(spacing: 0) {
+                ForEach(FitnessGoalPickerView.pickerGoals, id: \.self) { goal in
+                    Button(action: {
+                        tempSelectedGoal = goal
+                    }) {
+                        HStack(spacing: 16) {
+                            // Radio button
+                            Image(systemName: tempSelectedGoal == goal ? "largecircle.fill.circle" : "circle")
+                                .font(.system(size: 20))
+                                .foregroundColor(tempSelectedGoal == goal ? .accentColor : .secondary)
 
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(goal.displayName)
-                                            .font(.system(size: 16, weight: .medium))
-                                            .foregroundColor(.primary)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                    }
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(goal.displayName)
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.primary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
 
-                                    Spacer()
-                                }
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 12)
-                                .contentShape(Rectangle())
+                                Text(goal.subtitle)
+                                    .font(.system(size: 13))
+                                    .foregroundColor(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                             }
-                            .buttonStyle(PlainButtonStyle())
 
-                            if goal != FitnessGoalPickerView.canonicalGoals.last {
-                                Divider()
-                                    .padding(.leading)
-                            }
+                            Spacer()
                         }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 14)
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(PlainButtonStyle())
 
-                    Spacer(minLength: 20)
+                    if goal != FitnessGoalPickerView.pickerGoals.last {
+                        Divider()
+                            .padding(.leading, 52)
+                    }
                 }
-                .padding(.horizontal, 8)
             }
+            .padding(.horizontal, 8)
 
-            // Action buttons - outside ScrollView
+            Spacer()
+
+            // Action buttons
             actionButtons
                 .padding(.horizontal, 18)
                 .padding(.top, 16)
                 .padding(.bottom, 30)
         }
         .padding(.horizontal, 10)
-        // .background(Color(.systemBackground))
-        // .background(Color("primarybg"))
         .cornerRadius(24)
-        // .presentationDetents([.fraction(0.6)])
-          .presentationDetents([
-            .medium, .large
-        ])
-
+        .presentationDetents([.medium])
     }
-    
+
     private var actionButtons: some View {
         HStack(spacing: 0) {
-            Button("Set as default") {
-                selectedFitnessGoal = tempSelectedGoal.normalized
-                onSetDefault(tempSelectedGoal)
+            Button("Set for plan") {
+                selectedFitnessGoal = tempSelectedGoal
+                onSetForPlan(tempSelectedGoal)
             }
             .font(.system(size: 14, weight: .semibold))
             .foregroundColor(.primary)
-            
+
             Spacer()
-            
+
             Button("Set for this workout") {
-                onSetForWorkout(tempSelectedGoal.normalized)
+                onSetForWorkout(tempSelectedGoal)
             }
             .font(.system(size: 14, weight: .semibold))
             .foregroundColor(Color(.systemBackground))
@@ -4363,17 +4334,17 @@ struct FitnessGoalPickerView: View {
 struct FitnessLevelPickerView: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var selectedFitnessLevel: ExperienceLevel
-    let onSetDefault: (ExperienceLevel) -> Void
+    let onSetForPlan: (ExperienceLevel) -> Void
     let onSetForWorkout: (ExperienceLevel) -> Void
-    
+
     @State private var tempSelectedLevel: ExperienceLevel
-    
-    init(selectedFitnessLevel: Binding<ExperienceLevel>, onSetDefault: @escaping (ExperienceLevel) -> Void, onSetForWorkout: @escaping (ExperienceLevel) -> Void) {
+
+    init(selectedFitnessLevel: Binding<ExperienceLevel>, onSetForPlan: @escaping (ExperienceLevel) -> Void, onSetForWorkout: @escaping (ExperienceLevel) -> Void) {
         self._selectedFitnessLevel = selectedFitnessLevel
-        self.onSetDefault = onSetDefault
+        self.onSetForPlan = onSetForPlan
         self.onSetForWorkout = onSetForWorkout
-                 // Use the current selected level as initial value
-         let initialLevel = selectedFitnessLevel.wrappedValue
+        // Use the current selected level as initial value
+        let initialLevel = selectedFitnessLevel.wrappedValue
         self._tempSelectedLevel = State(initialValue: initialLevel)
     }
     
@@ -4461,15 +4432,15 @@ struct FitnessLevelPickerView: View {
     
     private var actionButtons: some View {
         HStack(spacing: 0) {
-            Button("Set as default") {
+            Button("Set for plan") {
                 selectedFitnessLevel = tempSelectedLevel
-                onSetDefault(tempSelectedLevel)
+                onSetForPlan(tempSelectedLevel)
             }
             .font(.system(size: 14, weight: .semibold))
             .foregroundColor(.primary)
-            
+
             Spacer()
-            
+
             Button("Set for this workout") {
                 onSetForWorkout(tempSelectedLevel)
             }
@@ -4482,8 +4453,6 @@ struct FitnessLevelPickerView: View {
         }
     }
 }
-
-
 
 // MARK: - Set Log Model
 

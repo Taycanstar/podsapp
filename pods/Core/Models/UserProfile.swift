@@ -34,9 +34,12 @@ enum Gender: String, CaseIterable, Codable {
 }
 
 enum FitnessGoal: String, CaseIterable, Codable {
-    // New canonical goals
+    // Primary goals (shown in picker)
     case strength = "strength"
     case hypertrophy = "hypertrophy"
+    case balanced = "balanced"  // Both strength and hypertrophy
+
+    // Secondary goals (legacy/advanced - not shown in simplified picker)
     case circuitTraining = "circuit_training"
     case general = "general"
     case powerlifting = "powerlifting"
@@ -52,6 +55,7 @@ enum FitnessGoal: String, CaseIterable, Codable {
         switch self {
         case .strength: return "Strength"
         case .hypertrophy: return "Hypertrophy"
+        case .balanced: return "Both"
         case .circuitTraining: return "Circuit Training"
         case .general: return "General Fitness"
         case .powerlifting: return "Powerlifting"
@@ -60,6 +64,15 @@ enum FitnessGoal: String, CaseIterable, Codable {
         case .endurance: return "Endurance" // legacy
         case .power: return "Power" // legacy
         case .sport: return "Sports Performance" // legacy
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .strength: return "Build maximal strength with heavier weights and lower reps"
+        case .hypertrophy: return "Maximize muscle growth with moderate weights and higher volume"
+        case .balanced: return "Equal focus on strength and muscle size"
+        default: return displayName
         }
     }
 
@@ -79,6 +92,7 @@ enum FitnessGoal: String, CaseIterable, Codable {
         switch key {
         case "strength": return .strength
         case "hypertrophy": return .hypertrophy
+        case "balanced": return .balanced
         case "general": return .general
         case "powerlifting": return .powerlifting
         case "circuit_training": return .circuitTraining

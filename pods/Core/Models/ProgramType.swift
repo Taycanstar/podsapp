@@ -204,6 +204,8 @@ struct TrainingProgram: Codable, Identifiable {
     let endDate: String
     let totalWeeks: Int
     let includeDeload: Bool
+    let defaultWarmupEnabled: Bool?
+    let defaultCooldownEnabled: Bool?
     let isActive: Bool
     let createdAt: String
     let syncVersion: Int

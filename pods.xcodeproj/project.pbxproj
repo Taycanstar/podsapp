@@ -454,6 +454,7 @@
 		36FBD5622F1738FD005F62B9 /* PlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FBD5612F1738FD005F62B9 /* PlanView.swift */; };
 		36FBD5642F173A4B005F62B9 /* ProgramService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FBD5632F173A4B005F62B9 /* ProgramService.swift */; };
 		36FBD5662F173B74005F62B9 /* ProgramType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FBD5652F173B74005F62B9 /* ProgramType.swift */; };
+		36FBD5682F1AB61E005F62B9 /* SinglePlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FBD5672F1AB619005F62B9 /* SinglePlanView.swift */; };
 		36FE12352FFFABCD00A1BCDE /* exercisesdb.csv in Resources */ = {isa = PBXBuildFile; fileRef = 36FE12342FFFABCD00A1BCDE /* exercisesdb.csv */; };
 		36FFF1012FBEBE6000A1C0DE /* AgentModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FFF1002FBEBE6000A1C0DE /* AgentModels.swift */; };
 		36FFF1112FBEBE6000A1C0DE /* AgentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FFF1102FBEBE6000A1C0DE /* AgentService.swift */; };
@@ -937,6 +938,7 @@
 		36FBD5612F1738FD005F62B9 /* PlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanView.swift; sourceTree = "<group>"; };
 		36FBD5632F173A4B005F62B9 /* ProgramService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramService.swift; sourceTree = "<group>"; };
 		36FBD5652F173B74005F62B9 /* ProgramType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramType.swift; sourceTree = "<group>"; };
+		36FBD5672F1AB619005F62B9 /* SinglePlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SinglePlanView.swift; sourceTree = "<group>"; };
 		36FE12342FFFABCD00A1BCDE /* exercisesdb.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = exercisesdb.csv; sourceTree = "<group>"; };
 		36FFF1002FBEBE6000A1C0DE /* AgentModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AgentModels.swift; path = Pods/Core/Models/AgentModels.swift; sourceTree = SOURCE_ROOT; };
 		36FFF1102FBEBE6000A1C0DE /* AgentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AgentService.swift; path = Pods/Core/Services/AgentService.swift; sourceTree = SOURCE_ROOT; };
@@ -1199,6 +1201,7 @@
 		3662A54D2DFDE02100847487 /* workouts */ = {
 			isa = PBXGroup;
 			children = (
+				36FBD5672F1AB619005F62B9 /* SinglePlanView.swift */,
 				36FBD5612F1738FD005F62B9 /* PlanView.swift */,
 				36DB82CD2EB924B7004BA082 /* ExercisesDb.swift */,
 				361919142EA17769007CAA0D /* WorkoutLogDetailView.swift */,
@@ -2184,6 +2187,7 @@
 				36A85CEF2DB4282100DD4266 /* AccomplishView.swift in Sources */,
 				361FF30B2E1D930600B7F68E /* EquipmentExercisesView.swift in Sources */,
 				36A851A92E5E27DA004E5CED /* PerformanceFeedbackService.swift in Sources */,
+				36FBD5682F1AB61E005F62B9 /* SinglePlanView.swift in Sources */,
 				3641F5122C73A13500256E85 /* PodInfoView.swift in Sources */,
 				36B3CF872C84014000265F91 /* MediaPreview.swift in Sources */,
 				36DB82E82EBFC6BD004BA082 /* PrimaryButtonStyle.swift in Sources */,

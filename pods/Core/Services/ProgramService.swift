@@ -157,6 +157,41 @@ class ProgramService: ObservableObject {
         return day
     }
 
+    // MARK: - Update Plan Preferences (MacroFactor-style)
+
+    /// Update plan-level preferences. Future workouts inherit changes.
+    /// Does NOT regenerate the plan - just mutates the template.
+    func updatePlanPreference(
+        userEmail: String,
+        fitnessGoal: String? = nil,
+        experienceLevel: String? = nil,
+        sessionDurationMinutes: Int? = nil,
+        warmupEnabled: Bool? = nil,
+        cooldownEnabled: Bool? = nil
+    ) async throws {
+        guard let program = activeProgram else {
+            print("[ProgramService] Cannot update preferences: no active program")
+            throw ProgramServiceError.programNotFound
+        }
+
+        print("[ProgramService] Updating plan preferences for program: \(program.id)")
+
+        // PATCH to backend
+        let updatedProgram = try await networkManager.updateProgramPreferences(
+            programId: program.id,
+            userEmail: userEmail,
+            fitnessGoal: fitnessGoal,
+            experienceLevel: experienceLevel,
+            sessionDurationMinutes: sessionDurationMinutes,
+            defaultWarmupEnabled: warmupEnabled,
+            defaultCooldownEnabled: cooldownEnabled
+        )
+
+        // Update local activeProgram with the response
+        self.activeProgram = updatedProgram
+        print("[ProgramService] Plan preferences updated successfully")
+    }
+
     // MARK: - Delete Program
 
     func deleteProgram(id: Int, userEmail: String) async throws {

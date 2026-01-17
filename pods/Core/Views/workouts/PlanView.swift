@@ -22,6 +22,7 @@ struct PlanView: View {
     @State private var selectedWorkoutDay: ProgramDay?
     @State private var showAllPlans = false
     @State private var showCreateProgram = false
+    @State private var showSinglePlanView = false
 
     private var userEmail: String {
         UserDefaults.standard.string(forKey: "userEmail") ?? ""
@@ -55,6 +56,23 @@ struct PlanView: View {
         }
         .sheet(isPresented: $showCreateProgram) {
             CreateProgramView(userEmail: userEmail)
+        }
+        .fullScreenCover(isPresented: $showSinglePlanView) {
+            if let program = programService.activeProgram {
+                NavigationStack {
+                    SinglePlanView(program: program)
+                        .toolbar {
+                            ToolbarItem(placement: .navigationBarLeading) {
+                                Button {
+                                    showSinglePlanView = false
+                                } label: {
+                                    Image(systemName: "chevron.left")
+                                        .font(.system(size: 16, weight: .medium))
+                                }
+                            }
+                        }
+                }
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .openCreateProgram)) { _ in
             showCreateProgram = true
@@ -104,14 +122,24 @@ struct PlanView: View {
     private func programContentView(program: TrainingProgram) -> some View {
         ScrollView {
             VStack(spacing: 0) {
-                // Program name header
-                Text(program.name)
-                    .font(.title2.bold())
-                    .foregroundColor(.primary)
+                // Program name header with chevron
+                Button {
+                    showSinglePlanView = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Text(program.name)
+                            .font(.title3.bold())
+                            .foregroundColor(.primary)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    .padding(.bottom, 20)
+                }
+                .buttonStyle(PlainButtonStyle())
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 20)
 
                 // Active Plan section with week selector
                 VStack(alignment: .leading, spacing: 10) {

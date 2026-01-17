@@ -244,30 +244,56 @@ class WorkoutManager: ObservableObject {
     }
     
     // MARK: - Computed Properties (Effective Values)
+    // Priority: Session override > Active Plan > Fallback default
+
     var effectiveDuration: WorkoutDuration {
-        sessionDuration ?? userProfileService.workoutDuration
+        // 1. Session override (this workout only)
+        if let session = sessionDuration { return session }
+        // 2. Active Plan preference
+        if let program = ProgramService.shared.activeProgram {
+            return WorkoutDuration.fromMinutes(program.sessionDurationMinutes)
+        }
+        // 3. Fallback default
+        return .fortyFiveMinutes
     }
-    
+
     var effectiveFitnessGoal: FitnessGoal {
-        sessionFitnessGoal ?? userProfileService.fitnessGoal
+        // 1. Session override (this workout only)
+        if let session = sessionFitnessGoal { return session }
+        // 2. Active Plan preference
+        if let program = ProgramService.shared.activeProgram,
+           let goal = FitnessGoal(rawValue: program.fitnessGoal) {
+            return goal
+        }
+        // 3. Fallback default
+        return .strength
     }
-    
+
     var effectiveFitnessLevel: ExperienceLevel {
-        sessionFitnessLevel ?? userProfileService.experienceLevel
+        // 1. Session override (this workout only)
+        if let session = sessionFitnessLevel { return session }
+        // 2. Active Plan preference
+        if let program = ProgramService.shared.activeProgram,
+           let level = ExperienceLevel(rawValue: program.experienceLevel) {
+            return level
+        }
+        // 3. Fallback default
+        return .intermediate
     }
-    
+
     var effectiveFlexibilityPreferences: FlexibilityPreferences {
+        // 1. Session override (this workout only)
         if let sessionPrefs = sessionFlexibilityPreferences {
             return sessionPrefs
         }
-        
-        // Fallback to UserDefaults since UserProfileService doesn't have flexibilityPreferences
-        if let data = UserDefaults.standard.data(forKey: "flexibilityPreferences"),
-           let prefs = try? JSONDecoder().decode(FlexibilityPreferences.self, from: data) {
-            return prefs
+        // 2. Active Plan preference
+        if let program = ProgramService.shared.activeProgram {
+            return FlexibilityPreferences(
+                warmUpEnabled: program.defaultWarmupEnabled ?? false,
+                coolDownEnabled: program.defaultCooldownEnabled ?? false
+            )
         }
-        
-        // Default: no flexibility options enabled
+        // 3. Fallback default
         return FlexibilityPreferences(warmUpEnabled: false, coolDownEnabled: false)
     }
     
@@ -686,16 +712,31 @@ class WorkoutManager: ObservableObject {
     }
     
     // MARK: - Preference Setters with Persistence
-    
-    /// Set default workout duration (permanent preference)
-    func setDefaultDuration(_ duration: WorkoutDuration) {
-        // Clear session override since we're setting a new default
+
+    /// Set plan-level workout duration (MacroFactor-style: future workouts inherit)
+    func setForPlanDuration(_ duration: WorkoutDuration) {
+        // Clear session override since we're setting a plan preference
         sessionDuration = nil
         UserDefaults.standard.removeObject(forKey: profileScopedKey(sessionDurationKey))
-        
-        // Update UserDefaults directly (UserProfileService reads from here)
-        UserDefaults.standard.set(duration.rawValue, forKey: "defaultWorkoutDuration")
-        UserDefaults.standard.set(duration.minutes, forKey: "availableTime")
+
+        // Update plan via ProgramService
+        Task {
+            do {
+                try await ProgramService.shared.updatePlanPreference(
+                    userEmail: userEmail,
+                    sessionDurationMinutes: duration.minutes
+                )
+                print("[WorkoutManager] Plan duration updated to \(duration.minutes) minutes")
+            } catch {
+                print("[WorkoutManager] Failed to update plan duration: \(error)")
+            }
+        }
+    }
+
+    /// Set default workout duration (legacy - for backwards compatibility)
+    @available(*, deprecated, renamed: "setForPlanDuration")
+    func setDefaultDuration(_ duration: WorkoutDuration) {
+        setForPlanDuration(duration)
     }
     
     /// Set session-only workout duration (temporary override)
@@ -707,14 +748,30 @@ class WorkoutManager: ObservableObject {
         UserDefaults.standard.set(Date(), forKey: profileScopedKey(sessionDateKey))
     }
     
-    /// Set default fitness goal (permanent preference)
-    func setDefaultFitnessGoal(_ goal: FitnessGoal) {
+    /// Set plan-level fitness goal (MacroFactor-style: future workouts inherit)
+    func setForPlanFitnessGoal(_ goal: FitnessGoal) {
         // Clear session override
         sessionFitnessGoal = nil
         UserDefaults.standard.removeObject(forKey: profileScopedKey(sessionFitnessGoalKey))
-        
-        // Update UserProfileService
-        userProfileService.fitnessGoal = goal
+
+        // Update plan via ProgramService
+        Task {
+            do {
+                try await ProgramService.shared.updatePlanPreference(
+                    userEmail: userEmail,
+                    fitnessGoal: goal.rawValue
+                )
+                print("[WorkoutManager] Plan fitness goal updated to \(goal.rawValue)")
+            } catch {
+                print("[WorkoutManager] Failed to update plan fitness goal: \(error)")
+            }
+        }
+    }
+
+    /// Set default fitness goal (legacy - for backwards compatibility)
+    @available(*, deprecated, renamed: "setForPlanFitnessGoal")
+    func setDefaultFitnessGoal(_ goal: FitnessGoal) {
+        setForPlanFitnessGoal(goal)
     }
     
     /// Set session-only fitness goal (temporary override)
@@ -723,11 +780,29 @@ class WorkoutManager: ObservableObject {
         UserDefaults.standard.set(goal.rawValue, forKey: profileScopedKey(sessionFitnessGoalKey))
     }
     
-    /// Set default fitness level (permanent preference)
-    func setDefaultFitnessLevel(_ level: ExperienceLevel) {
+    /// Set plan-level fitness level (MacroFactor-style: future workouts inherit)
+    func setForPlanFitnessLevel(_ level: ExperienceLevel) {
         sessionFitnessLevel = nil
         UserDefaults.standard.removeObject(forKey: profileScopedKey(sessionFitnessLevelKey))
-        userProfileService.experienceLevel = level
+
+        // Update plan via ProgramService
+        Task {
+            do {
+                try await ProgramService.shared.updatePlanPreference(
+                    userEmail: userEmail,
+                    experienceLevel: level.rawValue
+                )
+                print("[WorkoutManager] Plan fitness level updated to \(level.rawValue)")
+            } catch {
+                print("[WorkoutManager] Failed to update plan fitness level: \(error)")
+            }
+        }
+    }
+
+    /// Set default fitness level (legacy - for backwards compatibility)
+    @available(*, deprecated, renamed: "setForPlanFitnessLevel")
+    func setDefaultFitnessLevel(_ level: ExperienceLevel) {
+        setForPlanFitnessLevel(level)
     }
     
     /// Set session-only fitness level (temporary override)
@@ -736,15 +811,30 @@ class WorkoutManager: ObservableObject {
         UserDefaults.standard.set(level.rawValue, forKey: profileScopedKey(sessionFitnessLevelKey))
     }
     
-    /// Set default flexibility preferences
-    func setDefaultFlexibilityPreferences(_ prefs: FlexibilityPreferences) {
+    /// Set plan-level flexibility preferences (MacroFactor-style: future workouts inherit)
+    func setForPlanFlexibilityPreferences(_ prefs: FlexibilityPreferences) {
         sessionFlexibilityPreferences = nil
         UserDefaults.standard.removeObject(forKey: profileScopedKey(sessionFlexibilityKey))
-        
-        // Update UserDefaults directly (since UserProfileService has no flexibilityPreferences property)
-        if let data = try? JSONEncoder().encode(prefs) {
-            UserDefaults.standard.set(data, forKey: "flexibilityPreferences")
+
+        // Update plan via ProgramService
+        Task {
+            do {
+                try await ProgramService.shared.updatePlanPreference(
+                    userEmail: userEmail,
+                    warmupEnabled: prefs.warmUpEnabled,
+                    cooldownEnabled: prefs.coolDownEnabled
+                )
+                print("[WorkoutManager] Plan flexibility updated: warmup=\(prefs.warmUpEnabled), cooldown=\(prefs.coolDownEnabled)")
+            } catch {
+                print("[WorkoutManager] Failed to update plan flexibility: \(error)")
+            }
         }
+    }
+
+    /// Set default flexibility preferences (legacy - for backwards compatibility)
+    @available(*, deprecated, renamed: "setForPlanFlexibilityPreferences")
+    func setDefaultFlexibilityPreferences(_ prefs: FlexibilityPreferences) {
+        setForPlanFlexibilityPreferences(prefs)
     }
     
     /// Set session-only flexibility preferences

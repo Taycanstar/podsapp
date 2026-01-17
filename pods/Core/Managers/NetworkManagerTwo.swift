@@ -5764,6 +5764,58 @@ class NetworkManagerTwo {
         }
     }
 
+    func updateProgramPreferences(
+        programId: Int,
+        userEmail: String,
+        fitnessGoal: String? = nil,
+        experienceLevel: String? = nil,
+        sessionDurationMinutes: Int? = nil,
+        defaultWarmupEnabled: Bool? = nil,
+        defaultCooldownEnabled: Bool? = nil
+    ) async throws -> TrainingProgram {
+        guard let url = URL(string: "\(baseUrl)/api/programs/\(programId)/preferences/") else {
+            throw NetworkError.invalidURL
+        }
+
+        var urlRequest = URLRequest(url: url)
+        urlRequest.httpMethod = "PATCH"
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        var body: [String: Any] = ["user_email": userEmail]
+
+        if let fitnessGoal = fitnessGoal {
+            body["fitness_goal"] = fitnessGoal
+        }
+        if let experienceLevel = experienceLevel {
+            body["experience_level"] = experienceLevel
+        }
+        if let sessionDurationMinutes = sessionDurationMinutes {
+            body["session_duration_minutes"] = sessionDurationMinutes
+        }
+        if let defaultWarmupEnabled = defaultWarmupEnabled {
+            body["default_warmup_enabled"] = defaultWarmupEnabled
+        }
+        if let defaultCooldownEnabled = defaultCooldownEnabled {
+            body["default_cooldown_enabled"] = defaultCooldownEnabled
+        }
+
+        urlRequest.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: urlRequest)
+        try validate(response: response, data: data)
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+
+        struct UpdateResponse: Codable {
+            let success: Bool
+            let program: TrainingProgram
+        }
+
+        let responsePayload = try decoder.decode(UpdateResponse.self, from: data)
+        return responsePayload.program
+    }
+
     func fetchTodayWorkout(userEmail: String) async throws -> TodayWorkoutResponse {
         var components = URLComponents(string: "\(baseUrl)/api/programs/today/")
         components?.queryItems = [

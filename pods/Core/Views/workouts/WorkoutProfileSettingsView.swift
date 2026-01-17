@@ -162,7 +162,7 @@ struct WorkoutProfileSettingsView: View {
                     }
                     Spacer()
                     Menu {
-                        ForEach(FitnessGoalPickerView.canonicalGoals, id: \.self) { goal in
+                        ForEach(FitnessGoalPickerView.pickerGoals, id: \.self) { goal in
                             Button(action: {
                                 profile.fitnessGoal = goal
                                 sendPreferenceUpdate(["preferred_fitness_goal": goal.rawValue])

@@ -11,18 +11,18 @@ struct FlexibilityPickerView: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var warmUpEnabled: Bool
     @Binding var coolDownEnabled: Bool
-    let onSetDefault: (Bool, Bool) -> Void
+    let onSetForPlan: (Bool, Bool) -> Void
     let onSetForWorkout: (Bool, Bool) -> Void
-    
+
     @State private var tempWarmUpEnabled: Bool
     @State private var tempCoolDownEnabled: Bool
-    
-    init(warmUpEnabled: Binding<Bool>, coolDownEnabled: Binding<Bool>, onSetDefault: @escaping (Bool, Bool) -> Void, onSetForWorkout: @escaping (Bool, Bool) -> Void) {
+
+    init(warmUpEnabled: Binding<Bool>, coolDownEnabled: Binding<Bool>, onSetForPlan: @escaping (Bool, Bool) -> Void, onSetForWorkout: @escaping (Bool, Bool) -> Void) {
         self._warmUpEnabled = warmUpEnabled
         self._coolDownEnabled = coolDownEnabled
-        self.onSetDefault = onSetDefault
+        self.onSetForPlan = onSetForPlan
         self.onSetForWorkout = onSetForWorkout
-        
+
         // Use the current values as initial values
         self._tempWarmUpEnabled = State(initialValue: warmUpEnabled.wrappedValue)
         self._tempCoolDownEnabled = State(initialValue: coolDownEnabled.wrappedValue)
@@ -152,16 +152,16 @@ struct FlexibilityPickerView: View {
     
     private var actionButtons: some View {
         HStack(spacing: 0) {
-            Button("Set as default") {
+            Button("Set for plan") {
                 warmUpEnabled = tempWarmUpEnabled
                 coolDownEnabled = tempCoolDownEnabled
-                onSetDefault(tempWarmUpEnabled, tempCoolDownEnabled)
+                onSetForPlan(tempWarmUpEnabled, tempCoolDownEnabled)
             }
             .font(.system(size: 14, weight: .semibold))
             .foregroundColor(.primary)
-            
+
             Spacer()
-            
+
             Button("Set for this workout") {
                 warmUpEnabled = tempWarmUpEnabled
                 coolDownEnabled = tempCoolDownEnabled
@@ -182,8 +182,8 @@ struct FlexibilityPickerView: View {
     FlexibilityPickerView(
         warmUpEnabled: .constant(true),
         coolDownEnabled: .constant(false),
-        onSetDefault: { warmUp, coolDown in
-            print("Set as default: Warm-Up \(warmUp), Cool-Down \(coolDown)")
+        onSetForPlan: { warmUp, coolDown in
+            print("Set for plan: Warm-Up \(warmUp), Cool-Down \(coolDown)")
         },
         onSetForWorkout: { warmUp, coolDown in
             print("Set for workout: Warm-Up \(warmUp), Cool-Down \(coolDown)")
