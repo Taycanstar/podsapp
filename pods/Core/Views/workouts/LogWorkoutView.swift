@@ -4147,13 +4147,6 @@ struct WorkoutDurationPickerView: View {
     
     private var actionButtons: some View {
         HStack(spacing: 0) {
-            Button("Set for plan") {
-                selectedDuration = tempSelectedDuration
-                onSetForPlan(tempSelectedDuration)
-            }
-            .font(.system(size: 14, weight: .semibold))
-            .foregroundColor(.primary)
-
             Spacer()
 
             Button("Set for this workout") {

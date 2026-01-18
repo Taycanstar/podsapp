@@ -295,6 +295,11 @@ struct ProgramResponse: Codable {
     let program: TrainingProgram?
 }
 
+struct ProgramDayResponse: Codable {
+    let success: Bool?
+    let day: ProgramDay?
+}
+
 struct ProgramsListResponse: Codable {
     let programs: [TrainingProgram]
 }

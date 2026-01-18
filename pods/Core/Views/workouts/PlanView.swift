@@ -57,10 +57,15 @@ struct PlanView: View {
         .sheet(isPresented: $showCreateProgram) {
             CreateProgramView(userEmail: userEmail)
         }
-        .fullScreenCover(isPresented: $showSinglePlanView) {
+        .fullScreenCover(isPresented: $showSinglePlanView, onDismiss: {
+            // Force refresh when returning from SinglePlanView in case days were added/modified
+            Task {
+                _ = try? await programService.fetchActiveProgram(userEmail: userEmail)
+            }
+        }) {
             if let program = programService.activeProgram {
                 NavigationStack {
-                    SinglePlanView(program: program)
+                    SinglePlanView(initialProgram: program)
                         .toolbar {
                             ToolbarItem(placement: .navigationBarLeading) {
                                 Button {
@@ -76,6 +81,12 @@ struct PlanView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .openCreateProgram)) { _ in
             showCreateProgram = true
+        }
+        .onChange(of: programService.activeProgram?.id) { oldId, newId in
+            // When the active program is deleted (becomes nil), dismiss the SinglePlanView
+            if oldId != nil && newId == nil {
+                showSinglePlanView = false
+            }
         }
     }
 
@@ -131,7 +142,7 @@ struct PlanView: View {
                             .font(.title3.bold())
                             .foregroundColor(.primary)
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 14, weight: .medium))
+                            .font(.system(size: 14, weight: .bold))
                             .foregroundColor(.secondary)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -163,7 +174,11 @@ struct PlanView: View {
                        let days = selectedWeek.days {
                         VStack(spacing: 12) {
                             ForEach(days.sorted(by: { $0.dayNumber < $1.dayNumber })) { day in
-                                if day.dayType == .workout {
+                                // Check dayType first, but also fallback to workoutLabel for legacy data
+                                let isRestDay = day.dayType == .rest ||
+                                    day.workoutLabel.lowercased().hasPrefix("rest")
+
+                                if !isRestDay {
                                     ProgramWorkoutCard(day: day) {
                                         selectedWorkoutDay = day
                                     }
@@ -474,6 +489,18 @@ struct ProgramWorkoutDetailView: View {
         }
     }
 
+    private var resolvedWorkoutLabel: String {
+        guard let weeks = programService.activeProgram?.weeks else {
+            return day.workoutLabel
+        }
+        for week in weeks {
+            if let match = week.days?.first(where: { $0.id == day.id }) {
+                return match.workoutLabel
+            }
+        }
+        return day.workoutLabel
+    }
+
     var body: some View {
         NavigationView {
             ZStack {
@@ -555,14 +582,14 @@ struct ProgramWorkoutDetailView: View {
                 }
 
                 ToolbarItem(placement: .principal) {
-                    Text(day.workoutLabel)
+                    Text(resolvedWorkoutLabel)
                         .font(.system(size: 17, weight: .semibold))
                 }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         Button {
-                            editedName = day.workoutLabel
+                            editedName = resolvedWorkoutLabel
                             showEditNameSheet = true
                         } label: {
                             Label("Edit Name", systemImage: "pencil")
@@ -857,6 +884,7 @@ struct CreateProgramView: View {
     @State private var selectedGoal: ProgramFitnessGoal = .hypertrophy
     @State private var selectedType: ProgramType = .upperLower
     @State private var selectedExperience: ProgramExperienceLevel = .intermediate
+    @State private var daysPerWeek: Int = 4
     @State private var sessionDuration: Int = 60
     @State private var totalWeeks: Int = 6
     @State private var includeDeload: Bool = true
@@ -894,6 +922,7 @@ struct CreateProgramView: View {
                                 ForEach(ProgramType.allCases, id: \.self) { type in
                                     Button {
                                         selectedType = type
+                                        daysPerWeek = type.daysPerWeek
                                     } label: {
                                         if selectedType == type {
                                             Label(type.displayName, systemImage: "checkmark")
@@ -918,6 +947,7 @@ struct CreateProgramView: View {
 
                     // Duration
                     Section {
+                        Stepper("\(daysPerWeek) days per week", value: $daysPerWeek, in: 2...6)
                         Stepper("\(sessionDuration) min per session", value: $sessionDuration, in: 30...120, step: 15)
                         Stepper("\(totalWeeks) weeks", value: $totalWeeks, in: 4...12)
                         Toggle(isOn: $includeDeload) {
@@ -1001,7 +1031,7 @@ struct CreateProgramView: View {
                 programType: selectedType,
                 fitnessGoal: selectedGoal,
                 experienceLevel: selectedExperience,
-                daysPerWeek: selectedType.daysPerWeek,
+                daysPerWeek: daysPerWeek,
                 sessionDurationMinutes: sessionDuration,
                 totalWeeks: totalWeeks,
                 includeDeload: includeDeload

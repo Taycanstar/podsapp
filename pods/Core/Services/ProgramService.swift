@@ -148,13 +148,21 @@ class ProgramService: ObservableObject {
 
     // MARK: - Update Workout Name
 
-    func updateWorkoutName(dayId: Int, name: String, userEmail: String) async throws -> ProgramDay {
-        let day = try await networkManager.updateProgramDayLabel(dayId: dayId, workoutLabel: name, userEmail: userEmail)
+    func updateWorkoutName(dayId: Int, name: String, userEmail: String) async throws {
+        // The backend updates all days with the same label across all weeks
+        try await networkManager.updateProgramDayLabel(dayId: dayId, workoutLabel: name, userEmail: userEmail)
 
-        // Refresh active program to update the name
+        // Refresh active program to update the name across all weeks
         _ = try? await fetchActiveProgram(userEmail: userEmail)
+    }
 
-        return day
+    // MARK: - Remove Program Day
+
+    func deleteProgramDay(dayId: Int, userEmail: String) async throws {
+        try await networkManager.deleteProgramDay(dayId: dayId, userEmail: userEmail)
+
+        // Refresh active program to reflect the removal
+        _ = try? await fetchActiveProgram(userEmail: userEmail)
     }
 
     // MARK: - Update Plan Preferences (MacroFactor-style)
@@ -190,6 +198,39 @@ class ProgramService: ObservableObject {
         // Update local activeProgram with the response
         self.activeProgram = updatedProgram
         print("[ProgramService] Plan preferences updated successfully")
+    }
+
+    // MARK: - Update Plan Settings (MacroFactor-style)
+
+    /// Update plan settings that don't require regeneration.
+    /// Includes: name, total_weeks, include_deload, day_order
+    func updatePlanSettings(
+        programId: Int,
+        userEmail: String,
+        name: String? = nil,
+        totalWeeks: Int? = nil,
+        includeDeload: Bool? = nil,
+        dayOrder: [[String: String]]? = nil
+    ) async throws -> TrainingProgram {
+        print("[ProgramService] Updating plan settings for program: \(programId)")
+
+        // PATCH to backend
+        let updatedProgram = try await networkManager.updateProgramSettings(
+            programId: programId,
+            userEmail: userEmail,
+            name: name,
+            totalWeeks: totalWeeks,
+            includeDeload: includeDeload,
+            dayOrder: dayOrder
+        )
+
+        // Update local activeProgram if this is the active one
+        if activeProgram?.id == programId {
+            self.activeProgram = updatedProgram
+        }
+
+        print("[ProgramService] Plan settings updated successfully")
+        return updatedProgram
     }
 
     // MARK: - Delete Program
@@ -392,6 +433,389 @@ class ProgramService: ObservableObject {
         } catch {
             self.error = error.localizedDescription
         }
+    }
+
+    // MARK: - Optimistic Updates
+
+    /// Optimistically update a day's type to rest across all weeks (local only)
+    /// Returns the previous program state for rollback if needed
+    func optimisticConvertToRestDay(dayId: Int) -> TrainingProgram? {
+        guard let program = activeProgram else { return nil }
+        let previousState = program
+
+        // Find the day's workoutLabel to update all matching days across weeks
+        var targetLabel: String?
+        for week in program.weeks ?? [] {
+            if let day = week.days?.first(where: { $0.id == dayId }) {
+                targetLabel = day.workoutLabel
+                break
+            }
+        }
+
+        guard let label = targetLabel else { return nil }
+
+        // Create a new program with updated days
+        let updatedWeeks = program.weeks?.map { week -> ProgramWeek in
+            let updatedDays = week.days?.map { day -> ProgramDay in
+                if day.workoutLabel == label {
+                    return ProgramDay(
+                        id: day.id,
+                        dayNumber: day.dayNumber,
+                        dayType: .rest,
+                        workoutLabel: "Rest",
+                        targetMuscles: [],
+                        date: day.date,
+                        isCompleted: day.isCompleted,
+                        completedAt: day.completedAt,
+                        workoutSessionId: nil,
+                        workout: nil,
+                        cyclePosition: nil
+                    )
+                }
+                return day
+            }
+            return ProgramWeek(
+                id: week.id,
+                weekNumber: week.weekNumber,
+                isDeload: week.isDeload,
+                volumeModifier: week.volumeModifier,
+                days: updatedDays
+            )
+        }
+
+        let updatedProgram = TrainingProgram(
+            id: program.id,
+            name: program.name,
+            programType: program.programType,
+            fitnessGoal: program.fitnessGoal,
+            experienceLevel: program.experienceLevel,
+            daysPerWeek: program.daysPerWeek,
+            sessionDurationMinutes: program.sessionDurationMinutes,
+            startDate: program.startDate,
+            endDate: program.endDate,
+            totalWeeks: program.totalWeeks,
+            includeDeload: program.includeDeload,
+            defaultWarmupEnabled: program.defaultWarmupEnabled,
+            defaultCooldownEnabled: program.defaultCooldownEnabled,
+            isActive: program.isActive,
+            createdAt: program.createdAt,
+            syncVersion: program.syncVersion,
+            weeks: updatedWeeks
+        )
+
+        self.activeProgram = updatedProgram
+        return previousState
+    }
+
+    /// Optimistically update a workout name across all weeks (local only)
+    /// Returns the previous program state for rollback if needed
+    func optimisticUpdateWorkoutName(dayId: Int, newName: String) -> TrainingProgram? {
+        guard let program = activeProgram else { return nil }
+        let previousState = program
+
+        // Find the day's current workoutLabel to update all matching days
+        var targetLabel: String?
+        for week in program.weeks ?? [] {
+            if let day = week.days?.first(where: { $0.id == dayId }) {
+                targetLabel = day.workoutLabel
+                break
+            }
+        }
+
+        guard let oldLabel = targetLabel else { return nil }
+
+        // Create a new program with updated day names
+        let updatedWeeks = program.weeks?.map { week -> ProgramWeek in
+            let updatedDays = week.days?.map { day -> ProgramDay in
+                if day.workoutLabel == oldLabel {
+                    return ProgramDay(
+                        id: day.id,
+                        dayNumber: day.dayNumber,
+                        dayType: day.dayType,
+                        workoutLabel: newName,
+                        targetMuscles: day.targetMuscles,
+                        date: day.date,
+                        isCompleted: day.isCompleted,
+                        completedAt: day.completedAt,
+                        workoutSessionId: day.workoutSessionId,
+                        workout: day.workout != nil ? ProgramWorkoutSession(
+                            id: day.workout!.id,
+                            title: newName,
+                            status: day.workout!.status,
+                            scheduledDate: day.workout!.scheduledDate,
+                            estimatedDurationMinutes: day.workout!.estimatedDurationMinutes,
+                            actualDurationMinutes: day.workout!.actualDurationMinutes,
+                            completedExerciseCount: day.workout!.completedExerciseCount,
+                            exercises: day.workout!.exercises
+                        ) : nil,
+                        cyclePosition: day.cyclePosition
+                    )
+                }
+                return day
+            }
+            return ProgramWeek(
+                id: week.id,
+                weekNumber: week.weekNumber,
+                isDeload: week.isDeload,
+                volumeModifier: week.volumeModifier,
+                days: updatedDays
+            )
+        }
+
+        let updatedProgram = TrainingProgram(
+            id: program.id,
+            name: program.name,
+            programType: program.programType,
+            fitnessGoal: program.fitnessGoal,
+            experienceLevel: program.experienceLevel,
+            daysPerWeek: program.daysPerWeek,
+            sessionDurationMinutes: program.sessionDurationMinutes,
+            startDate: program.startDate,
+            endDate: program.endDate,
+            totalWeeks: program.totalWeeks,
+            includeDeload: program.includeDeload,
+            defaultWarmupEnabled: program.defaultWarmupEnabled,
+            defaultCooldownEnabled: program.defaultCooldownEnabled,
+            isActive: program.isActive,
+            createdAt: program.createdAt,
+            syncVersion: program.syncVersion,
+            weeks: updatedWeeks
+        )
+
+        self.activeProgram = updatedProgram
+        return previousState
+    }
+
+    /// Optimistically remove a day from all weeks (local only)
+    /// Returns the previous program state for rollback if needed
+    func optimisticRemoveDay(dayId: Int) -> TrainingProgram? {
+        guard let program = activeProgram else { return nil }
+        let previousState = program
+
+        // Find the day's workoutLabel to remove all matching days across weeks
+        var targetLabel: String?
+        for week in program.weeks ?? [] {
+            if let day = week.days?.first(where: { $0.id == dayId }) {
+                targetLabel = day.workoutLabel
+                break
+            }
+        }
+
+        guard let label = targetLabel else { return nil }
+
+        // Create a new program with the day removed from all weeks
+        let updatedWeeks = program.weeks?.map { week -> ProgramWeek in
+            let updatedDays = week.days?.filter { $0.workoutLabel != label }
+            return ProgramWeek(
+                id: week.id,
+                weekNumber: week.weekNumber,
+                isDeload: week.isDeload,
+                volumeModifier: week.volumeModifier,
+                days: updatedDays
+            )
+        }
+
+        let updatedProgram = TrainingProgram(
+            id: program.id,
+            name: program.name,
+            programType: program.programType,
+            fitnessGoal: program.fitnessGoal,
+            experienceLevel: program.experienceLevel,
+            daysPerWeek: program.daysPerWeek,
+            sessionDurationMinutes: program.sessionDurationMinutes,
+            startDate: program.startDate,
+            endDate: program.endDate,
+            totalWeeks: program.totalWeeks,
+            includeDeload: program.includeDeload,
+            defaultWarmupEnabled: program.defaultWarmupEnabled,
+            defaultCooldownEnabled: program.defaultCooldownEnabled,
+            isActive: program.isActive,
+            createdAt: program.createdAt,
+            syncVersion: program.syncVersion,
+            weeks: updatedWeeks
+        )
+
+        self.activeProgram = updatedProgram
+        return previousState
+    }
+
+    /// Optimistically reorder exercises for a day across all weeks (local only)
+    /// Returns the previous program state for rollback if needed
+    func optimisticReorderExercises(dayId: Int, exerciseOrder: [Int]) -> TrainingProgram? {
+        guard let program = activeProgram else { return nil }
+        let previousState = program
+
+        // Find the day's workoutLabel to update all matching days across weeks
+        var targetLabel: String?
+        for week in program.weeks ?? [] {
+            if let day = week.days?.first(where: { $0.id == dayId }) {
+                targetLabel = day.workoutLabel
+                break
+            }
+        }
+
+        guard let label = targetLabel else { return nil }
+
+        // Create a lookup for the new order
+        var orderMap: [Int: Int] = [:]
+        for (index, exerciseId) in exerciseOrder.enumerated() {
+            orderMap[exerciseId] = index
+        }
+
+        // Create a new program with reordered exercises
+        let updatedWeeks = program.weeks?.map { week -> ProgramWeek in
+            let updatedDays = week.days?.map { day -> ProgramDay in
+                if day.workoutLabel == label, let workout = day.workout, let exercises = workout.exercises {
+                    // Sort exercises by the new order
+                    let sortedExercises = exercises.sorted { ex1, ex2 in
+                        let order1 = orderMap[ex1.id] ?? ex1.order
+                        let order2 = orderMap[ex2.id] ?? ex2.order
+                        return order1 < order2
+                    }
+
+                    // Update order values
+                    let reorderedExercises = sortedExercises.enumerated().map { index, exercise in
+                        ProgramExercise(
+                            id: exercise.id,
+                            exerciseId: exercise.exerciseId,
+                            exerciseName: exercise.exerciseName,
+                            order: index,
+                            targetSets: exercise.targetSets,
+                            targetReps: exercise.targetReps,
+                            isCompleted: exercise.isCompleted
+                        )
+                    }
+
+                    let updatedWorkout = ProgramWorkoutSession(
+                        id: workout.id,
+                        title: workout.title,
+                        status: workout.status,
+                        scheduledDate: workout.scheduledDate,
+                        estimatedDurationMinutes: workout.estimatedDurationMinutes,
+                        actualDurationMinutes: workout.actualDurationMinutes,
+                        completedExerciseCount: workout.completedExerciseCount,
+                        exercises: reorderedExercises
+                    )
+
+                    return ProgramDay(
+                        id: day.id,
+                        dayNumber: day.dayNumber,
+                        dayType: day.dayType,
+                        workoutLabel: day.workoutLabel,
+                        targetMuscles: day.targetMuscles,
+                        date: day.date,
+                        isCompleted: day.isCompleted,
+                        completedAt: day.completedAt,
+                        workoutSessionId: day.workoutSessionId,
+                        workout: updatedWorkout,
+                        cyclePosition: day.cyclePosition
+                    )
+                }
+                return day
+            }
+            return ProgramWeek(
+                id: week.id,
+                weekNumber: week.weekNumber,
+                isDeload: week.isDeload,
+                volumeModifier: week.volumeModifier,
+                days: updatedDays
+            )
+        }
+
+        let updatedProgram = TrainingProgram(
+            id: program.id,
+            name: program.name,
+            programType: program.programType,
+            fitnessGoal: program.fitnessGoal,
+            experienceLevel: program.experienceLevel,
+            daysPerWeek: program.daysPerWeek,
+            sessionDurationMinutes: program.sessionDurationMinutes,
+            startDate: program.startDate,
+            endDate: program.endDate,
+            totalWeeks: program.totalWeeks,
+            includeDeload: program.includeDeload,
+            defaultWarmupEnabled: program.defaultWarmupEnabled,
+            defaultCooldownEnabled: program.defaultCooldownEnabled,
+            isActive: program.isActive,
+            createdAt: program.createdAt,
+            syncVersion: program.syncVersion,
+            weeks: updatedWeeks
+        )
+
+        self.activeProgram = updatedProgram
+        return previousState
+    }
+
+    /// Optimistically add a rest day to all weeks (local only)
+    /// Returns the previous program state for rollback if needed
+    func optimisticAddRestDay() -> TrainingProgram? {
+        guard let program = activeProgram else { return nil }
+        let previousState = program
+
+        // Find the next day number (current max + 1)
+        let maxDayNumber = program.weeks?.first?.days?.map { $0.dayNumber }.max() ?? 0
+        let newDayNumber = maxDayNumber + 1
+
+        // Create updated weeks with the new rest day
+        let updatedWeeks = program.weeks?.map { week -> ProgramWeek in
+            var updatedDays = week.days ?? []
+
+            // Create a temporary ID (negative to avoid conflicts with real IDs)
+            let tempId = -(newDayNumber * 1000 + week.weekNumber)
+
+            // Create the new rest day
+            let newDay = ProgramDay(
+                id: tempId,
+                dayNumber: newDayNumber,
+                dayType: .rest,
+                workoutLabel: "Rest",
+                targetMuscles: [],
+                date: "", // Will be set by backend
+                isCompleted: false,
+                completedAt: nil,
+                workoutSessionId: nil,
+                workout: nil,
+                cyclePosition: nil
+            )
+
+            updatedDays.append(newDay)
+
+            return ProgramWeek(
+                id: week.id,
+                weekNumber: week.weekNumber,
+                isDeload: week.isDeload,
+                volumeModifier: week.volumeModifier,
+                days: updatedDays
+            )
+        }
+
+        let updatedProgram = TrainingProgram(
+            id: program.id,
+            name: program.name,
+            programType: program.programType,
+            fitnessGoal: program.fitnessGoal,
+            experienceLevel: program.experienceLevel,
+            daysPerWeek: program.daysPerWeek,
+            sessionDurationMinutes: program.sessionDurationMinutes,
+            startDate: program.startDate,
+            endDate: program.endDate,
+            totalWeeks: program.totalWeeks,
+            includeDeload: program.includeDeload,
+            defaultWarmupEnabled: program.defaultWarmupEnabled,
+            defaultCooldownEnabled: program.defaultCooldownEnabled,
+            isActive: program.isActive,
+            createdAt: program.createdAt,
+            syncVersion: program.syncVersion,
+            weeks: updatedWeeks
+        )
+
+        self.activeProgram = updatedProgram
+        return previousState
+    }
+
+    /// Rollback to a previous program state
+    func rollback(to previousState: TrainingProgram) {
+        self.activeProgram = previousState
     }
 }
 

@@ -5955,6 +5955,43 @@ class NetworkManagerTwo {
         try validate(response: response, data: nil)
     }
 
+    /// Update plan settings (MacroFactor-style)
+    /// PATCH /api/programs/{id}/settings/
+    func updateProgramSettings(
+        programId: Int,
+        userEmail: String,
+        name: String? = nil,
+        totalWeeks: Int? = nil,
+        includeDeload: Bool? = nil,
+        dayOrder: [[String: String]]? = nil
+    ) async throws -> TrainingProgram {
+        guard let url = URL(string: "\(baseUrl)/api/programs/\(programId)/settings/") else { throw NetworkError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        var body: [String: Any] = ["user_email": userEmail]
+        if let name = name { body["name"] = name }
+        if let totalWeeks = totalWeeks { body["total_weeks"] = totalWeeks }
+        if let includeDeload = includeDeload { body["include_deload"] = includeDeload }
+        if let dayOrder = dayOrder { body["day_order"] = dayOrder }
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validate(response: response, data: data)
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let responsePayload = try decoder.decode(ProgramResponse.self, from: data)
+
+        guard let program = responsePayload.program else {
+            throw NetworkError.decodingError
+        }
+        return program
+    }
+
     func listPrograms(userEmail: String) async throws -> [TrainingProgram] {
         var components = URLComponents(string: "\(baseUrl)/api/programs/")
         components?.queryItems = [
@@ -5990,7 +6027,7 @@ class NetworkManagerTwo {
         return responsePayload.day
     }
 
-    func updateProgramDayLabel(dayId: Int, workoutLabel: String, userEmail: String) async throws -> ProgramDay {
+    func updateProgramDayLabel(dayId: Int, workoutLabel: String, userEmail: String) async throws {
         guard let url = URL(string: "\(baseUrl)/api/programs/day/\(dayId)/update/") else { throw NetworkError.invalidURL }
 
         var request = URLRequest(url: url)
@@ -5999,6 +6036,60 @@ class NetworkManagerTwo {
         let body: [String: Any] = [
             "user_email": userEmail,
             "workout_label": workoutLabel
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validate(response: response, data: data)
+        // Response contains the updated program, but caller will refresh separately
+    }
+
+    func deleteProgramDay(dayId: Int, userEmail: String) async throws {
+        guard let url = URL(string: "\(baseUrl)/api/programs/day/\(dayId)/delete/") else { throw NetworkError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = [
+            "user_email": userEmail
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validate(response: response, data: data)
+    }
+
+    /// Change a program day's type (workout <-> rest)
+    /// PATCH /api/programs/day/{dayId}/update/
+    /// When changing to rest, all exercises are deleted
+    func updateProgramDayType(dayId: Int, dayType: String, userEmail: String) async throws {
+        guard let url = URL(string: "\(baseUrl)/api/programs/day/\(dayId)/update/") else { throw NetworkError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = [
+            "user_email": userEmail,
+            "day_type": dayType
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validate(response: response, data: data)
+        // Response contains the updated program, caller will handle UI update
+    }
+
+    /// Reorder exercises within a program day
+    /// PATCH /api/programs/day/{dayId}/reorder-exercises/
+    func reorderProgramExercises(dayId: Int, exerciseOrder: [Int], userEmail: String) async throws -> ProgramDay {
+        guard let url = URL(string: "\(baseUrl)/api/programs/day/\(dayId)/reorder-exercises/") else { throw NetworkError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = [
+            "user_email": userEmail,
+            "exercise_order": exerciseOrder
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
@@ -6030,6 +6121,118 @@ class NetworkManagerTwo {
             throw NetworkError.invalidResponse
         }
         return program
+    }
+
+    /// Add a new day (rest or workout) to all weeks in the program
+    /// - Parameters:
+    ///   - programId: The program ID
+    ///   - dayType: "rest" or "workout"
+    ///   - position: Optional 0-indexed position where to insert (default: end)
+    ///   - userEmail: The user's email
+    /// - Returns: The updated TrainingProgram with the new day added to each week
+    func addProgramDay(programId: Int, dayType: String, position: Int? = nil, userEmail: String) async throws -> TrainingProgram {
+        guard let url = URL(string: "\(baseUrl)/api/programs/\(programId)/add-day/") else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        var body: [String: Any] = [
+            "user_email": userEmail,
+            "day_type": dayType
+        ]
+        if let position = position {
+            body["position"] = position
+        }
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validate(response: response, data: data)
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let responsePayload = try decoder.decode(ProgramResponse.self, from: data)
+        guard let program = responsePayload.program else {
+            throw NetworkError.invalidResponse
+        }
+        return program
+    }
+
+    /// Add exercises to a program day. If the day is a rest day, it will be
+    /// converted to a workout day with proper naming (e.g., "Workout D").
+    /// - Parameters:
+    ///   - dayId: The program day ID
+    ///   - exercises: Array of exercises to add with their details
+    ///   - userEmail: The user's email
+    /// - Returns: The updated ProgramDay with the added exercises
+    func addExercisesToDay(
+        dayId: Int,
+        exercises: [(exerciseId: Int, exerciseName: String, targetSets: Int, targetReps: Int)],
+        userEmail: String
+    ) async throws -> ProgramDay {
+        guard let url = URL(string: "\(baseUrl)/api/programs/day/\(dayId)/add-exercises/") else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let exercisesArray = exercises.map { ex -> [String: Any] in
+            return [
+                "exercise_id": ex.exerciseId,
+                "exercise_name": ex.exerciseName,
+                "target_sets": ex.targetSets,
+                "target_reps": ex.targetReps
+            ]
+        }
+
+        let body: [String: Any] = [
+            "user_email": userEmail,
+            "exercises": exercisesArray
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validate(response: response, data: data)
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let responsePayload = try decoder.decode(ProgramDayResponse.self, from: data)
+        guard let day = responsePayload.day else {
+            throw NetworkError.invalidResponse
+        }
+        return day
+    }
+
+    /// Update exercise targets (sets and/or reps) for a specific exercise instance
+    func updateExerciseTargets(
+        exerciseInstanceId: Int,
+        targetSets: Int?,
+        targetReps: Int?,
+        userEmail: String
+    ) async throws {
+        guard let url = URL(string: "\(baseUrl)/api/programs/exercise/\(exerciseInstanceId)/targets/") else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        var body: [String: Any] = ["user_email": userEmail]
+        if let sets = targetSets {
+            body["target_sets"] = sets
+        }
+        if let reps = targetReps {
+            body["target_reps"] = reps
+        }
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validate(response: response, data: data)
     }
 
 }
