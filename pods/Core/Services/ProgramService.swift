@@ -79,7 +79,9 @@ class ProgramService: ObservableObject {
         totalWeeks: Int = 6,
         includeDeload: Bool = true,
         availableEquipment: [String]? = nil,
-        excludedExercises: [Int]? = nil
+        excludedExercises: [Int]? = nil,
+        defaultWarmupEnabled: Bool = false,
+        defaultCooldownEnabled: Bool = false
     ) async throws -> TrainingProgram {
         isLoading = true
         defer { isLoading = false }
@@ -104,13 +106,16 @@ class ProgramService: ObservableObject {
             totalWeeks: totalWeeks,
             includeDeload: includeDeload,
             availableEquipment: availableEquipment,
-            excludedExercises: excludedExercises
+            excludedExercises: excludedExercises,
+            defaultWarmupEnabled: defaultWarmupEnabled,
+            defaultCooldownEnabled: defaultCooldownEnabled
         )
 
         do {
             let program = try await networkManager.generateProgram(userEmail: userEmail, request: request)
             self.activeProgram = program
             print("[ProgramService] Successfully generated program: \(program.name)")
+            print("[ProgramService] Program warmup=\(program.defaultWarmupEnabled ?? false), cooldown=\(program.defaultCooldownEnabled ?? false)")
             return program
         } catch {
             print("[ProgramService ERROR] Failed to generate program: \(error)")
@@ -388,6 +393,37 @@ class ProgramService: ObservableObject {
             }
         }()
 
+        // Generate warmup/cooldown based on plan preferences
+        let warmupEnabled = program.defaultWarmupEnabled ?? false
+        let cooldownEnabled = program.defaultCooldownEnabled ?? false
+        let includeFoamRolling = program.includeFoamRolling ?? true
+
+        print("🏋️ [todayProgramWorkout] Plan preferences: warmup=\(warmupEnabled), cooldown=\(cooldownEnabled), foamRolling=\(includeFoamRolling)")
+
+        var warmUpExercises: [TodayWorkoutExercise]? = nil
+        var coolDownExercises: [TodayWorkoutExercise]? = nil
+
+        if warmupEnabled {
+            // Use intelligent warmup that analyzes workout exercises
+            warmUpExercises = WorkoutRecommendationService.shared.getIntelligentWarmupExercises(
+                workoutExercises: todayExercises,
+                customEquipment: nil,
+                includeFoamRolling: includeFoamRolling,
+                totalCount: 4
+            )
+            print("🏋️ [todayProgramWorkout] Generated \(warmUpExercises?.count ?? 0) warmup exercises")
+        }
+
+        if cooldownEnabled {
+            // Use intelligent cooldown prioritized by muscle fatigue
+            coolDownExercises = WorkoutRecommendationService.shared.getIntelligentCooldownExercises(
+                workoutExercises: todayExercises,
+                customEquipment: nil,
+                totalCount: 3
+            )
+            print("🏋️ [todayProgramWorkout] Generated \(coolDownExercises?.count ?? 0) cooldown exercises")
+        }
+
         print("✅ [todayProgramWorkout] FOUND WORKOUT: '\(day.workoutLabel)' with \(todayExercises.count) exercises, dayId=\(day.id), cyclePosition=\(day.cyclePosition ?? -1)")
         return TodayWorkout(
             id: UUID(),
@@ -398,8 +434,8 @@ class ProgramService: ObservableObject {
             estimatedDuration: workoutSession.estimatedDurationMinutes,
             fitnessGoal: fitnessGoal,
             difficulty: 5,
-            warmUpExercises: nil,
-            coolDownExercises: nil,
+            warmUpExercises: warmUpExercises,
+            coolDownExercises: coolDownExercises,
             programDayId: day.id
         )
     }

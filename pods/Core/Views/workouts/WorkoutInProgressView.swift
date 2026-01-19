@@ -328,14 +328,23 @@ struct WorkoutInProgressView: View {
     private var warmUpSectionView: some View {
         if let warmUpExercises = workout.warmUpExercises, !warmUpExercises.isEmpty {
             sectionHeader(title: "Warm-Up", color: .primary)
-            
-            ForEach(Array(warmUpExercises.enumerated()), id: \.offset) { index, exercise in
-                createExerciseRow(
-                    exercise: exercise,
-                    globalIndex: index,
-                    loggedSetsCount: exerciseCompletionStatus[index]
-                )
+
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(warmUpExercises.enumerated()), id: \.offset) { index, exercise in
+                    createExerciseRow(
+                        exercise: exercise,
+                        globalIndex: index,
+                        loggedSetsCount: exerciseCompletionStatus[index],
+                        useBackground: false
+                    )
+                    if index != warmUpExercises.count - 1 {
+                        Divider().opacity(0.08)
+                    }
+                }
             }
+            .background(Color("containerbg"))
+            .cornerRadius(24)
+            .padding(.top, 8)
         }
     }
     
@@ -419,17 +428,26 @@ struct WorkoutInProgressView: View {
     private var coolDownSectionView: some View {
         if let coolDownExercises = workout.coolDownExercises, !coolDownExercises.isEmpty {
             let coolDownStartIndex = (workout.warmUpExercises?.count ?? 0) + workout.exercises.count
-            
+
             sectionHeader(title: "Cool-Down", color: .primary)
-            
-            ForEach(Array(coolDownExercises.enumerated()), id: \.offset) { index, exercise in
-                let globalIndex = coolDownStartIndex + index
-                createExerciseRow(
-                    exercise: exercise,
-                    globalIndex: globalIndex,
-                    loggedSetsCount: exerciseCompletionStatus[globalIndex]
-                )
+
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(coolDownExercises.enumerated()), id: \.offset) { index, exercise in
+                    let globalIndex = coolDownStartIndex + index
+                    createExerciseRow(
+                        exercise: exercise,
+                        globalIndex: globalIndex,
+                        loggedSetsCount: exerciseCompletionStatus[globalIndex],
+                        useBackground: false
+                    )
+                    if index != coolDownExercises.count - 1 {
+                        Divider().opacity(0.08)
+                    }
+                }
             }
+            .background(Color("containerbg"))
+            .cornerRadius(24)
+            .padding(.top, 8)
         }
     }
     

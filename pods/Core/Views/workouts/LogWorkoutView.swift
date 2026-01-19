@@ -636,8 +636,11 @@ struct LogWorkoutView: View {
             HStack(spacing: 12) {
                 if hasSessionModifications {
                     Button(action: {
-                        workoutManager.clearAllSessionOverrides()
-                        self.requestWorkoutGeneration()
+                        // Restore to plan workout (or generate defaults if no plan)
+                        // This does NOT regenerate a new random workout
+                        Task {
+                            await workoutManager.restoreToPlanWorkout()
+                        }
                     }) {
                         Image(systemName: "xmark")
                             .font(.system(size: 12, weight: .medium))
@@ -1372,7 +1375,10 @@ private struct TodayWorkoutView: View {
                 requestTodayWorkoutGeneration()
             }
             .onChange(of: effectiveFlexibilityPreferences) { _, newPreferences in
-                requestTodayWorkoutGeneration()
+                // Only update warmup/cooldown, don't regenerate the entire workout
+                Task {
+                    await workoutManager.updateFlexibilityExercisesOnly(newPreferences)
+                }
             }
             .onChange(of: customEquipment) { _, newEquipment in
                 requestTodayWorkoutGeneration()
@@ -3298,18 +3304,26 @@ private extension View {
             .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
 
             ForEach(Array(warmUpExercises.enumerated()), id: \.element.exercise.id) { index, exercise in
-                ExerciseWorkoutCard(
-                    exercise: exercise,
-                    allExercises: warmUpExercises,
-                    exerciseIndex: index,
-                    onExerciseReplaced: { _, _ in },
-                    onOpen: {
-                        onPresentLogSheet(LogExerciseSheetContext(exercise: exercise, allExercises: warmUpExercises, index: index))
+                VStack(spacing: 0) {
+                    ExerciseWorkoutCard(
+                        exercise: exercise,
+                        allExercises: warmUpExercises,
+                        exerciseIndex: index,
+                        onExerciseReplaced: { _, _ in },
+                        onOpen: {
+                            onPresentLogSheet(LogExerciseSheetContext(exercise: exercise, allExercises: warmUpExercises, index: index))
+                        },
+                        useBackground: false
+                    )
+                    if index != warmUpExercises.count - 1 {
+                        Divider()
+                            .padding(.leading, 92)  // Align with text after thumbnail
                     }
-                )
-                .listRowBackground(Color.clear)
+                }
+                .padding(.vertical, 4)
+                .listRowInsets(EdgeInsets(top: index == 0 ? 16 : 8, leading: 0, bottom: index == warmUpExercises.count - 1 ? 8 : 0, trailing: 0))
                 .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 0))
+                .listRowBackground(Color.clear)
             }
         }
     }
@@ -3485,18 +3499,26 @@ private extension View {
             .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
 
             ForEach(Array(coolDownExercises.enumerated()), id: \.element.exercise.id) { index, exercise in
-                ExerciseWorkoutCard(
-                    exercise: exercise,
-                    allExercises: coolDownExercises,
-                    exerciseIndex: index,
-                    onExerciseReplaced: { _, _ in },
-                    onOpen: {
-                        onPresentLogSheet(LogExerciseSheetContext(exercise: exercise, allExercises: coolDownExercises, index: index))
+                VStack(spacing: 0) {
+                    ExerciseWorkoutCard(
+                        exercise: exercise,
+                        allExercises: coolDownExercises,
+                        exerciseIndex: index,
+                        onExerciseReplaced: { _, _ in },
+                        onOpen: {
+                            onPresentLogSheet(LogExerciseSheetContext(exercise: exercise, allExercises: coolDownExercises, index: index))
+                        },
+                        useBackground: false
+                    )
+                    if index != coolDownExercises.count - 1 {
+                        Divider()
+                            .padding(.leading, 92)  // Align with text after thumbnail
                     }
-                )
-                .listRowBackground(Color.clear)
+                }
+                .padding(.vertical, 4)
+                .listRowInsets(EdgeInsets(top: index == 0 ? 16 : 8, leading: 0, bottom: index == coolDownExercises.count - 1 ? 8 : 0, trailing: 0))
                 .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 0))
+                .listRowBackground(Color.clear)
             }
         }
     }

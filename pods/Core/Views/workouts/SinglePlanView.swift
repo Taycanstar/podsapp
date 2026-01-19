@@ -254,7 +254,7 @@ struct SinglePlanView: View {
                 }
                 .buttonStyle(PrimaryButtonStyle())
                 .padding(.horizontal, 20)
-                .padding(.bottom, 20)
+                .padding(.bottom, 5)
             }
         }
         // WorkoutInProgressView fullScreenCover
@@ -1037,6 +1037,8 @@ private struct PlanSettingsSheet: View {
     @State private var planName: String
     @State private var totalWeeks: Int
     @State private var includeDeload: Bool
+    @State private var warmupEnabled: Bool
+    @State private var cooldownEnabled: Bool
     @State private var periodizationEnabled: Bool
     @State private var dayOrder: [DayOrderItem]
 
@@ -1055,6 +1057,8 @@ private struct PlanSettingsSheet: View {
         _planName = State(initialValue: program.name)
         _totalWeeks = State(initialValue: program.totalWeeks)
         _includeDeload = State(initialValue: program.includeDeload)
+        _warmupEnabled = State(initialValue: program.defaultWarmupEnabled ?? false)
+        _cooldownEnabled = State(initialValue: program.defaultCooldownEnabled ?? false)
         _periodizationEnabled = State(initialValue: true) // Default enabled (MacroFactor-style)
 
         // Initialize day order from week 1 days (use actual day count, not hardcoded 7)
@@ -1109,7 +1113,7 @@ private struct PlanSettingsSheet: View {
 
                 // Editable: Number of Weeks
                 Section("Duration") {
-                    Stepper("\(totalWeeks) weeks", value: $totalWeeks, in: 4...16)
+                    Stepper("\(totalWeeks) weeks", value: $totalWeeks, in: 1...16)
                 }
 
                 // Editable: Day Order (7-day cycle)
@@ -1133,14 +1137,24 @@ private struct PlanSettingsSheet: View {
                     Text("Schedule")
                 }
 
-                // Editable: Periodization & Deload
+                // Editable: Workout Options (deload, warmup, cooldown)
+                Section {
+                    Toggle("Deload Week", isOn: $includeDeload)
+                    Toggle("Warm-Up", isOn: $warmupEnabled)
+                    Toggle("Cool-Down", isOn: $cooldownEnabled)
+                } header: {
+                    Text("Workout Options")
+                } footer: {
+                    Text("Deload reduces volume in the final week. Warm-up and cool-down add flexibility exercises to each workout.")
+                }
+
+                // Editable: Periodization
                 Section {
                     Toggle("Periodization", isOn: $periodizationEnabled)
-                    Toggle("Include Deload Week", isOn: $includeDeload)
                 } header: {
                     Text("Periodization")
                 } footer: {
-                    Text("Periodization automatically adjusts volume and intensity across weeks for optimal progress.")
+                    Text("Automatically adjusts volume and intensity across weeks for optimal progress.")
                 }
 
                 // Read-only: Generation Settings (baked in, can't change)
@@ -1293,8 +1307,13 @@ private struct PlanSettingsSheet: View {
                 let weeksToSend = totalWeeks != program.totalWeeks ? totalWeeks : nil
                 let deloadToSend = includeDeload != program.includeDeload ? includeDeload : nil
 
-                print("[PlanSettings] Saving: name='\(planName)', weeks=\(totalWeeks), includeDeload=\(includeDeload), dayOrder=\(dayOrderPattern)")
+                // Check if warmup/cooldown changed
+                let warmupChanged = warmupEnabled != (program.defaultWarmupEnabled ?? false)
+                let cooldownChanged = cooldownEnabled != (program.defaultCooldownEnabled ?? false)
 
+                print("[PlanSettings] Saving: name='\(planName)', weeks=\(totalWeeks), includeDeload=\(includeDeload), warmup=\(warmupEnabled), cooldown=\(cooldownEnabled), dayOrder=\(dayOrderPattern)")
+
+                // Update plan settings (name, weeks, deload, day order)
                 _ = try await programService.updatePlanSettings(
                     programId: program.id,
                     userEmail: userEmail,
@@ -1303,6 +1322,15 @@ private struct PlanSettingsSheet: View {
                     includeDeload: deloadToSend,
                     dayOrder: dayOrderArray
                 )
+
+                // Update plan preferences (warmup/cooldown) if changed
+                if warmupChanged || cooldownChanged {
+                    try await programService.updatePlanPreference(
+                        userEmail: userEmail,
+                        warmupEnabled: warmupEnabled,
+                        cooldownEnabled: cooldownEnabled
+                    )
+                }
 
                 await MainActor.run {
                     onSettingsSaved?()
@@ -2222,7 +2250,9 @@ private struct EditExerciseTargetsView: View {
 
     @State private var targetSets: Int
     @State private var targetReps: Int
+    @State private var repsText: String
     @State private var isSaving = false
+    @FocusState private var focusedSetIndex: Int?
 
     // Sheet drag state (matching ExerciseLoggingView)
     @State private var sheetCurrentTop: CGFloat? = nil
@@ -2252,6 +2282,7 @@ private struct EditExerciseTargetsView: View {
         self.onSave = onSave
         _targetSets = State(initialValue: weekData.sets)
         _targetReps = State(initialValue: weekData.reps)
+        _repsText = State(initialValue: "\(weekData.reps)")
     }
 
     var body: some View {
@@ -2311,21 +2342,68 @@ private struct EditExerciseTargetsView: View {
                         .contentShape(Rectangle())
                         .gesture(sheetDragGesture(expandedTop: expandedTop, collapsedTop: collapsedTop))
 
-                    // Main content
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 16) {
-                            // Exercise header
+                    // Main content - use List for swipe-to-delete
+                    List {
+                        // Exercise header section
+                        Section {
                             exerciseHeaderSection
-
-                            // Sets input section
-                            setsInputSection
-
-                            // Bottom spacing
-                            Color.clear.frame(height: 120)
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
+                        .listRowBackground(Color("primarybg"))
+                        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                        .listRowSeparator(.hidden)
+
+                        // Sets rows with swipe to delete
+                        ForEach(0..<targetSets, id: \.self) { setIndex in
+                            setRow(setNumber: setIndex + 1, setIndex: setIndex)
+                                .listRowBackground(Color("primarybg"))
+                                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                                .listRowSeparator(.hidden)
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    if targetSets > 1 {
+                                        Button(role: .destructive) {
+                                            withAnimation {
+                                                targetSets -= 1
+                                            }
+                                            HapticFeedback.generateLigth()
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                    }
+                                }
+                        }
+
+                        // Add set button
+                        Button(action: {
+                            if targetSets < 10 {
+                                withAnimation {
+                                    targetSets += 1
+                                }
+                                HapticFeedback.generateLigth()
+                            }
+                        }) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 16, weight: .semibold))
+                                Text("Add Set")
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
+                            .foregroundColor(.primary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .listRowBackground(Color("primarybg"))
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 0, trailing: 16))
+                        .listRowSeparator(.hidden)
+
+                        // Bottom spacing
+                        Color.clear
+                            .frame(height: 100)
+                            .listRowBackground(Color("primarybg"))
+                            .listRowSeparator(.hidden)
                     }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
                     .scrollDismissesKeyboard(.interactively)
                     .scrollDisabled(isDraggingSheet)
                 }
@@ -2340,41 +2418,47 @@ private struct EditExerciseTargetsView: View {
         }
         // Top buttons pinned to safe area (matching ExerciseLoggingView)
         .safeAreaInset(edge: .top) {
-            HStack {
-                // xmark on left with ultraThinMaterial (no gray container)
-                Button(action: { dismiss() }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.primary)
-                        .frame(width: 36, height: 36)
-                        .background(.ultraThinMaterial)
-                        .clipShape(Circle())
-                        .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 2)
-                }
-                .padding(.leading, 12)
-                .padding(.top, 4)
-
-                Spacer()
-
-                // checkmark on right with glassProminent
-                if isSaving {
-                    ProgressView()
-                        .padding(.trailing, 12)
-                        .padding(.top, 4)
-                } else {
-                    Button(action: { saveTargets() }) {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(width: 36, height: 36)
-                    }
-                    .glassProminentButtonStyle()
-                    .padding(.trailing, 12)
-                    .padding(.top, 4)
-                }
-            }
+            topButtonsView
         }
         .navigationBarHidden(true)
+    }
+
+    // MARK: - Top Buttons (xmark left, checkmark right)
+    @ViewBuilder
+    private var topButtonsView: some View {
+        HStack {
+            // xmark on left with ultraThinMaterial
+            Button(action: { dismiss() }) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.primary)
+                    .frame(width: 36, height: 36)
+                    .background(.ultraThinMaterial)
+                    .clipShape(Circle())
+                    .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 2)
+            }
+            .padding(.leading, 12)
+            .padding(.top, 4)
+
+            Spacer()
+
+            // checkmark on right with glassProminent (no container for iOS 26+)
+            if isSaving {
+                ProgressView()
+                    .padding(.trailing, 12)
+                    .padding(.top, 4)
+            } else {
+                Button(action: { saveTargets() }) {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 36, height: 36)
+                }
+                .editTargetsCheckmarkStyle()
+                .padding(.trailing, 12)
+                .padding(.top, 4)
+            }
+        }
     }
 
     // MARK: - Exercise Header Section
@@ -2394,120 +2478,51 @@ private struct EditExerciseTargetsView: View {
         .padding(.vertical, 8)
     }
 
-    // MARK: - Sets Input Section (matching ExerciseLoggingView style)
-    private var setsInputSection: some View {
-        VStack(spacing: 0) {
-            ForEach(0..<targetSets, id: \.self) { setIndex in
-                VStack(spacing: 0) {
-                    setRow(setNumber: setIndex + 1)
-
-                    if setIndex < targetSets - 1 {
-                        Divider()
-                            .padding(.leading, 48)
-                    }
-                }
-            }
-
-            // Add set button
-            Button(action: {
-                if targetSets < 10 {
-                    targetSets += 1
-                    HapticFeedback.generateLigth()
-                }
-            }) {
-                HStack(spacing: 8) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .semibold))
-                    Text("Add Set")
-                        .font(.system(size: 16, weight: .semibold))
-                }
-                .foregroundColor(.primary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(Color.clear)
-                .cornerRadius(8)
-            }
-            .buttonStyle(PlainButtonStyle())
-            .padding(.top, 8)
-        }
-    }
-
-    // MARK: - Set Row (matching DynamicSetRowView style)
-    private func setRow(setNumber: Int) -> some View {
-        HStack(spacing: 12) {
-            // Set number circle
+    // MARK: - Set Row (matching DynamicSetRowView style from ExerciseLoggingView)
+    private func setRow(setNumber: Int, setIndex: Int) -> some View {
+        HStack(spacing: 16) {
+            // Set number indicator (rounded rectangle like DynamicSetRowView)
             ZStack {
-                Circle()
-                    .fill(Color("thumbbg"))
-                    .frame(width: 36, height: 36)
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color("containerbg"))
+                    .strokeBorder(Color(.systemGray4), lineWidth: 0.5)
+                    .frame(width: 44, height: 44)
+
                 Text("\(setNumber)")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
                     .foregroundColor(.primary)
             }
 
-            // Reps input
-            HStack(spacing: 4) {
-                Button {
-                    if targetReps > 1 {
-                        targetReps -= 1
-                        HapticFeedback.generateLigth()
+            // Reps TextField (matching DynamicSetRowView style)
+            TextField("\(targetReps)", text: $repsText)
+                .keyboardType(.numberPad)
+                .font(.system(size: 17, weight: .medium, design: .rounded))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .frame(minWidth: 80)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color("containerbg"))
+                        .strokeBorder(
+                            focusedSetIndex == setIndex ? Color.accentColor : Color(.systemGray4),
+                            lineWidth: focusedSetIndex == setIndex ? 2 : 0.5
+                        )
+                )
+                .focused($focusedSetIndex, equals: setIndex)
+                .onChange(of: repsText) { _, newValue in
+                    if let reps = Int(newValue), reps > 0 {
+                        targetReps = reps
                     }
-                } label: {
-                    Image(systemName: "minus")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(.secondary)
-                        .frame(width: 28, height: 28)
-                        .background(Color("thumbbg"))
-                        .clipShape(Circle())
                 }
-
-                Text("\(targetReps)")
-                    .font(.system(size: 17, weight: .medium, design: .rounded))
-                    .frame(minWidth: 32)
-                    .multilineTextAlignment(.center)
-
-                Button {
-                    if targetReps < 30 {
-                        targetReps += 1
-                        HapticFeedback.generateLigth()
-                    }
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(.secondary)
-                        .frame(width: 28, height: 28)
-                        .background(Color("thumbbg"))
-                        .clipShape(Circle())
-                }
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .background(Color("containerbg"))
-            .cornerRadius(12)
 
             Text("reps")
                 .font(.system(size: 14))
                 .foregroundColor(.secondary)
 
             Spacer()
-
-            // Delete set button (swipe alternative)
-            if targetSets > 1 {
-                Button {
-                    if targetSets > 1 {
-                        targetSets -= 1
-                        HapticFeedback.generateLigth()
-                    }
-                } label: {
-                    Image(systemName: "trash")
-                        .font(.system(size: 14))
-                        .foregroundColor(.red.opacity(0.8))
-                }
-                .buttonStyle(PlainButtonStyle())
-            }
         }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 4)
+        .padding(.vertical, 6)
     }
 
     // MARK: - Sheet Drag Gesture
@@ -2568,6 +2583,20 @@ private extension View {
             self.buttonStyle(.glassProminent)
                 .buttonBorderShape(.circle)
         } else {
+            self.background(Color.accentColor)
+                .clipShape(Circle())
+                .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 2)
+        }
+    }
+
+    @ViewBuilder
+    func editTargetsCheckmarkStyle() -> some View {
+        if #available(iOS 26, *) {
+            // iOS 26+: use glassProminent without any container
+            self.buttonStyle(.glassProminent)
+                .buttonBorderShape(.circle)
+        } else {
+            // Pre-iOS 26: fallback with accentColor background
             self.background(Color.accentColor)
                 .clipShape(Circle())
                 .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 2)

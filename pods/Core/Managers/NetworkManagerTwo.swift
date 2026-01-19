@@ -5853,7 +5853,9 @@ class NetworkManagerTwo {
             "days_per_week": request.daysPerWeek,
             "session_duration_minutes": request.sessionDurationMinutes,
             "total_weeks": request.totalWeeks,
-            "include_deload": request.includeDeload
+            "include_deload": request.includeDeload,
+            "default_warmup_enabled": request.defaultWarmupEnabled,
+            "default_cooldown_enabled": request.defaultCooldownEnabled
         ]
 
         if let startDate = request.startDate {
@@ -5955,8 +5957,20 @@ class NetworkManagerTwo {
         let body: [String: Any] = ["user_email": userEmail]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (_, response) = try await URLSession.shared.data(for: request)
-        try validate(response: response, data: nil)
+        print("[DELETE PROGRAM] Deleting program \(programId) for user: \(userEmail)")
+        print("[DELETE PROGRAM] URL: \(url)")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        if let httpResponse = response as? HTTPURLResponse {
+            print("[DELETE PROGRAM] Response status: \(httpResponse.statusCode)")
+        }
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("[DELETE PROGRAM] Response: \(responseString)")
+        }
+
+        try validate(response: response, data: data)
+        print("[DELETE PROGRAM] Successfully deleted program \(programId)")
     }
 
     /// Update plan settings (MacroFactor-style)

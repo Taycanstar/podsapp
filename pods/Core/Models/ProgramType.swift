@@ -220,6 +220,17 @@ struct TrainingProgram: Codable, Identifiable {
         parseProgramDate(endDate)
     }
 
+    var totalCalendarWeeks: Int {
+        if let weeks = weeks, !weeks.isEmpty {
+            return weeks.count
+        }
+        if let start = startDateValue, let end = endDateValue {
+            let days = Calendar.current.dateComponents([.day], from: start, to: end).day ?? 0
+            return max(1, (days / 7) + 1)
+        }
+        return totalWeeks + (includeDeload ? 1 : 0)
+    }
+
     var currentWeekNumber: Int? {
         guard let start = startDateValue else { return nil }
         let today = Date()
@@ -333,4 +344,6 @@ struct GenerateProgramRequest: Codable {
     let includeDeload: Bool
     let availableEquipment: [String]?
     let excludedExercises: [Int]?
+    let defaultWarmupEnabled: Bool
+    let defaultCooldownEnabled: Bool
 }

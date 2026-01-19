@@ -244,7 +244,8 @@ class WorkoutManager: ObservableObject {
     }
     
     // MARK: - Computed Properties (Effective Values)
-    // Priority: Session override > Active Plan > Fallback default
+    // Priority: Session override > Active Plan > Account Defaults > Ultimate Fallback
+    // This follows MacroFactor's approach: app works with sensible defaults even without a plan
 
     var effectiveDuration: WorkoutDuration {
         // 1. Session override (this workout only)
@@ -253,7 +254,11 @@ class WorkoutManager: ObservableObject {
         if let program = ProgramService.shared.activeProgram {
             return WorkoutDuration.fromMinutes(program.sessionDurationMinutes)
         }
-        // 3. Fallback default
+        // 3. Account-level defaults (safety net when no plan)
+        if let profile = userProfileService.activeWorkoutProfile {
+            return WorkoutDuration.fromMinutes(profile.preferredWorkoutDuration)
+        }
+        // 4. Ultimate fallback
         return .fortyFiveMinutes
     }
 
@@ -265,7 +270,11 @@ class WorkoutManager: ObservableObject {
            let goal = FitnessGoal(rawValue: program.fitnessGoal) {
             return goal
         }
-        // 3. Fallback default
+        // 3. Account-level defaults (safety net when no plan)
+        if let profile = userProfileService.activeWorkoutProfile {
+            return FitnessGoal.from(string: profile.fitnessGoal)
+        }
+        // 4. Ultimate fallback
         return .strength
     }
 
@@ -277,23 +286,43 @@ class WorkoutManager: ObservableObject {
            let level = ExperienceLevel(rawValue: program.experienceLevel) {
             return level
         }
-        // 3. Fallback default
+        // 3. Account-level defaults (safety net when no plan)
+        if let profile = userProfileService.activeWorkoutProfile,
+           let level = ExperienceLevel(rawValue: profile.fitnessLevel) {
+            return level
+        }
+        // 4. Ultimate fallback
         return .intermediate
     }
 
     var effectiveFlexibilityPreferences: FlexibilityPreferences {
         // 1. Session override (this workout only)
         if let sessionPrefs = sessionFlexibilityPreferences {
+            print("[WorkoutManager] effectiveFlexibilityPreferences: Using SESSION override - warmup=\(sessionPrefs.warmUpEnabled), cooldown=\(sessionPrefs.coolDownEnabled)")
             return sessionPrefs
         }
         // 2. Active Plan preference
         if let program = ProgramService.shared.activeProgram {
+            let warmup = program.defaultWarmupEnabled ?? false
+            let cooldown = program.defaultCooldownEnabled ?? false
+            let foamRolling = program.includeFoamRolling ?? true
+            print("[WorkoutManager] effectiveFlexibilityPreferences: Using PLAN '\(program.name)' - warmup=\(warmup), cooldown=\(cooldown), foamRolling=\(foamRolling)")
             return FlexibilityPreferences(
-                warmUpEnabled: program.defaultWarmupEnabled ?? false,
-                coolDownEnabled: program.defaultCooldownEnabled ?? false
+                warmUpEnabled: warmup,
+                coolDownEnabled: cooldown,
+                includeFoamRolling: foamRolling
             )
         }
-        // 3. Fallback default
+        // 3. Account-level defaults from WorkoutProfile (safety net when no plan)
+        if let profile = userProfileService.activeWorkoutProfile {
+            print("[WorkoutManager] effectiveFlexibilityPreferences: Using PROFILE defaults - warmup=\(profile.defaultWarmupEnabled), cooldown=\(profile.defaultCooldownEnabled)")
+            return FlexibilityPreferences(
+                warmUpEnabled: profile.defaultWarmupEnabled,
+                coolDownEnabled: profile.defaultCooldownEnabled
+            )
+        }
+        // 4. Ultimate fallback: defaults to FALSE (warmup/cooldown disabled by default)
+        print("[WorkoutManager] effectiveFlexibilityPreferences: Using FALLBACK - warmup=false, cooldown=false")
         return FlexibilityPreferences(warmUpEnabled: false, coolDownEnabled: false)
     }
     
@@ -1949,7 +1978,30 @@ class WorkoutManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: profileScopedKey(sessionRestWarmupKey))
         UserDefaults.standard.removeObject(forKey: profileScopedKey(sessionRestWorkingKey))
     }
-    
+
+    /// Restore workout to plan defaults (clears session overrides and uses plan workout if available)
+    /// This is called when user taps X to discard session changes and return to plan defaults
+    @MainActor
+    func restoreToPlanWorkout() async {
+        print("🔄 WorkoutManager: Restoring to plan workout (clearing session overrides)")
+
+        // 1. Clear all session-level overrides
+        clearAllSessionOverrides()
+
+        // 2. Check if there's a plan workout for today
+        if let programWorkout = ProgramService.shared.todayProgramWorkout {
+            print("📋 WorkoutManager: Restoring plan workout '\(programWorkout.title)'")
+            // Set todayWorkout to the plan workout directly (this restores the original plan workout)
+            self.todayWorkout = programWorkout
+            self.workoutRefreshTrigger = UUID()
+            saveTodayWorkout()
+        } else {
+            // No plan exists, generate a new workout with default settings
+            print("📋 WorkoutManager: No plan workout, generating with defaults")
+            await generateTodayWorkout(forceRegenerate: false)
+        }
+    }
+
     /// Replace exercise at index with new exercise data
     func replaceExercise(at index: Int, with newExercise: ExerciseData) {
         guard let currentWorkout = todayWorkout else { return }
@@ -2912,10 +2964,57 @@ class WorkoutManager: ObservableObject {
             }
         }
         
-        // Force regenerate workout with new preferences (user preference change)
+        // Update warmup/cooldown only (don't regenerate main workout exercises)
         Task {
-            await generateTodayWorkout(forceRegenerate: true)
+            await updateFlexibilityExercisesOnly(preferences)
         }
+    }
+
+    /// Update only warmup/cooldown exercises without regenerating the main workout
+    /// This keeps the main exercise list intact and only adds/removes flexibility exercises
+    @MainActor
+    func updateFlexibilityExercisesOnly(_ preferences: FlexibilityPreferences) async {
+        guard let currentWorkout = todayWorkout else {
+            print("⚠️ WorkoutManager: No workout to update flexibility exercises")
+            return
+        }
+
+        print("🔄 WorkoutManager: Updating flexibility exercises only (warmup=\(preferences.warmUpEnabled), cooldown=\(preferences.coolDownEnabled))")
+
+        // Generate new warmup/cooldown based on existing main exercises
+        let warmUpExercises: [TodayWorkoutExercise]? = preferences.warmUpEnabled ?
+            generateWarmUpExercises(
+                workoutExercises: currentWorkout.exercises,
+                equipment: customEquipment,
+                includeFoamRolling: preferences.includeFoamRolling
+            ) : nil
+
+        let coolDownExercises: [TodayWorkoutExercise]? = preferences.coolDownEnabled ?
+            generateCoolDownExercises(
+                workoutExercises: currentWorkout.exercises,
+                equipment: customEquipment
+            ) : nil
+
+        // Create new workout with same main exercises but updated warmup/cooldown
+        let updatedWorkout = TodayWorkout(
+            id: currentWorkout.id,
+            date: currentWorkout.date,
+            title: currentWorkout.title,
+            exercises: currentWorkout.exercises,
+            blocks: currentWorkout.blocks,
+            estimatedDuration: currentWorkout.estimatedDuration,
+            fitnessGoal: currentWorkout.fitnessGoal,
+            difficulty: currentWorkout.difficulty,
+            warmUpExercises: warmUpExercises,
+            coolDownExercises: coolDownExercises,
+            programDayId: currentWorkout.programDayId
+        )
+
+        // Update the published workout
+        self.todayWorkout = updatedWorkout
+        self.workoutRefreshTrigger = UUID()
+
+        print("✅ WorkoutManager: Flexibility exercises updated - warmup: \(warmUpExercises?.count ?? 0), cooldown: \(coolDownExercises?.count ?? 0)")
     }
 
     /// Clear all session overrides

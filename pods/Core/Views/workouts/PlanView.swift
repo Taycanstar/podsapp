@@ -237,7 +237,7 @@ struct PlanView: View {
         .onAppear {
             // Set selected week to current week
             if let currentWeek = program.currentWeekNumber {
-                selectedWeekNumber = min(currentWeek, program.totalWeeks)
+                selectedWeekNumber = min(currentWeek, program.totalCalendarWeeks)
             }
         }
     }
@@ -246,7 +246,7 @@ struct PlanView: View {
 
     private func weekSelector(program: TrainingProgram) -> some View {
         Menu {
-            ForEach(1...program.totalWeeks, id: \.self) { weekNum in
+            ForEach(1...program.totalCalendarWeeks, id: \.self) { weekNum in
                 let isDeload = program.weeks?.first(where: { $0.weekNumber == weekNum })?.isDeload ?? false
 
                 Button(action: { selectedWeekNumber = weekNum }) {
@@ -887,7 +887,10 @@ struct CreateProgramView: View {
     @State private var daysPerWeek: Int = 4
     @State private var sessionDuration: Int = 60
     @State private var totalWeeks: Int = 6
+    // Workout Options (combined section)
     @State private var includeDeload: Bool = true
+    @State private var warmupEnabled: Bool = false
+    @State private var cooldownEnabled: Bool = false
     @State private var isGenerating = false
     @State private var error: String?
 
@@ -947,17 +950,9 @@ struct CreateProgramView: View {
 
                     // Duration
                     Section {
-                        Stepper("\(daysPerWeek) days per week", value: $daysPerWeek, in: 2...6)
+                        Stepper("\(daysPerWeek) days per week", value: $daysPerWeek, in: 2...7)
                         Stepper("\(sessionDuration) min per session", value: $sessionDuration, in: 30...120, step: 15)
-                        Stepper("\(totalWeeks) weeks", value: $totalWeeks, in: 4...12)
-                        Toggle(isOn: $includeDeload) {
-                            VStack(alignment: .leading) {
-                                Text("Include Deload Week")
-                                Text("Recovery week at the end")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
+                        Stepper("\(totalWeeks) weeks", value: $totalWeeks, in: 1...12)
                     } header: {
                         Text("Duration")
                     }
@@ -973,6 +968,36 @@ struct CreateProgramView: View {
                         .controlSize(.large)
                     } header: {
                         Text("Experience Level")
+                    }
+
+                    // Workout Options (Deload, Warm-Up, Cool-Down)
+                    Section {
+                        Toggle(isOn: $includeDeload) {
+                            VStack(alignment: .leading) {
+                                Text("Deload Week")
+                                Text("Recovery week at the end")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        Toggle(isOn: $warmupEnabled) {
+                            VStack(alignment: .leading) {
+                                Text("Warm-Up")
+                                Text("Dynamic stretches before workout")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        Toggle(isOn: $cooldownEnabled) {
+                            VStack(alignment: .leading) {
+                                Text("Cool-Down")
+                                Text("Static stretches after workout")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    } header: {
+                        Text("Workout Options")
                     }
 
                     // Error Message
@@ -1034,7 +1059,9 @@ struct CreateProgramView: View {
                 daysPerWeek: daysPerWeek,
                 sessionDurationMinutes: sessionDuration,
                 totalWeeks: totalWeeks,
-                includeDeload: includeDeload
+                includeDeload: includeDeload,
+                defaultWarmupEnabled: warmupEnabled,
+                defaultCooldownEnabled: cooldownEnabled
             )
             // Notify WorkoutManager to refresh today's workout with the new program
             NotificationCenter.default.post(name: .trainingProgramCreated, object: nil)
@@ -1449,7 +1476,7 @@ private struct PlanListRow: View {
                             }
                         }
 
-                        Text("\(program.totalWeeks) weeks • \(program.programTypeEnum?.displayName ?? program.programType)")
+                        Text("\(program.totalCalendarWeeks) weeks • \(program.programTypeEnum?.displayName ?? program.programType)")
                             .font(.system(size: 14))
                             .foregroundColor(.secondary)
                     }
