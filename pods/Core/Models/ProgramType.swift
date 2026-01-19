@@ -65,12 +65,14 @@ enum ProgramFitnessGoal: String, Codable, CaseIterable {
     case hypertrophy = "hypertrophy"
     case strength = "strength"
     case balanced = "balanced"
+    case endurance = "endurance"
 
     var displayName: String {
         switch self {
         case .hypertrophy: return "Hypertrophy"
         case .strength: return "Strength"
         case .balanced: return "Both"
+        case .endurance: return "Endurance"
         }
     }
 
@@ -79,6 +81,7 @@ enum ProgramFitnessGoal: String, Codable, CaseIterable {
         case .hypertrophy: return "Hypertrophy"
         case .strength: return "Strength"
         case .balanced: return "Balanced"
+        case .endurance: return "Endurance"
         }
     }
 
@@ -87,6 +90,7 @@ enum ProgramFitnessGoal: String, Codable, CaseIterable {
         case .hypertrophy: return "Maximize muscle growth with moderate weights and higher volume"
         case .strength: return "Build maximal strength with heavier weights and lower reps"
         case .balanced: return "Equal focus on strength and muscle size"
+        case .endurance: return "Build work capacity and stamina with higher reps and shorter rest"
         }
     }
 }

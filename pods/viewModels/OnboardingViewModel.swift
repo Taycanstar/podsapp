@@ -55,6 +55,7 @@ class OnboardingViewModel: ObservableObject {
         case gainMuscle = "Gain muscle"
         case leanAndToned = "Get lean and toned"
         case loseWeight = "Lose weight"
+        case buildEndurance = "Build endurance"
 
         var id: String { rawValue }
 
@@ -68,6 +69,8 @@ class OnboardingViewModel: ObservableObject {
                 return "figure.cooldown"
             case .loseWeight:
                 return "scalemass"
+            case .buildEndurance:
+                return "figure.run"
             }
         }
 
@@ -80,6 +83,8 @@ class OnboardingViewModel: ObservableObject {
                 return "hypertrophy"
             case .loseWeight:
                 return "hypertrophy"
+            case .buildEndurance:
+                return "endurance"
             }
         }
 
@@ -94,6 +99,8 @@ class OnboardingViewModel: ObservableObject {
                 return "lean_bulk"
             case .liftMoreWeight:
                 return "recomp"
+            case .buildEndurance:
+                return "recomp"
             }
         }
 
@@ -104,6 +111,8 @@ class OnboardingViewModel: ObservableObject {
                 return .liftMoreWeight
             case "hypertrophy":
                 return .leanAndToned
+            case "endurance":
+                return .buildEndurance
             case "circuit_training", "general":
                 return .leanAndToned
             default:

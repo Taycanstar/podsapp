@@ -4229,11 +4229,12 @@ struct FitnessGoalPickerView: View {
 
     @State private var tempSelectedGoal: FitnessGoal
 
-    // Simplified 3-option picker matching Plan creation (MacroFactor-style)
+    // Simplified 4-option picker matching Plan creation (MacroFactor-style)
     static let pickerGoals: [FitnessGoal] = [
         .hypertrophy,
         .strength,
-        .balanced
+        .balanced,
+        .endurance
     ]
 
     init(selectedFitnessGoal: Binding<FitnessGoal>, onSetForWorkout: @escaping (FitnessGoal) -> Void) {
@@ -4245,6 +4246,7 @@ struct FitnessGoalPickerView: View {
         case .hypertrophy, .tone: .hypertrophy
         case .strength, .power, .powerlifting: .strength
         case .balanced: .balanced
+        case .endurance: .endurance
         default: .balanced  // general, circuitTraining, olympicWeightlifting → balanced
         }
         self._tempSelectedGoal = State(initialValue: mapped)
