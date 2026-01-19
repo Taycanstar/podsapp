@@ -10,7 +10,7 @@
 //
 //  1. PLAN DURATION:
 //     - User's preference stored on the active training plan
-//     - Updated when "Set for plan" is pressed
+//     - Updated from plan creation/editing flows
 //     - Syncs via ProgramService.updatePlanPreference() to backend
 //     - Future workouts inherit the new value
 //
@@ -295,6 +295,7 @@ struct LogWorkoutView: View {
             }
             .sheet(isPresented: $showingEquipmentPicker) {
                 equipmentPickerSheet
+                    .environmentObject(workoutManager)
             }
             .sheet(isPresented: $showingFitnessGoalPicker) {
                 fitnessGoalPickerSheet
@@ -406,11 +407,6 @@ struct LogWorkoutView: View {
     private var durationPickerSheet: some View {
         WorkoutDurationPickerView(
             selectedDuration: .constant(workoutManager.effectiveDuration),
-            onSetForPlan: { newDuration in
-                // Update plan via ProgramService (setForPlanDuration handles the API call)
-                workoutManager.setForPlanDuration(newDuration)
-                showingDurationPicker = false
-            },
             onSetForWorkout: { newDuration in
                 // Update WorkoutManager session duration
                 workoutManager.setSessionDuration(newDuration)
@@ -433,23 +429,32 @@ struct LogWorkoutView: View {
     
     @ViewBuilder
     private var equipmentPickerSheet: some View {
-        EquipmentView(onSelectionChanged: { newEquipment, equipmentType in
-                // Save custom equipment selection and type
-                workoutManager.setSessionEquipment(newEquipment, type: equipmentType)
-
+        TodayEquipmentPickerSheet(
+            onSetForProfile: { equipment in
+                // Update the active profile's equipment and regenerate workout
+                workoutManager.setSessionEquipment(equipment, type: "Custom")
                 showingEquipmentPicker = false
-            })
+                // Force regenerate workout with new equipment
+                Task {
+                    await workoutManager.generateTodayWorkout(forceRegenerate: true)
+                }
+            },
+            onSetForWorkout: { equipment in
+                // Only set session equipment and regenerate (ghost edit - profile unchanged)
+                workoutManager.setSessionEquipment(equipment, type: "Custom")
+                showingEquipmentPicker = false
+                // Force regenerate workout with new equipment
+                Task {
+                    await workoutManager.generateTodayWorkout(forceRegenerate: true)
+                }
+            }
+        )
     }
     
     @ViewBuilder
     private var fitnessGoalPickerSheet: some View {
         FitnessGoalPickerView(
             selectedFitnessGoal: .constant(workoutManager.effectiveFitnessGoal),
-            onSetForPlan: { newGoal in
-                // Update plan via ProgramService (setForPlanFitnessGoal handles the API call)
-                workoutManager.setForPlanFitnessGoal(newGoal)
-                showingFitnessGoalPicker = false
-            },
             onSetForWorkout: { newGoal in
                 workoutManager.setSessionFitnessGoal(newGoal)
                 showingFitnessGoalPicker = false
@@ -461,11 +466,6 @@ struct LogWorkoutView: View {
     private var fitnessLevelPickerSheet: some View {
         FitnessLevelPickerView(
             selectedFitnessLevel: .constant(workoutManager.effectiveFitnessLevel),
-            onSetForPlan: { newLevel in
-                // Update plan via ProgramService (setForPlanFitnessLevel handles the API call)
-                workoutManager.setForPlanFitnessLevel(newLevel)
-                showingFitnessLevelPicker = false
-            },
             onSetForWorkout: { newLevel in
                 workoutManager.setSessionFitnessLevel(newLevel)
                 showingFitnessLevelPicker = false
@@ -1441,7 +1441,8 @@ private struct TodayWorkoutView: View {
             return
         }
         Task {
-            await workoutManager.generateTodayWorkout()
+            // Force regenerate because this is triggered by user preference changes
+            await workoutManager.generateTodayWorkout(forceRegenerate: true)
         }
     }
     
@@ -1500,20 +1501,29 @@ private struct TodayWorkoutView: View {
             "\(muscleGroups.prefix(2).joined(separator: " & ")) Focus" : 
             getWorkoutTitle(for: fitnessGoal)
         
-        // Generate warm-up exercises if enabled
+        // Generate warm-up exercises if enabled (using intelligent workout-aware algorithm)
         let warmUpExercises: [TodayWorkoutExercise]?
         if effectiveFlexibilityPreferences.warmUpEnabled {
-            let warmUpResult = recommendationService.getWarmUpExercises(targetMuscles: muscleGroups, customEquipment: customEquipment, count: 3)
-            warmUpExercises = warmUpResult
+            // Use intelligent warmup that analyzes workout exercises to select appropriate exercises
+            warmUpExercises = recommendationService.getIntelligentWarmupExercises(
+                workoutExercises: workoutPlan.exercises,
+                customEquipment: customEquipment,
+                includeFoamRolling: effectiveFlexibilityPreferences.includeFoamRolling,
+                totalCount: 4
+            )
         } else {
             warmUpExercises = nil
         }
 
-        // Generate cool-down exercises if enabled
+        // Generate cool-down exercises if enabled (using intelligent fatigue-prioritized algorithm)
         let coolDownExercises: [TodayWorkoutExercise]?
         if effectiveFlexibilityPreferences.coolDownEnabled {
-            let coolDownResult = recommendationService.getCoolDownExercises(targetMuscles: muscleGroups, customEquipment: customEquipment, count: 3)
-            coolDownExercises = coolDownResult
+            // Use intelligent cooldown that prioritizes stretches for most fatigued muscles
+            coolDownExercises = recommendationService.getIntelligentCooldownExercises(
+                workoutExercises: workoutPlan.exercises,
+                customEquipment: customEquipment,
+                totalCount: 3
+            )
         } else {
             coolDownExercises = nil
         }
@@ -4024,59 +4034,57 @@ struct WorkoutControlButton: View {
 struct WorkoutDurationPickerView: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var selectedDuration: WorkoutDuration
-    let onSetForPlan: (WorkoutDuration) -> Void
     let onSetForWorkout: (WorkoutDuration) -> Void
 
     @State private var tempSelectedDuration: WorkoutDuration
 
-    init(selectedDuration: Binding<WorkoutDuration>, onSetForPlan: @escaping (WorkoutDuration) -> Void, onSetForWorkout: @escaping (WorkoutDuration) -> Void) {
+    init(selectedDuration: Binding<WorkoutDuration>, onSetForWorkout: @escaping (WorkoutDuration) -> Void) {
         self._selectedDuration = selectedDuration
-        self.onSetForPlan = onSetForPlan
         self.onSetForWorkout = onSetForWorkout
         self._tempSelectedDuration = State(initialValue: selectedDuration.wrappedValue)
     }
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header with close button
-            HStack {
-                Spacer()
+            VStack(spacing: 0) {
+                // Header with close button
+                HStack {
+                    Spacer()
+                    
+                    Button(action: {
+                        dismiss()
+                    }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.primary)
+                            .frame(width: 30, height: 30)
+                          
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.top, 16)
+                .padding(.bottom, 16)
                 
-                Button(action: {
-                    dismiss()
-                }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.primary)
-                        .frame(width: 30, height: 30)
-                      
+                Text("Duration")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal)
+                    .padding(.bottom, 30)
+                
+                // Duration Slider
+                VStack(spacing: 30) {
+                    // Custom duration selector
+                    durationSelector
+                        .padding(.horizontal)
                 }
             }
-            .padding(.horizontal)
-            .padding(.top, 16)
-            .padding(.bottom, 16)
+            .padding(.horizontal, 10)
             
-            Text("Duration")
-                .font(.title2)
-                .fontWeight(.semibold)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal)
-                .padding(.bottom, 30)
+            Spacer()
             
-            // Duration Slider
-            VStack(spacing: 30) {
-                // Custom duration selector
-                durationSelector
-                
-                Spacer()
-                
-                // Action buttons
-                actionButtons
-            }
-            .padding(.horizontal)
-            .padding(.bottom, 30)
+            actionButtons
         }
-        .padding(.horizontal, 10)
         // .background(Color(.systemBackground))
         // .background(Color("primarybg"))
         .cornerRadius(24)
@@ -4146,18 +4154,21 @@ struct WorkoutDurationPickerView: View {
     }
     
     private var actionButtons: some View {
-        HStack(spacing: 0) {
-            Spacer()
+        VStack(spacing: 0) {
+            Divider()
+                .padding(.bottom, 12)
 
-            Button("Set for this workout") {
+            Button("Set for workout") {
                 onSetForWorkout(tempSelectedDuration)
             }
             .font(.system(size: 14, weight: .semibold))
             .foregroundColor(Color(.systemBackground))
-            .padding(.horizontal, 20)
+            .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
             .background(Color.primary)
             .cornerRadius(24)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 30)
         }
     }
 
@@ -4192,7 +4203,6 @@ extension View {
 struct FitnessGoalPickerView: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var selectedFitnessGoal: FitnessGoal
-    let onSetForPlan: (FitnessGoal) -> Void
     let onSetForWorkout: (FitnessGoal) -> Void
 
     @State private var tempSelectedGoal: FitnessGoal
@@ -4204,9 +4214,8 @@ struct FitnessGoalPickerView: View {
         .balanced
     ]
 
-    init(selectedFitnessGoal: Binding<FitnessGoal>, onSetForPlan: @escaping (FitnessGoal) -> Void, onSetForWorkout: @escaping (FitnessGoal) -> Void) {
+    init(selectedFitnessGoal: Binding<FitnessGoal>, onSetForWorkout: @escaping (FitnessGoal) -> Void) {
         self._selectedFitnessGoal = selectedFitnessGoal
-        self.onSetForPlan = onSetForPlan
         self.onSetForWorkout = onSetForWorkout
         // Map legacy/advanced goals to closest simplified option
         let initial = selectedFitnessGoal.wrappedValue
@@ -4221,103 +4230,97 @@ struct FitnessGoalPickerView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header with close button
-            HStack {
-                Spacer()
-
-                Button(action: {
-                    dismiss()
-                }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.primary)
-                        .frame(width: 30, height: 30)
-                }
-            }
-            .padding(.horizontal)
-            .padding(.top, 16)
-            .padding(.bottom, 16)
-
-            Text("Fitness Goal")
-                .font(.title2)
-                .fontWeight(.semibold)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal)
-                .padding(.bottom, 20)
-
-            // Fitness Goal List (simplified 3-option)
             VStack(spacing: 0) {
-                ForEach(FitnessGoalPickerView.pickerGoals, id: \.self) { goal in
+                // Header with close button
+                HStack {
+                    Spacer()
+
                     Button(action: {
-                        tempSelectedGoal = goal
+                        dismiss()
                     }) {
-                        HStack(spacing: 16) {
-                            // Radio button
-                            Image(systemName: tempSelectedGoal == goal ? "largecircle.fill.circle" : "circle")
-                                .font(.system(size: 20))
-                                .foregroundColor(tempSelectedGoal == goal ? .accentColor : .secondary)
-
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(goal.displayName)
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(.primary)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                                Text(goal.subtitle)
-                                    .font(.system(size: 13))
-                                    .foregroundColor(.secondary)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-
-                            Spacer()
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 14)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(PlainButtonStyle())
-
-                    if goal != FitnessGoalPickerView.pickerGoals.last {
-                        Divider()
-                            .padding(.leading, 52)
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.primary)
+                            .frame(width: 30, height: 30)
                     }
                 }
+                .padding(.horizontal)
+                .padding(.top, 16)
+                .padding(.bottom, 16)
+
+                Text("Fitness Goal")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal)
+                    .padding(.bottom, 20)
+
+                // Fitness Goal List (simplified 3-option)
+                VStack(spacing: 0) {
+                    ForEach(FitnessGoalPickerView.pickerGoals, id: \.self) { goal in
+                        Button(action: {
+                            tempSelectedGoal = goal
+                        }) {
+                            HStack(spacing: 16) {
+                                // Radio button
+                                Image(systemName: tempSelectedGoal == goal ? "largecircle.fill.circle" : "circle")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(tempSelectedGoal == goal ? .accentColor : .secondary)
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(goal.displayName)
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundColor(.primary)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                                    Text(goal.subtitle)
+                                        .font(.system(size: 13))
+                                        .foregroundColor(.secondary)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+
+                                Spacer()
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 14)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(PlainButtonStyle())
+
+                        if goal != FitnessGoalPickerView.pickerGoals.last {
+                            Divider()
+                                .padding(.leading, 52)
+                        }
+                    }
+                }
+                .padding(.horizontal, 8)
             }
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 10)
 
             Spacer()
 
-            // Action buttons
             actionButtons
-                .padding(.horizontal, 18)
-                .padding(.top, 16)
-                .padding(.bottom, 30)
         }
-        .padding(.horizontal, 10)
         .cornerRadius(24)
         .presentationDetents([.medium])
     }
 
     private var actionButtons: some View {
-        HStack(spacing: 0) {
-            Button("Set for plan") {
-                selectedFitnessGoal = tempSelectedGoal
-                onSetForPlan(tempSelectedGoal)
-            }
-            .font(.system(size: 14, weight: .semibold))
-            .foregroundColor(.primary)
+        VStack(spacing: 0) {
+            Divider()
+                .padding(.bottom, 12)
 
-            Spacer()
-
-            Button("Set for this workout") {
+            Button("Set for workout") {
                 onSetForWorkout(tempSelectedGoal)
             }
             .font(.system(size: 14, weight: .semibold))
             .foregroundColor(Color(.systemBackground))
-            .padding(.horizontal, 20)
+            .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
             .background(Color.primary)
             .cornerRadius(24)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 30)
         }
     }
 }
@@ -4327,14 +4330,12 @@ struct FitnessGoalPickerView: View {
 struct FitnessLevelPickerView: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var selectedFitnessLevel: ExperienceLevel
-    let onSetForPlan: (ExperienceLevel) -> Void
     let onSetForWorkout: (ExperienceLevel) -> Void
 
     @State private var tempSelectedLevel: ExperienceLevel
 
-    init(selectedFitnessLevel: Binding<ExperienceLevel>, onSetForPlan: @escaping (ExperienceLevel) -> Void, onSetForWorkout: @escaping (ExperienceLevel) -> Void) {
+    init(selectedFitnessLevel: Binding<ExperienceLevel>, onSetForWorkout: @escaping (ExperienceLevel) -> Void) {
         self._selectedFitnessLevel = selectedFitnessLevel
-        self.onSetForPlan = onSetForPlan
         self.onSetForWorkout = onSetForWorkout
         // Use the current selected level as initial value
         let initialLevel = selectedFitnessLevel.wrappedValue
@@ -4343,76 +4344,76 @@ struct FitnessLevelPickerView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header with close button
-            HStack {
-                Spacer()
-                
-                Button(action: {
-                    dismiss()
-                }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.primary)
-                        .frame(width: 30, height: 30)
+            VStack(spacing: 0) {
+                // Header with close button
+                HStack {
+                    Spacer()
+                    
+                    Button(action: {
+                        dismiss()
+                    }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.primary)
+                            .frame(width: 30, height: 30)
+                    }
                 }
-            }
-            .padding(.horizontal)
-            .padding(.top, 16)
-            .padding(.bottom, 16)
-            
-            Text("Fitness Level")
-                .font(.title2)
-                .fontWeight(.semibold)
-                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal)
-                .padding(.bottom, 30)
-            
-            // Fitness Level List
-            VStack(spacing: 16) {
-                VStack(spacing: 0) {
-                                         ForEach(ExperienceLevel.allCases, id: \.self) { level in
-                        Button(action: {
-                            tempSelectedLevel = level
-                        }) {
-                            HStack(spacing: 16) {
-                                // Radio button
-                                Image(systemName: tempSelectedLevel == level ? "largecircle.fill.circle" : "circle")
-                                    .font(.system(size: 20))
-                                    .foregroundColor(tempSelectedLevel == level ? .accentColor : .secondary)
-                                
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(level.displayName)
-                                        .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(.primary)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 16)
+                .padding(.bottom, 16)
+                
+                Text("Fitness Level")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal)
+                    .padding(.bottom, 30)
+                
+                // Fitness Level List
+                VStack(spacing: 16) {
+                    VStack(spacing: 0) {
+                        ForEach(ExperienceLevel.allCases, id: \.self) { level in
+                            Button(action: {
+                                tempSelectedLevel = level
+                            }) {
+                                HStack(spacing: 16) {
+                                    // Radio button
+                                    Image(systemName: tempSelectedLevel == level ? "largecircle.fill.circle" : "circle")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(tempSelectedLevel == level ? .accentColor : .secondary)
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(level.displayName)
+                                            .font(.system(size: 16, weight: .medium))
+                                            .foregroundColor(.primary)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                    }
+                                    
+                                    Spacer()
                                 }
-                                
-                                Spacer()
-                            }
-                                                            .padding(.horizontal, 12)
+                                .padding(.horizontal, 12)
                                 .padding(.vertical, 12)
                   
-                            // .background(Color("primarybg"))
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        
-                                                 if level != ExperienceLevel.allCases.last {
-                                                            Divider()
+                                // .background(Color("primarybg"))
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            
+                            if level != ExperienceLevel.allCases.last {
+                                Divider()
                                     .padding(.leading)
+                            }
                         }
                     }
                 }
-                
-                Spacer()
-                
-                // Action buttons
-                actionButtons
+                .padding(.horizontal, 8)
             }
-            .padding(.horizontal, 8)
-            .padding(.bottom, 30)
+            .padding(.horizontal, 10)
+            
+            Spacer()
+            
+            actionButtons
         }
-        .padding(.horizontal, 10)
         // .background(Color(.systemBackground))
         // .background(Color("primarybg"))
         .cornerRadius(24)
@@ -4424,25 +4425,21 @@ struct FitnessLevelPickerView: View {
     }
     
     private var actionButtons: some View {
-        HStack(spacing: 0) {
-            Button("Set for plan") {
-                selectedFitnessLevel = tempSelectedLevel
-                onSetForPlan(tempSelectedLevel)
-            }
-            .font(.system(size: 14, weight: .semibold))
-            .foregroundColor(.primary)
+        VStack(spacing: 0) {
+            Divider()
+                .padding(.bottom, 12)
 
-            Spacer()
-
-            Button("Set for this workout") {
+            Button("Set for workout") {
                 onSetForWorkout(tempSelectedLevel)
             }
             .font(.system(size: 14, weight: .semibold))
             .foregroundColor(Color(.systemBackground))
-            .padding(.horizontal, 20)
+            .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
             .background(Color.primary)
             .cornerRadius(24)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 30)
         }
     }
 }
@@ -4792,7 +4789,781 @@ private extension LogWorkoutView {
             return
         }
         Task {
-            await workoutManager.generateTodayWorkout()
+            // Force regenerate because this is triggered by user action
+            await workoutManager.generateTodayWorkout(forceRegenerate: true)
+        }
+    }
+}
+
+// MARK: - Today Equipment Picker Sheet
+
+/// Equipment picker for the Today tab that shows:
+/// 1. Gym profile selection at top (like SinglePlanView)
+/// 2. Equipment grid for customization
+/// 3. "Set for Profile" and "Set for Workout" buttons
+struct TodayEquipmentPickerSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var userProfileService = UserProfileService.shared
+    @EnvironmentObject private var workoutManager: WorkoutManager
+    @AppStorage("userEmail") private var userEmail: String = ""
+
+    let onSetForProfile: ([Equipment]) -> Void
+    let onSetForWorkout: ([Equipment]) -> Void
+
+    @State private var selectedEquipment: Set<Equipment> = []
+    @State private var showManageProfiles = false
+    @State private var showCreateProfile = false
+    // Track selected profile ID locally for immediate UI feedback
+    @State private var selectedProfileId: Int?
+
+    // Initialize equipment from active profile
+    init(
+        onSetForProfile: @escaping ([Equipment]) -> Void,
+        onSetForWorkout: @escaping ([Equipment]) -> Void
+    ) {
+        self.onSetForProfile = onSetForProfile
+        self.onSetForWorkout = onSetForWorkout
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                // MARK: - Gym Profiles Section
+                Section {
+                    ForEach(Array(userProfileService.workoutProfiles.enumerated()), id: \.offset) { index, profile in
+                        Button {
+                            selectProfile(profile)
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(profile.displayName)
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundColor(.primary)
+
+                                    Text("\(profile.availableEquipment.count) equipment items")
+                                        .font(.system(size: 13))
+                                        .foregroundColor(.secondary)
+                                }
+
+                                Spacer()
+
+                                // Use local selectedProfileId for immediate UI feedback
+                                if profile.id == selectedProfileId {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.accentColor)
+                                        .font(.system(size: 20))
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
+                } header: {
+                    Text("Select Gym Profile")
+                }
+
+                Section {
+                    Button {
+                        showManageProfiles = true
+                    } label: {
+                        Label("Manage Gym Profiles", systemImage: "gearshape")
+                            .foregroundColor(.primary)
+                    }
+                }
+
+                // MARK: - Available Equipment Section
+                Section {
+                    let allEquipment = Equipment.allCases.filter { $0 != .bodyWeight }
+                    let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 3)
+
+                    LazyVGrid(columns: columns, spacing: 16) {
+                        ForEach(allEquipment, id: \.self) { equipment in
+                            EquipmentSelectionButton(
+                                equipment: equipment,
+                                isSelected: selectedEquipment.contains(equipment),
+                                onTap: {
+                                    HapticFeedback.generate()
+                                    if selectedEquipment.contains(equipment) {
+                                        selectedEquipment.remove(equipment)
+                                    } else {
+                                        selectedEquipment.insert(equipment)
+                                    }
+                                    // Check if equipment still matches the selected profile
+                                    updateProfileSelectionBasedOnEquipment()
+                                }
+                            )
+                        }
+                    }
+                    .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
+                } header: {
+                    HStack {
+                        Text("Available Equipment")
+                        Spacer()
+                        Text("\(selectedEquipment.count) selected")
+                            .textCase(.none)
+                    }
+                }
+            }
+            .navigationTitle("Equipment")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 15, weight: .semibold))
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        showCreateProfile = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 15, weight: .semibold))
+                    }
+                }
+            }
+            .navigationDestination(isPresented: $showManageProfiles) {
+                TodayManageGymProfilesView(userEmail: userEmail)
+            }
+            .navigationDestination(isPresented: $showCreateProfile) {
+                TodayCreateGymProfileView(userEmail: userEmail)
+            }
+            .safeAreaInset(edge: .bottom) {
+                actionButtons
+            }
+            .onAppear {
+                loadEquipmentFromActiveProfile()
+            }
+        }
+    }
+
+    // MARK: - Action Buttons
+
+    private var actionButtons: some View {
+        VStack(spacing: 0) {
+            Divider()
+
+            HStack(spacing: 12) {
+                // Set for Profile button
+                Button {
+                    HapticFeedback.generate()
+                    updateActiveProfileEquipment()
+                    onSetForProfile(Array(selectedEquipment))
+                    dismiss()
+                } label: {
+                    Text("Set for Profile")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.primary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color("containerbg"))
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                        )
+                }
+                .buttonStyle(PlainButtonStyle())
+
+                // Set for Workout button (primary)
+                Button {
+                    HapticFeedback.generate()
+                    onSetForWorkout(Array(selectedEquipment))
+                    dismiss()
+                } label: {
+                    Text("Set for Workout")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(Color(.systemBackground))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color.primary)
+                        .cornerRadius(8)
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 30)
+            .background(Color(UIColor.systemGroupedBackground))
+        }
+    }
+
+    // MARK: - Helper Methods
+
+    private func loadEquipmentFromActiveProfile() {
+        // Check if there's session-level equipment override (from "Set for Workout")
+        if let sessionEquipment = workoutManager.customEquipment, !sessionEquipment.isEmpty {
+            selectedEquipment = Set(sessionEquipment)
+            print("[TodayEquipment] Loaded \(sessionEquipment.count) equipment from session override")
+
+            // Check if session equipment matches any profile for checkmark
+            updateProfileSelectionBasedOnEquipment()
+            return
+        }
+
+        // No session override - load from active gym profile
+        selectedProfileId = userProfileService.activeWorkoutProfileId
+
+        if let activeProfile = userProfileService.activeWorkoutProfile {
+            let equipment = activeProfile.availableEquipment.compactMap { Equipment.from(string: $0) }
+            selectedEquipment = Set(equipment)
+            print("[TodayEquipment] Loaded \(equipment.count) equipment from active profile: \(activeProfile.displayName), id: \(activeProfile.id ?? -1)")
+        } else {
+            // Fallback to UserProfileService's available equipment
+            selectedEquipment = Set(userProfileService.availableEquipment)
+            print("[TodayEquipment] Loaded \(selectedEquipment.count) equipment from UserProfileService")
+        }
+    }
+
+    private func selectProfile(_ profile: WorkoutProfile) {
+        guard let profileId = profile.id else {
+            print("[TodayEquipment] ❌ Profile has no ID")
+            return
+        }
+
+        // Immediately update local state for instant checkmark feedback
+        selectedProfileId = profileId
+
+        // Load equipment from the selected profile
+        let equipment = profile.availableEquipment.compactMap { Equipment.from(string: $0) }
+        selectedEquipment = Set(equipment)
+        print("[TodayEquipment] Selected profile: \(profile.displayName) (id: \(profileId)) with \(equipment.count) equipment")
+
+        // Also activate this profile in the service if it's different
+        guard profileId != userProfileService.activeWorkoutProfileId else { return }
+
+        Task {
+            do {
+                try await userProfileService.activateWorkoutProfile(profileId: profileId)
+                print("[TodayEquipment] ✅ Activated profile: \(profile.displayName)")
+            } catch {
+                print("[TodayEquipment] ❌ Failed to activate profile: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// Check if current equipment matches any profile, update selectedProfileId accordingly
+    private func updateProfileSelectionBasedOnEquipment() {
+        // Convert current selection to a comparable set of strings
+        let currentEquipmentStrings = Set(selectedEquipment.map { $0.rawValue })
+
+        // Check if any profile matches the current equipment
+        for profile in userProfileService.workoutProfiles {
+            let profileEquipmentStrings = Set(profile.availableEquipment)
+            if currentEquipmentStrings == profileEquipmentStrings {
+                // Found a matching profile
+                selectedProfileId = profile.id
+                print("[TodayEquipment] Equipment matches profile: \(profile.displayName)")
+                return
+            }
+        }
+
+        // No profile matches - clear selection (custom session setup)
+        selectedProfileId = nil
+        print("[TodayEquipment] Equipment doesn't match any profile - custom session setup")
+    }
+
+    private func updateActiveProfileEquipment() {
+        // Use locally selected profile ID (or fall back to service's active ID)
+        guard let profileId = selectedProfileId ?? userProfileService.activeWorkoutProfileId else {
+            print("[TodayEquipment] No active profile to update")
+            return
+        }
+
+        let equipmentStrings = selectedEquipment
+            .filter { $0 != .bodyWeight }
+            .map { $0.rawValue }
+
+        // Update local profile
+        if let index = userProfileService.workoutProfiles.firstIndex(where: { $0.id == profileId }) {
+            var updated = userProfileService.workoutProfiles[index]
+            updated.availableEquipment = equipmentStrings
+            userProfileService.workoutProfiles[index] = updated
+        }
+
+        // Persist to backend
+        let email = userEmail.isEmpty ? (UserDefaults.standard.string(forKey: "userEmail") ?? "") : userEmail
+        guard !email.isEmpty else { return }
+
+        NetworkManagerTwo.shared.updateWorkoutPreferences(
+            email: email,
+            workoutData: ["available_equipment": equipmentStrings],
+            profileId: profileId
+        ) { result in
+            switch result {
+            case .success:
+                print("[TodayEquipment] ✅ Updated profile \(profileId) equipment on server")
+            case .failure(let error):
+                print("[TodayEquipment] ❌ Failed to update profile equipment: \(error.localizedDescription)")
+            }
+        }
+    }
+}
+
+// MARK: - Today Manage Gym Profiles View
+
+private struct TodayManageGymProfilesView: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var userProfileService = UserProfileService.shared
+    let userEmail: String
+
+    @State private var showCreateProfile = false
+
+    var body: some View {
+        List {
+            ForEach(userProfileService.workoutProfiles, id: \.id) { profile in
+                NavigationLink {
+                    TodayGymProfileEquipmentView(profile: profile, userEmail: userEmail)
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(profile.displayName)
+                                .font(.system(size: 16, weight: .medium))
+
+                            Text("\(profile.availableEquipment.count) equipment items")
+                                .font(.system(size: 13))
+                                .foregroundColor(.secondary)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "pencil")
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+        }
+        .navigationTitle("Manage Profiles")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    showCreateProfile = true
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 15, weight: .semibold))
+                }
+            }
+        }
+        .navigationDestination(isPresented: $showCreateProfile) {
+            TodayCreateGymProfileView(userEmail: userEmail)
+        }
+    }
+}
+
+// MARK: - Today Gym Profile Equipment View
+
+private struct TodayGymProfileEquipmentView: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var userProfileService = UserProfileService.shared
+    let profile: WorkoutProfile
+    let userEmail: String
+
+    @State private var editedName: String
+    @State private var selectedEquipment: Set<Equipment>
+    @State private var showDeleteConfirmation = false
+    @State private var isDeleting = false
+
+    private var canDelete: Bool {
+        userProfileService.workoutProfiles.count > 1
+    }
+
+    init(profile: WorkoutProfile, userEmail: String) {
+        self.profile = profile
+        self.userEmail = userEmail
+        _editedName = State(initialValue: profile.name)
+        let equipment = profile.availableEquipment.compactMap { Equipment.from(string: $0) }
+        _selectedEquipment = State(initialValue: Set(equipment))
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Gym Name")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    TextField("Gym Name", text: $editedName)
+                        .textFieldStyle(.plain)
+                        .padding()
+                        .background(Color("containerbg"))
+                        .cornerRadius(100)
+                        .submitLabel(.done)
+                }
+
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        Text("Equipment")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Text("\(selectedEquipment.count) selected")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+
+                    let allEquipment = Equipment.allCases.filter { $0 != .bodyWeight }
+                    let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
+                    LazyVGrid(columns: columns, spacing: 16) {
+                        ForEach(allEquipment, id: \.self) { equipment in
+                            EquipmentSelectionButton(
+                                equipment: equipment,
+                                isSelected: selectedEquipment.contains(equipment),
+                                onTap: { toggleEquipment(equipment) }
+                            )
+                        }
+                    }
+                }
+
+                Color.clear.frame(height: 80)
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 32)
+        }
+        .background(Color("primarybg").ignoresSafeArea())
+        .navigationTitle("Gym Equipment")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button {
+                    saveChanges()
+                } label: {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 15, weight: .semibold))
+                }
+                .disabled(editedName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            if canDelete {
+                Button(role: .destructive) {
+                    showDeleteConfirmation = true
+                } label: {
+                    if isDeleting {
+                        ProgressView().tint(.red)
+                    } else {
+                        Text("Delete Gym")
+                    }
+                }
+                .font(.system(size: 17))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(.ultraThinMaterial)
+                .foregroundColor(.red)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .padding(.horizontal, 20)
+                .padding(.bottom, 8)
+                .disabled(isDeleting)
+            }
+        }
+        .confirmationDialog(
+            "Delete \"\(profile.displayName)\"?",
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete Gym", role: .destructive) {
+                Task { await deleteProfile() }
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This gym profile will be permanently deleted.")
+        }
+    }
+
+    private func toggleEquipment(_ equipment: Equipment) {
+        HapticFeedback.generate()
+        if selectedEquipment.contains(equipment) {
+            selectedEquipment.remove(equipment)
+        } else {
+            selectedEquipment.insert(equipment)
+        }
+    }
+
+    private func saveChanges() {
+        let trimmedName = editedName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedName = trimmedName.isEmpty ? profile.displayName : trimmedName
+        let equipmentList = selectedEquipment
+            .filter { $0 != .bodyWeight }
+            .map { $0.rawValue }
+
+        // Update local profile
+        guard let profileId = profile.id else { return }
+        if let index = userProfileService.workoutProfiles.firstIndex(where: { $0.id == profileId }) {
+            var updated = userProfileService.workoutProfiles[index]
+            updated.name = resolvedName
+            updated.availableEquipment = equipmentList
+            userProfileService.workoutProfiles[index] = updated
+        }
+
+        // Persist to backend
+        let email = userEmail.isEmpty ? (UserDefaults.standard.string(forKey: "userEmail") ?? "") : userEmail
+        guard !email.isEmpty else { return }
+
+        NetworkManagerTwo.shared.updateWorkoutPreferences(
+            email: email,
+            workoutData: ["available_equipment": equipmentList],
+            profileId: profileId
+        ) { result in
+            switch result {
+            case .success:
+                print("[TodayGymEquipment] Equipment updated for profile \(profileId)")
+            case .failure(let error):
+                print("[TodayGymEquipment] Failed: \(error.localizedDescription)")
+            }
+        }
+
+        dismiss()
+    }
+
+    @MainActor
+    private func deleteProfile() async {
+        guard let profileId = profile.id, canDelete else { return }
+        isDeleting = true
+        do {
+            try await userProfileService.deleteWorkoutProfile(profileId: profileId)
+            dismiss()
+        } catch {
+            print("[TodayGymEquipment] Failed to delete: \(error.localizedDescription)")
+            isDeleting = false
+        }
+    }
+}
+
+// MARK: - Today Create Gym Profile View
+
+private struct TodayCreateGymProfileView: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var userProfileService = UserProfileService.shared
+    let userEmail: String
+
+    @State private var profileName: String
+    @State private var selectedOption: OnboardingViewModel.GymLocationOption
+    @State private var selectedEquipment: Set<Equipment>
+    @State private var isSaving = false
+    @State private var errorMessage: String?
+
+    init(userEmail: String) {
+        self.userEmail = userEmail
+        let existingNames = UserProfileService.shared.workoutProfiles.map { $0.displayName }
+        let defaultName = Self.defaultGymName(from: existingNames)
+        _profileName = State(initialValue: defaultName)
+        _selectedOption = State(initialValue: .largeGym)
+        _selectedEquipment = State(initialValue: Self.equipmentDefaults(for: .largeGym))
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Gym Name")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    TextField("Gym Name", text: $profileName)
+                        .textFieldStyle(.plain)
+                        .padding()
+                        .background(Color("containerbg"))
+                        .cornerRadius(100)
+                        .submitLabel(.done)
+                }
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Gym Type")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+
+                    ForEach(OnboardingViewModel.GymLocationOption.allCases) { option in
+                        gymOptionRow(option)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        Text("Equipment")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Text("\(selectedEquipment.count) selected")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+
+                    let allEquipment = Equipment.allCases.filter { $0 != .bodyWeight }
+                    let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
+                    LazyVGrid(columns: columns, spacing: 16) {
+                        ForEach(allEquipment, id: \.self) { equipment in
+                            EquipmentSelectionButton(
+                                equipment: equipment,
+                                isSelected: selectedEquipment.contains(equipment),
+                                onTap: { toggleEquipment(equipment) }
+                            )
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+        }
+        .background(Color("primarybg").ignoresSafeArea())
+        .navigationTitle("New Gym Profile")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button {
+                    Task { await createProfile() }
+                } label: {
+                    if isSaving {
+                        ProgressView()
+                    } else {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 15, weight: .semibold))
+                    }
+                }
+                .disabled(isSaving || profileName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .alert("Error", isPresented: errorBinding) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(errorMessage ?? "Unknown error")
+        }
+    }
+
+    private var errorBinding: Binding<Bool> {
+        Binding(
+            get: { errorMessage != nil },
+            set: { if !$0 { errorMessage = nil } }
+        )
+    }
+
+    @ViewBuilder
+    private func gymOptionRow(_ option: OnboardingViewModel.GymLocationOption) -> some View {
+        Button {
+            HapticFeedback.generate()
+            selectedOption = option
+            if option != .custom {
+                selectedEquipment = Self.equipmentDefaults(for: option)
+            }
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(option.title)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.primary)
+                    Text(option.description)
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                if selectedOption == option {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.accentColor)
+                        .font(.system(size: 20))
+                }
+            }
+            .padding()
+            .background(Color("containerbg"))
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(selectedOption == option ? Color.accentColor : Color.clear, lineWidth: 2)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+
+    private func toggleEquipment(_ equipment: Equipment) {
+        HapticFeedback.generate()
+        if selectedEquipment.contains(equipment) {
+            selectedEquipment.remove(equipment)
+        } else {
+            selectedEquipment.insert(equipment)
+        }
+    }
+
+    @MainActor
+    private func createProfile() async {
+        let trimmedName = profileName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return }
+        isSaving = true
+        defer { isSaving = false }
+
+        do {
+            try await userProfileService.createWorkoutProfile(named: trimmedName, makeActive: true)
+            persistEquipmentSelection()
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func persistEquipmentSelection() {
+        let equipmentList = selectedEquipment
+            .filter { $0 != .bodyWeight }
+            .map { $0.rawValue }
+        let locationValue = Self.workoutLocationValue(for: selectedOption)
+        let email = userEmail.isEmpty ? (UserDefaults.standard.string(forKey: "userEmail") ?? "") : userEmail
+        guard !email.isEmpty else { return }
+
+        var payload: [String: Any] = [
+            "available_equipment": equipmentList,
+            "workout_location": locationValue
+        ]
+
+        if let profileId = userProfileService.activeWorkoutProfile?.id {
+            payload["profile_id"] = profileId
+        }
+
+        NetworkManagerTwo.shared.updateWorkoutPreferences(email: email, workoutData: payload) { result in
+            switch result {
+            case .success:
+                print("[GymProfiles] Updated equipment for new gym profile.")
+            case .failure(let error):
+                print("[GymProfiles] Failed to update equipment: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private static func defaultGymName(from existingNames: [String]) -> String {
+        let baseName = "New Gym"
+        let usedNames = Set(existingNames.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() })
+        if !usedNames.contains(baseName.lowercased()) {
+            return baseName
+        }
+        var suffix = 1
+        while usedNames.contains("\(baseName) \(suffix)".lowercased()) {
+            suffix += 1
+        }
+        return "\(baseName) \(suffix)"
+    }
+
+    private static func equipmentDefaults(for option: OnboardingViewModel.GymLocationOption) -> Set<Equipment> {
+        switch option {
+        case .largeGym:
+            return Set(Equipment.allCases.filter { $0 != .bodyWeight })
+        case .smallGym:
+            return Set(EquipmentView.EquipmentType.smallGym.equipmentList)
+        case .garageGym:
+            return Set(EquipmentView.EquipmentType.garageGym.equipmentList)
+        case .atHome:
+            return Set(EquipmentView.EquipmentType.atHome.equipmentList)
+        case .noEquipment:
+            return []
+        case .custom:
+            return []
+        }
+    }
+
+    private static func workoutLocationValue(for option: OnboardingViewModel.GymLocationOption) -> String {
+        switch option {
+        case .largeGym: return "large_gym"
+        case .smallGym: return "small_gym"
+        case .garageGym: return "garage_gym"
+        case .atHome: return "home"
+        case .noEquipment: return "bodyweight"
+        case .custom: return "custom"
         }
     }
 }

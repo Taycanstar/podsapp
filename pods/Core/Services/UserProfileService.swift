@@ -160,6 +160,10 @@ class UserProfileService: ObservableObject {
         lastUpdated = Date()
         cacheProfileData(response)
         updateFromServer(serverData: response.toDictionary())
+        print("📋 [UserProfileService] handleProfileResponse: workoutProfiles.count=\(workoutProfiles.count), activeId=\(activeWorkoutProfileId ?? -1)")
+        for profile in workoutProfiles {
+            print("   - id=\(profile.id ?? -1), name=\(profile.name), isActive=\(profile.isActive)")
+        }
     }
 
     func scopedDefaultsKey(_ base: String) -> String {
@@ -732,13 +736,13 @@ class UserProfileService: ObservableObject {
         get {
             let scopedKey = scopedDefaultsKey("availableEquipment")
             if let stored = UserDefaults.standard.array(forKey: scopedKey) as? [String] {
-                return stored.compactMap { Equipment(rawValue: $0) }
+                return stored.compactMap { Equipment.from(string: $0) }
             }
 
             if let legacy = UserDefaults.standard.array(forKey: "availableEquipment") as? [String] {
                 UserDefaults.standard.set(legacy, forKey: scopedKey)
                 UserDefaults.standard.removeObject(forKey: "availableEquipment")
-                return legacy.compactMap { Equipment(rawValue: $0) }
+                return legacy.compactMap { Equipment.from(string: $0) }
             }
 
             if let workoutProfile = activeWorkoutProfile {
@@ -746,7 +750,7 @@ class UserProfileService: ObservableObject {
                 if !equipmentStrings.isEmpty {
                     UserDefaults.standard.set(equipmentStrings, forKey: scopedKey)
                 }
-                return equipmentStrings.compactMap { Equipment(rawValue: $0) }
+                return equipmentStrings.compactMap { Equipment.from(string: $0) }
             }
 
             return []

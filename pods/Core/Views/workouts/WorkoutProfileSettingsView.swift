@@ -131,7 +131,7 @@ struct WorkoutProfileSettingsView: View {
                         } else {
                             workoutManager.customEquipment = nil
                         }
-                        Task { await workoutManager.generateTodayWorkout() }
+                        Task { await workoutManager.generateTodayWorkout(forceRegenerate: true) }
                     }
                 )) {
                     HStack(spacing: 12) {
@@ -373,7 +373,7 @@ struct WorkoutProfileSettingsView: View {
 
                                 // Directly regenerate workout (no race condition)
                                 Task {
-                                    await workoutManager.generateTodayWorkout()
+                                    await workoutManager.generateTodayWorkout(forceRegenerate: true)
                                 }
                             }) {
                                 HStack {
@@ -583,7 +583,7 @@ extension WorkoutProfileSettingsView {
         sendPreferenceUpdate(["available_equipment": ordered.map { $0.rawValue }])
         showEquipmentSheet = false
         Task {
-            await workoutManager.generateTodayWorkout()
+            await workoutManager.generateTodayWorkout(forceRegenerate: true)
         }
     }
 

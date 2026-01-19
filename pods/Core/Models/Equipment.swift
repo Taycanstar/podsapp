@@ -136,6 +136,74 @@ enum Equipment: String, CaseIterable, Codable {
         case .suspensionTrainer: return "trx"
         }
     }
+
+    /// Initialize from a string, supporting both new format ("Barbells") and legacy format ("barbell")
+    static func from(string: String) -> Equipment? {
+        // First try exact match with rawValue
+        if let equipment = Equipment(rawValue: string) {
+            return equipment
+        }
+
+        // Legacy format mapping (snake_case/lowercase to Equipment)
+        let legacyMapping: [String: Equipment] = [
+            "barbell": .barbells,
+            "barbells": .barbells,
+            "dumbbell": .dumbbells,
+            "dumbbells": .dumbbells,
+            "cable": .cable,
+            "smith_machine": .smithMachine,
+            "hammerstrength_machine": .hammerstrengthMachine,
+            "hammerstrength": .hammerstrengthMachine,
+            "kettlebell": .kettlebells,
+            "kettlebells": .kettlebells,
+            "resistance_bands": .resistanceBands,
+            "stability_ball": .stabilityBall,
+            "swiss_ball": .stabilityBall,
+            "battle_ropes": .battleRopes,
+            "ez_bar": .ezBar,
+            "bosu_ball": .bosuBalanceTrainer,
+            "bosu_balance_trainer": .bosuBalanceTrainer,
+            "sled": .sled,
+            "medicine_ball": .medicineBalls,
+            "medicine_balls": .medicineBalls,
+            "body_weight": .bodyWeight,
+            "bodyweight": .bodyWeight,
+            "flat_bench": .flatBench,
+            "bench": .flatBench,
+            "decline_bench": .declineBench,
+            "preacher_curl_bench": .preacherCurlBench,
+            "incline_bench": .inclineBench,
+            "lat_pulldown": .latPulldownCable,
+            "lat_pulldown_cable": .latPulldownCable,
+            "leg_extension": .legExtensionMachine,
+            "leg_extension_machine": .legExtensionMachine,
+            "leg_curl": .legCurlMachine,
+            "leg_curl_machine": .legCurlMachine,
+            "calf_raise_machine": .calfRaiseMachine,
+            "row_machine": .rowMachine,
+            "seated_row": .rowMachine,
+            "leg_press": .legPress,
+            "pullup_bar": .pullupBar,
+            "pull_up_bar": .pullupBar,
+            "dip_bar": .dipBar,
+            "squat_rack": .squatRack,
+            "box": .box,
+            "platforms": .platforms,
+            "hack_squat": .hackSquatMachine,
+            "hack_squat_machine": .hackSquatMachine,
+            "shoulder_press_machine": .shoulderPressMachine,
+            "triceps_extension_machine": .tricepsExtensionMachine,
+            "biceps_curl_machine": .bicepsCurlMachine,
+            "ab_crunch_machine": .abCrunchMachine,
+            "preacher_curl_machine": .preacherCurlMachine,
+            "pvc": .pvc,
+            "rings": .rings,
+            "trx": .suspensionTrainer,
+            "suspension_trainer": .suspensionTrainer,
+        ]
+
+        return legacyMapping[string.lowercased()]
+    }
 }
 
 // MARK: - Workout Location

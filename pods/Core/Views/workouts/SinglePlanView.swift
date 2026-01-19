@@ -14,6 +14,7 @@ struct SinglePlanView: View {
     @AppStorage("userEmail") private var userEmail: String = ""
     @ObservedObject private var programService = ProgramService.shared
     @ObservedObject private var userProfileService = UserProfileService.shared
+    @EnvironmentObject private var workoutManager: WorkoutManager
 
     @State private var selectedDayIndex: Int = 0
     @State private var showSettings = false
@@ -30,6 +31,9 @@ struct SinglePlanView: View {
     @State private var isConvertingToRestDay = false
     @State private var showRemoveDayConfirmation = false
     @State private var isRemovingDay = false
+
+    // Workout in progress
+    @State private var currentWorkout: TodayWorkout?
 
     // Use the active program from ProgramService if available, otherwise use initial
     private var program: TrainingProgram {
@@ -70,6 +74,66 @@ struct SinglePlanView: View {
         } ?? []
 
         return result
+    }
+
+    // Build a TodayWorkout from the selected day's exercises
+    private func buildTodayWorkout(from day: ProgramDay) -> TodayWorkout? {
+        guard day.dayType == .workout,
+              let workout = day.workout,
+              let programExercises = workout.exercises else {
+            return nil
+        }
+
+        // Convert ProgramExercise to TodayWorkoutExercise
+        let exercises: [TodayWorkoutExercise] = programExercises.compactMap { progEx in
+            guard let exerciseData = ExerciseDatabase.findExercise(byId: progEx.exerciseId) else {
+                return nil
+            }
+            return TodayWorkoutExercise(
+                exercise: exerciseData,
+                sets: progEx.targetSets ?? 3,
+                reps: progEx.targetReps ?? 10,
+                weight: nil,
+                restTime: 90,
+                notes: nil,
+                warmupSets: nil,
+                flexibleSets: nil,
+                trackingType: nil
+            )
+        }
+
+        guard !exercises.isEmpty else { return nil }
+
+        // Convert ProgramFitnessGoal to FitnessGoal via rawValue
+        let fitnessGoal: FitnessGoal
+        if let programGoal = program.fitnessGoalEnum,
+           let goal = FitnessGoal(rawValue: programGoal.rawValue) {
+            fitnessGoal = goal
+        } else {
+            fitnessGoal = .hypertrophy
+        }
+
+        return TodayWorkout(
+            id: UUID(),
+            date: Date(),
+            title: workout.title,
+            exercises: exercises,
+            blocks: nil,
+            estimatedDuration: workout.estimatedDurationMinutes,
+            fitnessGoal: fitnessGoal,
+            difficulty: 3,
+            warmUpExercises: nil,
+            coolDownExercises: nil
+        )
+    }
+
+    // Start workout action
+    private func startWorkout() {
+        guard let day = selectedDay,
+              let workout = buildTodayWorkout(from: day) else { return }
+
+        HapticFeedback.generateLigth()
+        currentWorkout = workout
     }
 
     var body: some View {
@@ -178,6 +242,35 @@ struct SinglePlanView: View {
             }
         } message: {
             Text("This will remove this day from your plan across all weeks. This action cannot be undone.")
+        }
+        // Floating Start Workout button (only for workout days with exercises)
+        .safeAreaInset(edge: .bottom) {
+            if let day = selectedDay,
+               day.dayType == .workout,
+               let exercises = day.workout?.exercises,
+               !exercises.isEmpty {
+                Button(action: startWorkout) {
+                    Text("Start Workout")
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
+            }
+        }
+        // WorkoutInProgressView fullScreenCover
+        .fullScreenCover(item: $currentWorkout) { workout in
+            WorkoutInProgressView(
+                isPresented: Binding(
+                    get: { currentWorkout != nil },
+                    set: { isPresented in
+                        if !isPresented {
+                            currentWorkout = nil
+                            workoutManager.cancelActiveWorkout()
+                        }
+                    }
+                ),
+                workout: workout
+            )
         }
     }
 
@@ -1420,8 +1513,30 @@ private struct GymProfilesListSheet: View {
     }
 
     private func selectProfile(_ profile: WorkoutProfile) {
-        // TODO: Call backend to set active profile
-        print("[GymProfiles] Selected profile: \(profile.displayName)")
+        // Ensure profile has a valid ID
+        guard let profileId = profile.id else {
+            print("[GymProfiles] ❌ Profile has no ID")
+            dismiss()
+            return
+        }
+
+        // Skip if already the active profile
+        guard profileId != userProfileService.activeWorkoutProfileId else {
+            dismiss()
+            return
+        }
+
+        print("[GymProfiles] Activating profile: \(profile.displayName) (id: \(profileId))")
+
+        Task {
+            do {
+                try await userProfileService.activateWorkoutProfile(profileId: profileId)
+                print("[GymProfiles] ✅ Successfully activated profile: \(profile.displayName)")
+            } catch {
+                print("[GymProfiles] ❌ Failed to activate profile: \(error.localizedDescription)")
+            }
+        }
+
         dismiss()
     }
 }
@@ -1778,12 +1893,20 @@ private struct GymProfileEquipmentView: View {
 
     @State private var editedName: String
     @State private var selectedEquipment: Set<Equipment>
+    @State private var showDeleteConfirmation = false
+    @State private var isDeleting = false
+
+    // Can only delete if there's more than one profile
+    private var canDelete: Bool {
+        userProfileService.workoutProfiles.count > 1
+    }
 
     init(profile: WorkoutProfile, userEmail: String) {
         self.profile = profile
         self.userEmail = userEmail
         _editedName = State(initialValue: profile.name)
-        let equipment = profile.availableEquipment.compactMap { Equipment(rawValue: $0) }
+        // Use Equipment.from(string:) to handle both new format ("Barbells") and legacy format ("barbell")
+        let equipment = profile.availableEquipment.compactMap { Equipment.from(string: $0) }
         _selectedEquipment = State(initialValue: Set(equipment))
     }
 
@@ -1827,6 +1950,9 @@ private struct GymProfileEquipmentView: View {
                         }
                     }
                 }
+
+                // Extra bottom padding to account for floating delete button
+                Color.clear.frame(height: 80)
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 32)
@@ -1841,6 +1967,44 @@ private struct GymProfileEquipmentView: View {
                 }
                 .disabled(editedName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
+        }
+        // Floating Delete Gym button (Apple Calendar style)
+        .safeAreaInset(edge: .bottom) {
+            if canDelete {
+                Button(role: .destructive) {
+                    showDeleteConfirmation = true
+                } label: {
+                    if isDeleting {
+                        ProgressView()
+                            .tint(.red)
+                    } else {
+                        Text("Delete Gym")
+                    }
+                }
+                .font(.system(size: 17))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(.ultraThinMaterial)
+                .foregroundColor(.red)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .padding(.horizontal, 20)
+                .padding(.bottom, 8)
+                .disabled(isDeleting)
+            }
+        }
+        .confirmationDialog(
+            "Delete \"\(profile.displayName)\"?",
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete Gym", role: .destructive) {
+                Task {
+                    await deleteProfile()
+                }
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This gym profile will be permanently deleted. This action cannot be undone.")
         }
     }
 
@@ -1927,6 +2091,19 @@ private struct GymProfileEquipmentView: View {
             case .failure(let error):
                 print("[GymEquipment] Failed to update equipment: \(error.localizedDescription)")
             }
+        }
+    }
+
+    @MainActor
+    private func deleteProfile() async {
+        guard let profileId = profile.id, canDelete else { return }
+        isDeleting = true
+        do {
+            try await userProfileService.deleteWorkoutProfile(profileId: profileId)
+            dismiss()
+        } catch {
+            print("[GymEquipment] Failed to delete profile: \(error.localizedDescription)")
+            isDeleting = false
         }
     }
 
@@ -2032,20 +2209,25 @@ private struct ExerciseReorderSheet: View {
 }
 
 // MARK: - Edit Exercise Targets View
-// Allows editing sets/reps targets for a specific week's exercise
+// Replicates ExerciseLoggingView layout for editing sets/reps targets
 
 private struct EditExerciseTargetsView: View {
     @Environment(\.dismiss) private var dismiss
 
     let exercise: ProgramExercise
     let weekData: WeeklyExerciseData
-    let exerciseInstanceId: Int  // The actual exercise instance ID for this week
+    let exerciseInstanceId: Int
     let userEmail: String
-    var onSave: ((Int, Int) -> Void)?  // Callback with (sets, reps)
+    var onSave: ((Int, Int) -> Void)?
 
     @State private var targetSets: Int
     @State private var targetReps: Int
     @State private var isSaving = false
+
+    // Sheet drag state (matching ExerciseLoggingView)
+    @State private var sheetCurrentTop: CGFloat? = nil
+    @State private var dragStartTop: CGFloat = 0
+    @State private var isDraggingSheet: Bool = false
 
     private var thumbnailImageName: String {
         String(format: "%04d", exercise.exerciseId)
@@ -2053,7 +2235,7 @@ private struct EditExerciseTargetsView: View {
 
     private var videoURL: URL? {
         let videoId = String(format: "%04d", exercise.exerciseId)
-        return URL(string: "https://podsappdata.blob.core.windows.net/exercise-videos/\(videoId).mp4")
+        return URL(string: "https://humulistoragecentral.blob.core.windows.net/videos/hevc/filtered_vids_alpha_hevc/\(videoId).mov")
     }
 
     init(
@@ -2073,173 +2255,283 @@ private struct EditExerciseTargetsView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Video header
-                    videoHeader
-                        .padding(.horizontal, 16)
-                        .padding(.top, 16)
+        GeometryReader { geo in
+            let height = geo.size.height
+            let safeTop = geo.safeAreaInsets.top
+            let expandedTop = max(safeTop + 40, height * 0.15)
+            let collapsedTop = max(expandedTop + 140, height * 0.45)
 
-                    // Exercise name
-                    Text(exercise.exerciseName)
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 16)
+            ZStack(alignment: .top) {
+                // Video background
+                Color("sectionbg")
+                    .ignoresSafeArea(.all)
 
-                    // Week label
-                    HStack {
-                        Text(weekData.displayLabel)
-                            .font(.headline)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                    }
-                    .padding(.horizontal, 16)
+                // Video player (adapts to sheet position)
+                let sheetTop = sheetCurrentTop ?? expandedTop
+                let isCollapsed = sheetTop >= (collapsedTop - 20)
+                let extraGapWhenCollapsed: CGFloat = 16
+                let videoPadding: CGFloat = isCollapsed ? (12 + extraGapWhenCollapsed) : 12
+                let videoH = max(120, sheetTop - videoPadding)
 
-                    // Sets and Reps inputs
-                    VStack(spacing: 16) {
-                        // Sets input
-                        HStack {
-                            Text("Target Sets")
-                                .font(.system(size: 16))
-                            Spacer()
-                            HStack(spacing: 12) {
-                                Button {
-                                    if targetSets > 1 {
-                                        targetSets -= 1
-                                        HapticFeedback.generateLigth()
-                                    }
-                                } label: {
-                                    Image(systemName: "minus.circle.fill")
-                                        .font(.system(size: 28))
-                                        .foregroundColor(targetSets > 1 ? .primary : .secondary.opacity(0.5))
-                                }
-                                .disabled(targetSets <= 1)
-
-                                Text("\(targetSets)")
-                                    .font(.system(size: 20, weight: .semibold))
-                                    .frame(width: 40)
-
-                                Button {
-                                    if targetSets < 10 {
-                                        targetSets += 1
-                                        HapticFeedback.generateLigth()
-                                    }
-                                } label: {
-                                    Image(systemName: "plus.circle.fill")
-                                        .font(.system(size: 28))
-                                        .foregroundColor(targetSets < 10 ? .primary : .secondary.opacity(0.5))
-                                }
-                                .disabled(targetSets >= 10)
-                            }
+                if let videoURL = videoURL {
+                    CustomExerciseVideoPlayer(videoURL: videoURL)
+                        .frame(maxWidth: .infinity, minHeight: videoH, maxHeight: videoH, alignment: .center)
+                        .clipped()
+                        .padding(.top, safeTop - 125)
+                } else {
+                    // Fallback thumbnail
+                    Group {
+                        if let image = UIImage(named: thumbnailImageName) {
+                            Image(uiImage: image)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } else {
+                            Rectangle()
+                                .fill(Color.gray.opacity(0.3))
+                                .overlay(
+                                    Image(systemName: "dumbbell")
+                                        .foregroundColor(.white)
+                                        .font(.system(size: 32))
+                                )
                         }
-                        .padding(16)
-                        .background(Color("containerbg"))
-                        .cornerRadius(12)
-
-                        // Reps input
-                        HStack {
-                            Text("Target Reps")
-                                .font(.system(size: 16))
-                            Spacer()
-                            HStack(spacing: 12) {
-                                Button {
-                                    if targetReps > 1 {
-                                        targetReps -= 1
-                                        HapticFeedback.generateLigth()
-                                    }
-                                } label: {
-                                    Image(systemName: "minus.circle.fill")
-                                        .font(.system(size: 28))
-                                        .foregroundColor(targetReps > 1 ? .primary : .secondary.opacity(0.5))
-                                }
-                                .disabled(targetReps <= 1)
-
-                                Text("\(targetReps)")
-                                    .font(.system(size: 20, weight: .semibold))
-                                    .frame(width: 40)
-
-                                Button {
-                                    if targetReps < 30 {
-                                        targetReps += 1
-                                        HapticFeedback.generateLigth()
-                                    }
-                                } label: {
-                                    Image(systemName: "plus.circle.fill")
-                                        .font(.system(size: 28))
-                                        .foregroundColor(targetReps < 30 ? .primary : .secondary.opacity(0.5))
-                                }
-                                .disabled(targetReps >= 30)
-                            }
-                        }
-                        .padding(16)
-                        .background(Color("containerbg"))
-                        .cornerRadius(12)
                     }
-                    .padding(.horizontal, 16)
+                    .frame(maxWidth: .infinity, minHeight: videoH, maxHeight: videoH, alignment: .center)
+                    .clipped()
+                    .padding(.top, safeTop - 125)
+                }
 
-                    Spacer()
+                // Draggable content sheet
+                VStack(spacing: 0) {
+                    // Drag handle
+                    Capsule()
+                        .fill(Color.secondary.opacity(0.35))
+                        .frame(width: 40, height: 5)
+                        .padding(.top, 8)
+                        .padding(.bottom, 8)
+                        .contentShape(Rectangle())
+                        .gesture(sheetDragGesture(expandedTop: expandedTop, collapsedTop: collapsedTop))
+
+                    // Main content
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 16) {
+                            // Exercise header
+                            exerciseHeaderSection
+
+                            // Sets input section
+                            setsInputSection
+
+                            // Bottom spacing
+                            Color.clear.frame(height: 120)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                    }
+                    .scrollDismissesKeyboard(.interactively)
+                    .scrollDisabled(isDraggingSheet)
+                }
+                .background(Color("primarybg"))
+                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                .offset(y: sheetTop)
+                .simultaneousGesture(sheetDragGesture(expandedTop: expandedTop, collapsedTop: collapsedTop))
+            }
+            .onAppear {
+                if sheetCurrentTop == nil { sheetCurrentTop = expandedTop }
+            }
+        }
+        // Top buttons pinned to safe area (matching ExerciseLoggingView)
+        .safeAreaInset(edge: .top) {
+            HStack {
+                // xmark on left with ultraThinMaterial (no gray container)
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.primary)
+                        .frame(width: 36, height: 36)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Circle())
+                        .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 2)
+                }
+                .padding(.leading, 12)
+                .padding(.top, 4)
+
+                Spacer()
+
+                // checkmark on right with glassProminent
+                if isSaving {
+                    ProgressView()
+                        .padding(.trailing, 12)
+                        .padding(.top, 4)
+                } else {
+                    Button(action: { saveTargets() }) {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(width: 36, height: 36)
+                    }
+                    .glassProminentButtonStyle()
+                    .padding(.trailing, 12)
+                    .padding(.top, 4)
                 }
             }
-            .background(Color("primarybg"))
-            .navigationTitle("Edit Targets")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 15, weight: .semibold))
-                    }
-                    .glassButtonStyle()
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    if isSaving {
-                        ProgressView()
-                    } else {
-                        Button {
-                            saveTargets()
-                        } label: {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 15, weight: .semibold))
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .buttonBorderShape(.circle)
+        }
+        .navigationBarHidden(true)
+    }
+
+    // MARK: - Exercise Header Section
+    private var exerciseHeaderSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(exercise.exerciseName)
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(.primary)
+
+            // Week label as subtitle
+            Text(weekData.displayLabel)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 8)
+    }
+
+    // MARK: - Sets Input Section (matching ExerciseLoggingView style)
+    private var setsInputSection: some View {
+        VStack(spacing: 0) {
+            ForEach(0..<targetSets, id: \.self) { setIndex in
+                VStack(spacing: 0) {
+                    setRow(setNumber: setIndex + 1)
+
+                    if setIndex < targetSets - 1 {
+                        Divider()
+                            .padding(.leading, 48)
                     }
                 }
             }
+
+            // Add set button
+            Button(action: {
+                if targetSets < 10 {
+                    targetSets += 1
+                    HapticFeedback.generateLigth()
+                }
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text("Add Set")
+                        .font(.system(size: 16, weight: .semibold))
+                }
+                .foregroundColor(.primary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(Color.clear)
+                .cornerRadius(8)
+            }
+            .buttonStyle(PlainButtonStyle())
+            .padding(.top, 8)
         }
     }
 
-    private var videoHeader: some View {
-        Group {
-            if let videoURL = videoURL {
-                CustomExerciseVideoPlayer(videoURL: videoURL)
-                    .frame(height: 200)
-                    .clipped()
-                    .cornerRadius(12)
-            } else {
-                Group {
-                    if let image = UIImage(named: thumbnailImageName) {
-                        Image(uiImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } else {
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.3))
-                            .overlay(
-                                Image(systemName: "dumbbell")
-                                    .foregroundColor(.white)
-                                    .font(.system(size: 32))
-                            )
+    // MARK: - Set Row (matching DynamicSetRowView style)
+    private func setRow(setNumber: Int) -> some View {
+        HStack(spacing: 12) {
+            // Set number circle
+            ZStack {
+                Circle()
+                    .fill(Color("thumbbg"))
+                    .frame(width: 36, height: 36)
+                Text("\(setNumber)")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.primary)
+            }
+
+            // Reps input
+            HStack(spacing: 4) {
+                Button {
+                    if targetReps > 1 {
+                        targetReps -= 1
+                        HapticFeedback.generateLigth()
                     }
+                } label: {
+                    Image(systemName: "minus")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.secondary)
+                        .frame(width: 28, height: 28)
+                        .background(Color("thumbbg"))
+                        .clipShape(Circle())
                 }
-                .frame(height: 200)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                Text("\(targetReps)")
+                    .font(.system(size: 17, weight: .medium, design: .rounded))
+                    .frame(minWidth: 32)
+                    .multilineTextAlignment(.center)
+
+                Button {
+                    if targetReps < 30 {
+                        targetReps += 1
+                        HapticFeedback.generateLigth()
+                    }
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.secondary)
+                        .frame(width: 28, height: 28)
+                        .background(Color("thumbbg"))
+                        .clipShape(Circle())
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(Color("containerbg"))
+            .cornerRadius(12)
+
+            Text("reps")
+                .font(.system(size: 14))
+                .foregroundColor(.secondary)
+
+            Spacer()
+
+            // Delete set button (swipe alternative)
+            if targetSets > 1 {
+                Button {
+                    if targetSets > 1 {
+                        targetSets -= 1
+                        HapticFeedback.generateLigth()
+                    }
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.system(size: 14))
+                        .foregroundColor(.red.opacity(0.8))
+                }
+                .buttonStyle(PlainButtonStyle())
             }
         }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 4)
+    }
+
+    // MARK: - Sheet Drag Gesture
+    private func sheetDragGesture(expandedTop: CGFloat, collapsedTop: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 8, coordinateSpace: .global)
+            .onChanged { value in
+                let dx = value.translation.width
+                let dy = value.translation.height
+                guard abs(dy) > abs(dx) else { return }
+                if !isDraggingSheet {
+                    isDraggingSheet = true
+                    dragStartTop = sheetCurrentTop ?? collapsedTop
+                }
+                let proposed = dragStartTop + dy
+                sheetCurrentTop = max(expandedTop, min(collapsedTop, proposed))
+            }
+            .onEnded { _ in
+                guard isDraggingSheet else { return }
+                let mid = (expandedTop + collapsedTop) / 2
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                    sheetCurrentTop = (sheetCurrentTop ?? mid) < mid ? expandedTop : collapsedTop
+                }
+                isDraggingSheet = false
+            }
     }
 
     private func saveTargets() {
@@ -2268,16 +2560,17 @@ private struct EditExerciseTargetsView: View {
     }
 }
 
-// Helper extension for glass button style fallback
+// Helper extension for glass prominent button style
 private extension View {
     @ViewBuilder
-    func glassButtonStyle() -> some View {
+    func glassProminentButtonStyle() -> some View {
         if #available(iOS 26, *) {
-            self.buttonStyle(.glass)
+            self.buttonStyle(.glassProminent)
                 .buttonBorderShape(.circle)
         } else {
-            self.buttonStyle(.bordered)
-                .buttonBorderShape(.circle)
+            self.background(Color.accentColor)
+                .clipShape(Circle())
+                .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 2)
         }
     }
 }
@@ -2298,10 +2591,12 @@ private extension View {
             includeDeload: true,
             defaultWarmupEnabled: true,
             defaultCooldownEnabled: false,
+            includeFoamRolling: true,
             isActive: true,
             createdAt: "2026-01-01",
             syncVersion: 1,
             weeks: nil
         ))
+        .environmentObject(WorkoutManager.shared)
     }
 }

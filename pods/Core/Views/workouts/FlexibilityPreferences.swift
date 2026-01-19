@@ -11,10 +11,27 @@ import Foundation
 struct FlexibilityPreferences: Codable, Equatable {
     let warmUpEnabled: Bool
     let coolDownEnabled: Bool
-    
-    init(warmUpEnabled: Bool = false, coolDownEnabled: Bool = false) {
+    let includeFoamRolling: Bool
+
+    init(warmUpEnabled: Bool = false, coolDownEnabled: Bool = false, includeFoamRolling: Bool = true) {
         self.warmUpEnabled = warmUpEnabled
         self.coolDownEnabled = coolDownEnabled
+        self.includeFoamRolling = includeFoamRolling
+    }
+
+    // CodingKeys to handle optional foam rolling for backwards compatibility
+    enum CodingKeys: String, CodingKey {
+        case warmUpEnabled
+        case coolDownEnabled
+        case includeFoamRolling
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        warmUpEnabled = try container.decode(Bool.self, forKey: .warmUpEnabled)
+        coolDownEnabled = try container.decode(Bool.self, forKey: .coolDownEnabled)
+        // Default to true if not present (backwards compatibility)
+        includeFoamRolling = try container.decodeIfPresent(Bool.self, forKey: .includeFoamRolling) ?? true
     }
     
     // Display text for the button

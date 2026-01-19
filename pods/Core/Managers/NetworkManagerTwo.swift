@@ -5771,7 +5771,8 @@ class NetworkManagerTwo {
         experienceLevel: String? = nil,
         sessionDurationMinutes: Int? = nil,
         defaultWarmupEnabled: Bool? = nil,
-        defaultCooldownEnabled: Bool? = nil
+        defaultCooldownEnabled: Bool? = nil,
+        includeFoamRolling: Bool? = nil
     ) async throws -> TrainingProgram {
         guard let url = URL(string: "\(baseUrl)/api/programs/\(programId)/preferences/") else {
             throw NetworkError.invalidURL
@@ -5797,6 +5798,9 @@ class NetworkManagerTwo {
         }
         if let defaultCooldownEnabled = defaultCooldownEnabled {
             body["default_cooldown_enabled"] = defaultCooldownEnabled
+        }
+        if let includeFoamRolling = includeFoamRolling {
+            body["include_foam_rolling"] = includeFoamRolling
         }
 
         urlRequest.httpBody = try JSONSerialization.data(withJSONObject: body)

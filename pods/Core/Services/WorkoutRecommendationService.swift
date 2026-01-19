@@ -810,7 +810,423 @@ class WorkoutRecommendationService {
             )
         }
     }
-    
+
+    // MARK: - Intelligent Warmup/Cooldown Generation (Workout-Aware)
+
+    /// Generate intelligent warmup exercises based on workout analysis
+    /// Returns exercises in structured phases: Foam Rolling -> Dynamic Stretching -> Activation
+    func getIntelligentWarmupExercises(
+        workoutExercises: [TodayWorkoutExercise],
+        customEquipment: [Equipment]? = nil,
+        includeFoamRolling: Bool = true,
+        totalCount: Int = 5
+    ) -> [TodayWorkoutExercise] {
+
+        // Step 1: Analyze the workout to build fatigue map
+        let fatigueMap = WorkoutAnalyzerService.shared.analyzeWorkout(workoutExercises)
+
+        print("🔥 INTELLIGENT WARMUP: Analyzing workout with \(workoutExercises.count) exercises")
+        print("   └── Movement patterns: \(fatigueMap.movementPatterns.map { $0.displayName }.joined(separator: ", "))")
+        print("   └── Primary muscles: \(fatigueMap.primaryMuscles.prefix(5).joined(separator: ", "))")
+        print("   └── Joints involved: \(fatigueMap.jointsInvolved.prefix(3).map { $0.joint.displayName }.joined(separator: ", "))")
+
+        var warmupExercises: [TodayWorkoutExercise] = []
+        let allExercises = ExerciseDatabase.getAllExercises()
+
+        // Step 2: Phase allocation
+        let foamRollingCount = includeFoamRolling ? 1 : 0
+        let dynamicStretchCount = max(2, (totalCount - foamRollingCount) / 2)
+        let activationCount = totalCount - foamRollingCount - dynamicStretchCount
+
+        // Step 3: Foam Rolling (optional, targets most fatigued muscles)
+        if includeFoamRolling {
+            let topMuscle = fatigueMap.musclesByFatigue.first ?? "Full Body"
+            let foamRollingExercise = createFoamRollingExercise(targetMuscle: topMuscle)
+            warmupExercises.append(foamRollingExercise)
+            print("   └── 🧘 Foam Rolling: \(topMuscle)")
+        }
+
+        // Step 4: Dynamic Stretching (based on movement patterns)
+        var usedExerciseIds: Set<Int> = []
+        let dynamicExercises = selectDynamicStretchesForPatterns(
+            patterns: fatigueMap.movementPatterns,
+            allExercises: allExercises,
+            targetMuscles: fatigueMap.primaryMuscles,
+            count: dynamicStretchCount,
+            usedIds: &usedExerciseIds
+        )
+        warmupExercises.append(contentsOf: dynamicExercises)
+
+        // Step 5: Activation/Primer exercises
+        let activationExercises = selectActivationExercises(
+            patterns: fatigueMap.movementPatterns,
+            allExercises: allExercises,
+            targetMuscles: fatigueMap.primaryMuscles,
+            count: activationCount,
+            usedIds: &usedExerciseIds
+        )
+        warmupExercises.append(contentsOf: activationExercises)
+
+        print("🔥 INTELLIGENT WARMUP: Generated \(warmupExercises.count) exercises")
+        for (index, exercise) in warmupExercises.enumerated() {
+            print("   \(index + 1). \(exercise.exercise.name)")
+        }
+
+        return warmupExercises
+    }
+
+    /// Generate intelligent cooldown exercises prioritized by muscle fatigue
+    func getIntelligentCooldownExercises(
+        workoutExercises: [TodayWorkoutExercise],
+        customEquipment: [Equipment]? = nil,
+        totalCount: Int = 4
+    ) -> [TodayWorkoutExercise] {
+
+        // Analyze the workout
+        let fatigueMap = WorkoutAnalyzerService.shared.analyzeWorkout(workoutExercises)
+
+        print("🧊 INTELLIGENT COOLDOWN: Analyzing workout")
+        print("   └── Top fatigued muscles: \(fatigueMap.musclesByFatigue.prefix(5).joined(separator: ", "))")
+
+        let allExercises = ExerciseDatabase.getAllExercises()
+
+        // Get static stretches prioritized by fatigue
+        let topFatiguedMuscles = fatigueMap.topFatiguedMuscles(count: totalCount + 2)
+
+        var cooldownExercises: [TodayWorkoutExercise] = []
+        var usedExerciseIds: Set<Int> = []
+
+        // Select one stretch per top fatigued muscle
+        for muscle in topFatiguedMuscles {
+            guard cooldownExercises.count < totalCount else { break }
+
+            if let stretch = selectStaticStretch(
+                for: muscle,
+                from: allExercises,
+                excludingIds: usedExerciseIds
+            ) {
+                cooldownExercises.append(stretch)
+                usedExerciseIds.insert(stretch.exercise.id)
+            }
+        }
+
+        // If we still need more, add general stretches
+        if cooldownExercises.count < totalCount {
+            let additionalStretches = selectGeneralStaticStretches(
+                from: allExercises,
+                excludingIds: usedExerciseIds,
+                count: totalCount - cooldownExercises.count
+            )
+            cooldownExercises.append(contentsOf: additionalStretches)
+        }
+
+        print("🧊 INTELLIGENT COOLDOWN: Generated \(cooldownExercises.count) exercises")
+        for (index, exercise) in cooldownExercises.enumerated() {
+            print("   \(index + 1). \(exercise.exercise.name)")
+        }
+
+        return cooldownExercises
+    }
+
+    // MARK: - Private Intelligent Warmup Helpers
+
+    private func createFoamRollingExercise(targetMuscle: String) -> TodayWorkoutExercise {
+        // Create a synthetic foam rolling exercise for the target muscle
+        let bodyPart = MuscleGroupNormalizer.bodyPartFor(muscleGroup: targetMuscle)
+
+        let foamRollExercise = ExerciseData(
+            id: -1,  // Synthetic ID for foam rolling
+            name: "Foam Roll - \(targetMuscle)",
+            exerciseType: "Stretching",
+            bodyPart: bodyPart,
+            equipment: "Foam Roller",
+            gender: "Male",
+            target: targetMuscle,
+            synergist: "",
+            category: nil
+        )
+
+        var flexibleSets: [FlexibleSetData] = []
+        for _ in 0..<2 {
+            var set = FlexibleSetData(trackingType: .timeOnly)
+            set.duration = 45  // 45 seconds per side
+            set.durationString = "0:45"
+            flexibleSets.append(set)
+        }
+
+        return TodayWorkoutExercise(
+            exercise: foamRollExercise,
+            sets: 2,
+            reps: 1,
+            weight: nil,
+            restTime: 10,
+            notes: "Roll slowly, pause on tender spots for 30-45 seconds",
+            warmupSets: nil,
+            flexibleSets: flexibleSets,
+            trackingType: .timeOnly
+        )
+    }
+
+    private func selectDynamicStretchesForPatterns(
+        patterns: [MovementPattern],
+        allExercises: [ExerciseData],
+        targetMuscles: [String],
+        count: Int,
+        usedIds: inout Set<Int>
+    ) -> [TodayWorkoutExercise] {
+
+        // Collect keywords from detected patterns
+        var dynamicKeywords: Set<String> = []
+        for pattern in patterns {
+            dynamicKeywords.formUnion(pattern.dynamicWarmupKeywords)
+        }
+
+        // Filter to dynamic stretches/movements
+        let candidates = allExercises.filter { exercise in
+            guard !usedIds.contains(exercise.id) else { return false }
+
+            let name = exercise.name.lowercased()
+            let exerciseType = exercise.exerciseType.lowercased()
+            let equipment = exercise.equipment.lowercased()
+
+            // Must be bodyweight or minimal equipment
+            guard equipment.contains("body weight") || equipment.contains("band") else {
+                return false
+            }
+
+            // Check for dynamic patterns
+            let isDynamic = name.contains("dynamic") ||
+                           name.contains("swing") ||
+                           name.contains("circle") ||
+                           name.contains("rotation") ||
+                           name.contains("march") ||
+                           (name.contains("walk") && !name.contains("farmer"))
+
+            // Check if matches pattern keywords
+            let matchesPattern = dynamicKeywords.contains { keyword in
+                name.contains(keyword.lowercased())
+            }
+
+            // Check if targets workout muscles
+            let targetsWorkoutMuscles = targetMuscles.contains { muscle in
+                exercise.bodyPart.lowercased().contains(muscle.lowercased()) ||
+                exercise.target.lowercased().contains(muscle.lowercased())
+            }
+
+            return (isDynamic || matchesPattern) && (exerciseType == "stretching" || targetsWorkoutMuscles)
+        }
+
+        // Prioritize by muscle targeting
+        let prioritized = prioritizeDynamicByMuscleTargeting(candidates, targetMuscles: targetMuscles)
+        let selected = Array(prioritized.prefix(count))
+
+        // Track used IDs
+        for exercise in selected {
+            usedIds.insert(exercise.id)
+        }
+
+        return selected.map { exercise in
+            createDynamicWarmupExercise(from: exercise)
+        }
+    }
+
+    private func selectActivationExercises(
+        patterns: [MovementPattern],
+        allExercises: [ExerciseData],
+        targetMuscles: [String],
+        count: Int,
+        usedIds: inout Set<Int>
+    ) -> [TodayWorkoutExercise] {
+
+        // Collect activation keywords from patterns
+        var activationKeywords: Set<String> = []
+        for pattern in patterns {
+            activationKeywords.formUnion(pattern.activationKeywords)
+        }
+
+        // Filter to activation-appropriate exercises
+        let candidates = allExercises.filter { exercise in
+            guard !usedIds.contains(exercise.id) else { return false }
+
+            let name = exercise.name.lowercased()
+            let exerciseType = exercise.exerciseType.lowercased()
+            let equipment = exercise.equipment.lowercased()
+
+            // Must be bodyweight or band
+            guard equipment.contains("body weight") || equipment.contains("band") else {
+                return false
+            }
+
+            // Exclude stretching type for activation
+            guard exerciseType != "stretching" else { return false }
+
+            // Check activation patterns
+            let isActivation = name.contains("bridge") ||
+                              name.contains("activation") ||
+                              name.contains("primer") ||
+                              name.contains("bird dog") ||
+                              name.contains("dead bug") ||
+                              (name.contains("band") && name.contains("pull"))
+
+            // Check if matches pattern keywords
+            let matchesPattern = activationKeywords.contains { keyword in
+                name.contains(keyword.lowercased())
+            }
+
+            return isActivation || matchesPattern
+        }
+
+        let prioritized = prioritizeDynamicByMuscleTargeting(candidates, targetMuscles: targetMuscles)
+        let selected = Array(prioritized.prefix(count))
+
+        // Track used IDs
+        for exercise in selected {
+            usedIds.insert(exercise.id)
+        }
+
+        return selected.map { exercise in
+            createActivationExercise(from: exercise)
+        }
+    }
+
+    private func selectStaticStretch(
+        for muscle: String,
+        from allExercises: [ExerciseData],
+        excludingIds: Set<Int>
+    ) -> TodayWorkoutExercise? {
+
+        let candidates = allExercises.filter { exercise in
+            guard !excludingIds.contains(exercise.id) else { return false }
+
+            let exerciseType = exercise.exerciseType.lowercased()
+            let name = exercise.name.lowercased()
+
+            // Must be stretching type
+            guard exerciseType == "stretching" else { return false }
+
+            // Exclude dynamic movements
+            let isDynamic = name.contains("dynamic") ||
+                           name.contains("swing") ||
+                           name.contains("circle") ||
+                           name.contains("rotation")
+            guard !isDynamic else { return false }
+
+            // Check muscle targeting
+            let muscleKey = muscle.lowercased()
+            let targetsMuscle = exercise.bodyPart.lowercased().contains(muscleKey) ||
+                               exercise.target.lowercased().contains(muscleKey) ||
+                               exercise.name.lowercased().contains(muscleKey)
+
+            return targetsMuscle
+        }
+
+        guard let selected = candidates.first else { return nil }
+        return createCooldownStretchExercise(from: selected)
+    }
+
+    private func selectGeneralStaticStretches(
+        from allExercises: [ExerciseData],
+        excludingIds: Set<Int>,
+        count: Int
+    ) -> [TodayWorkoutExercise] {
+
+        let candidates = allExercises.filter { exercise in
+            guard !excludingIds.contains(exercise.id) else { return false }
+
+            let exerciseType = exercise.exerciseType.lowercased()
+            let name = exercise.name.lowercased()
+
+            guard exerciseType == "stretching" else { return false }
+
+            let isDynamic = name.contains("dynamic") ||
+                           name.contains("swing") ||
+                           name.contains("circle")
+
+            return !isDynamic
+        }
+
+        return Array(candidates.prefix(count)).map { createCooldownStretchExercise(from: $0) }
+    }
+
+    // MARK: - Exercise Creation Helpers
+
+    private func createDynamicWarmupExercise(from exercise: ExerciseData) -> TodayWorkoutExercise {
+        var flexibleSets: [FlexibleSetData] = []
+        for _ in 0..<2 {
+            var set = FlexibleSetData(trackingType: .timeOnly)
+            set.duration = 30  // 30 seconds
+            set.durationString = "0:30"
+            flexibleSets.append(set)
+        }
+
+        return TodayWorkoutExercise(
+            exercise: exercise,
+            sets: 2,
+            reps: 10,
+            weight: nil,
+            restTime: 10,
+            notes: "Dynamic movement - controlled tempo",
+            warmupSets: nil,
+            flexibleSets: flexibleSets,
+            trackingType: .timeOnly
+        )
+    }
+
+    private func createActivationExercise(from exercise: ExerciseData) -> TodayWorkoutExercise {
+        return TodayWorkoutExercise(
+            exercise: exercise,
+            sets: 2,
+            reps: 8,
+            weight: nil,
+            restTime: 15,
+            notes: "Activation - focus on mind-muscle connection",
+            warmupSets: nil,
+            flexibleSets: nil,
+            trackingType: .repsOnly
+        )
+    }
+
+    private func createCooldownStretchExercise(from exercise: ExerciseData) -> TodayWorkoutExercise {
+        var flexibleSets: [FlexibleSetData] = []
+        for _ in 0..<2 {
+            var set = FlexibleSetData(trackingType: .holdTime)
+            set.duration = 30  // 30 second hold
+            set.durationString = "0:30"
+            flexibleSets.append(set)
+        }
+
+        return TodayWorkoutExercise(
+            exercise: exercise,
+            sets: 2,
+            reps: 1,
+            weight: nil,
+            restTime: 5,
+            notes: "Hold stretch for 20-30 seconds",
+            warmupSets: nil,
+            flexibleSets: flexibleSets,
+            trackingType: .holdTime
+        )
+    }
+
+    private func prioritizeDynamicByMuscleTargeting(_ exercises: [ExerciseData], targetMuscles: [String]) -> [ExerciseData] {
+        return exercises.sorted { ex1, ex2 in
+            let score1 = muscleTargetingScoreForWarmup(ex1, targetMuscles: targetMuscles)
+            let score2 = muscleTargetingScoreForWarmup(ex2, targetMuscles: targetMuscles)
+            return score1 > score2
+        }
+    }
+
+    private func muscleTargetingScoreForWarmup(_ exercise: ExerciseData, targetMuscles: [String]) -> Int {
+        var score = 0
+        for muscle in targetMuscles {
+            let muscleKey = muscle.lowercased()
+            if exercise.bodyPart.lowercased().contains(muscleKey) { score += 3 }
+            if exercise.target.lowercased().contains(muscleKey) { score += 2 }
+            if exercise.synergist.lowercased().contains(muscleKey) { score += 1 }
+        }
+        return score
+    }
+
     // Helper method to prioritize exercises for target muscles
     private func prioritizeForTargetMuscles(_ exercises: [ExerciseData], targetMuscles: [String]) -> [ExerciseData] {
         let targetMusclesLower = targetMuscles.map { $0.lowercased() }
@@ -1264,22 +1680,22 @@ class WorkoutRecommendationService {
     }
 
     // MARK: - Redundancy/Diversity System
-    private enum MovementPattern: String { case squat, hinge, lunge, push, pull, isolation, core, other }
+    private enum DiversityPattern: String { case squat, hinge, lunge, push, pull, isolation, core, other }
 
     private func enforceDiversity(_ sorted: [ExerciseData], goal: FitnessGoal, maxCount: Int) -> [ExerciseData] {
         var selected: [ExerciseData] = []
-        var patternCounts: [MovementPattern: Int] = [:]
+        var patternCounts: [DiversityPattern: Int] = [:]
         var isolationMuscleCounts: [String: Int] = [:]
         var selectedIds = Set<Int>()
 
         let minPatterns = (goal.normalized == .hypertrophy || goal.normalized == .strength) ? 3 : 3
-        let caps: [MovementPattern: Int] = [
+        let caps: [DiversityPattern: Int] = [
             .squat: 2, .hinge: 2, .lunge: 2, .push: 2, .pull: 2, .isolation: 99, .core: 2, .other: 99
         ]
 
         for candidate in sorted {
             if selected.count >= maxCount { break }
-            let pattern = movementPattern(for: candidate)
+            let pattern = diversityPattern(for: candidate)
             let countForPattern = patternCounts[pattern] ?? 0
             if countForPattern >= (caps[pattern] ?? 2) { continue }
 
@@ -1293,7 +1709,7 @@ class WorkoutRecommendationService {
             var redundant = false
             for ex in selected {
                 let sim = similarity(candidate, ex)
-                let exPat = movementPattern(for: ex)
+                let exPat = diversityPattern(for: ex)
                 let exCount = patternCounts[exPat] ?? 0
                 // If we already have one of this pattern and similarity is very high, skip
                 if exPat == pattern && exCount >= 1 && sim > 0.8 { redundant = true; break }
@@ -1303,7 +1719,7 @@ class WorkoutRecommendationService {
             if redundant { continue }
 
             // Diversity bias: prefer a new pattern until we reach minPatterns
-            let uniquePatterns = Set(selected.map { movementPattern(for: $0) })
+            let uniquePatterns = Set(selected.map { diversityPattern(for: $0) })
             if uniquePatterns.count < minPatterns {
                 // If this candidate adds a new pattern, strongly prefer it; otherwise allow only 50% chance
                 if uniquePatterns.contains(pattern) == false {
@@ -1330,7 +1746,7 @@ class WorkoutRecommendationService {
                 if selected.count >= maxCount { break }
                 if selectedIds.contains(candidate.id) { continue }
 
-                let pattern = movementPattern(for: candidate)
+                let pattern = diversityPattern(for: candidate)
                 let currentCount = patternCounts[pattern] ?? 0
                 let allowed = relaxedCaps[pattern] ?? (currentCount + 1)
                 if currentCount >= allowed { continue }
@@ -1344,7 +1760,7 @@ class WorkoutRecommendationService {
                 for ex in selected {
                     if ex.id == candidate.id { continue }
                     let sim = similarity(candidate, ex)
-                    if movementPattern(for: ex) == pattern && sim > 0.9 {
+                    if diversityPattern(for: ex) == pattern && sim > 0.9 {
                         redundant = true
                         break
                     }
@@ -1363,7 +1779,7 @@ class WorkoutRecommendationService {
         return selected
     }
 
-    private func movementPattern(for ex: ExerciseData) -> MovementPattern {
+    private func diversityPattern(for ex: ExerciseData) -> DiversityPattern {
         let n = ex.name.lowercased()
         let eq = ex.equipment.lowercased()
         let part = ex.bodyPart.lowercased()
@@ -1429,8 +1845,8 @@ class WorkoutRecommendationService {
 
     private func similarity(_ a: ExerciseData, _ b: ExerciseData) -> Double {
         var score: Double = 0
-        let pa = movementPattern(for: a)
-        let pb = movementPattern(for: b)
+        let pa = diversityPattern(for: a)
+        let pb = diversityPattern(for: b)
         if pa == pb { score += 0.4 }
         if variationKey(a) == variationKey(b) { score += 0.2 }
         if equipmentCategory(for: a) == equipmentCategory(for: b) { score += 0.2 }
@@ -1790,8 +2206,8 @@ class WorkoutRecommendationService {
         }
 
         // Phase 1: Movement pattern classification
-        enum MovementPattern { case squat, press, pull, explosive, isolation, unilateral }
-        func classifyMovement(_ e: ExerciseData) -> MovementPattern {
+        enum WeightEstimatePattern { case squat, press, pull, explosive, isolation, unilateral }
+        func classifyMovement(_ e: ExerciseData) -> WeightEstimatePattern {
             let n = e.name.lowercased()
             if n.contains("clean") || n.contains("snatch") || n.contains("thruster") { return .explosive }
             if n.contains("single") || n.contains("one-arm") || n.contains("one arm") || n.contains("single-arm") { return .unilateral }
@@ -1804,7 +2220,7 @@ class WorkoutRecommendationService {
         let mp = classifyMovement(exercise)
 
         // Phase 2: Equipment-specific base weights (in lbs). Dumbbell values are per-hand.
-        func equipmentBase(_ e: ExerciseData, mp: MovementPattern) -> Double {
+        func equipmentBase(_ e: ExerciseData, mp: WeightEstimatePattern) -> Double {
             let name = e.name.lowercased()
             let eq = e.equipment.lowercased()
             // Smith machine
@@ -1860,7 +2276,7 @@ class WorkoutRecommendationService {
         }
 
         // Phase 5: Experience adjustments refined
-        func experienceMultiplier(_ mp: MovementPattern) -> Double {
+        func experienceMultiplier(_ mp: WeightEstimatePattern) -> Double {
             switch UserProfileService.shared.experienceLevel {
             case .beginner:
                 switch mp {
@@ -1886,7 +2302,7 @@ class WorkoutRecommendationService {
         w *= experienceMultiplier(mp)
 
         // Phase 4: Movement-appropriate safety minimums
-        func applyMinimums(_ weight: Double, eq: String, mp: MovementPattern) -> Double {
+        func applyMinimums(_ weight: Double, eq: String, mp: WeightEstimatePattern) -> Double {
             var minW = 8.0
             if eq.contains("barbell") { minW = 45 }
             else if eq.contains("smith") { minW = 35 }

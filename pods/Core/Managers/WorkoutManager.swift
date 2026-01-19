@@ -592,17 +592,23 @@ class WorkoutManager: ObservableObject {
 
     /// Generate today's workout with dynamic programming (1 second simple loading)
     /// NOTE: Program workouts are now handled by ProgramService.todayProgramWorkout
-    /// This method only generates the fallback workout for non-program days
-    func generateTodayWorkout() async {
+    /// This method only generates the fallback workout for non-program days, unless forceRegenerate is true
+    /// - Parameter forceRegenerate: When true, regenerates workout even if a program workout exists (for session-level changes like equipment, duration, etc.)
+    func generateTodayWorkout(forceRegenerate: Bool = false) async {
         assertMainActor("generateTodayWorkout")
         let startTime = Date()
 
         // If there's already a program workout for today, no need to generate
         // The computed todayWorkout property will return the program workout
-        if ProgramService.shared.todayProgramWorkout != nil {
+        // UNLESS forceRegenerate is true (user wants to regenerate with session-level changes)
+        if !forceRegenerate && ProgramService.shared.todayProgramWorkout != nil {
             print("📋 Program workout exists for today, skipping generation")
             generationError = nil
             return
+        }
+
+        if forceRegenerate {
+            print("🔄 Force regenerating workout with session-level changes")
         }
 
         await setGenerating(true, message: "Generating workout")
@@ -1911,7 +1917,8 @@ class WorkoutManager: ObservableObject {
     func handleProfileChange() {
         loadDefaultMusclePreferences()
         loadSessionData()
-        Task { await generateTodayWorkout() }
+        // Force regenerate when profile changes (user preference change)
+        Task { await generateTodayWorkout(forceRegenerate: true) }
     }
     
     /// Clear all session overrides
@@ -2905,12 +2912,12 @@ class WorkoutManager: ObservableObject {
             }
         }
         
-        // Regenerate workout with new preferences
+        // Force regenerate workout with new preferences (user preference change)
         Task {
-            await generateTodayWorkout()
+            await generateTodayWorkout(forceRegenerate: true)
         }
     }
-    
+
     /// Clear all session overrides
     func clearSessionOverrides() {
         sessionDuration = nil
@@ -3139,12 +3146,19 @@ class WorkoutManager: ObservableObject {
         
         print("✅ WorkoutManager: Generated \(workoutPlan.exercises.count) exercises, actual duration: \(workoutPlan.actualDurationMinutes) minutes")
         
-        // Generate warm-up/cool-down if enabled
+        // Generate warm-up/cool-down if enabled (using intelligent workout-aware algorithms)
         let warmUpExercises = parameters.flexibilityPreferences.warmUpEnabled ?
-            generateWarmUpExercises(targetMuscles: muscleGroups, equipment: parameters.customEquipment) : nil
-        
+            generateWarmUpExercises(
+                workoutExercises: workoutPlan.exercises,
+                equipment: parameters.customEquipment,
+                includeFoamRolling: parameters.flexibilityPreferences.includeFoamRolling
+            ) : nil
+
         let coolDownExercises = parameters.flexibilityPreferences.coolDownEnabled ?
-            generateCoolDownExercises(targetMuscles: muscleGroups, equipment: parameters.customEquipment) : nil
+            generateCoolDownExercises(
+                workoutExercises: workoutPlan.exercises,
+                equipment: parameters.customEquipment
+            ) : nil
         
         // Build base workout
         let base = TodayWorkout(
@@ -3184,21 +3198,29 @@ class WorkoutManager: ObservableObject {
         return GeneratedWorkoutResult(workout: finalWorkout, muscleGroups: muscleGroups)
     }
     
-    private func generateWarmUpExercises(targetMuscles: [String], equipment: [Equipment]?) -> [TodayWorkoutExercise] {
-        // FITBOD-ALIGNED: Get warmup exercises using proper method
-        return recommendationService.getWarmUpExercises(
-            targetMuscles: targetMuscles,
+    private func generateWarmUpExercises(
+        workoutExercises: [TodayWorkoutExercise],
+        equipment: [Equipment]?,
+        includeFoamRolling: Bool
+    ) -> [TodayWorkoutExercise] {
+        // Use intelligent warmup that analyzes workout to select appropriate exercises
+        return recommendationService.getIntelligentWarmupExercises(
+            workoutExercises: workoutExercises,
             customEquipment: equipment,
-            count: 3
+            includeFoamRolling: includeFoamRolling,
+            totalCount: 4
         )
     }
-    
-    private func generateCoolDownExercises(targetMuscles: [String], equipment: [Equipment]?) -> [TodayWorkoutExercise] {
-        // FITBOD-ALIGNED: Get cooldown exercises using proper method
-        return recommendationService.getCoolDownExercises(
-            targetMuscles: targetMuscles,
+
+    private func generateCoolDownExercises(
+        workoutExercises: [TodayWorkoutExercise],
+        equipment: [Equipment]?
+    ) -> [TodayWorkoutExercise] {
+        // Use intelligent cooldown that prioritizes stretches for most fatigued muscles
+        return recommendationService.getIntelligentCooldownExercises(
+            workoutExercises: workoutExercises,
             customEquipment: equipment,
-            count: 3
+            totalCount: 3
         )
     }
     
@@ -3835,7 +3857,7 @@ class WorkoutManager: ObservableObject {
         if let sessionDate = UserDefaults.standard.object(forKey: profileScopedKey(sessionDateKey)) as? Date,
            Calendar.current.isDateInToday(sessionDate),
            let savedEquipment = UserDefaults.standard.array(forKey: profileScopedKey(sessionCustomEquipmentKey)) as? [String] {
-            let resolved = savedEquipment.compactMap { Equipment(rawValue: $0) }
+            let resolved = savedEquipment.compactMap { Equipment.from(string: $0) }
             customEquipment = resolved
             if let equipmentType = UserDefaults.standard.string(forKey: profileScopedKey(sessionEquipmentTypeKey)), !equipmentType.isEmpty {
                 selectedEquipmentType = equipmentType

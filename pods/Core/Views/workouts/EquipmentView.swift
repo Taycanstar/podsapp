@@ -209,7 +209,7 @@ struct EquipmentView: View {
             
             // Load saved custom equipment selection if it exists
             if let savedEquipmentStrings = UserDefaults.standard.array(forKey: equipmentKey) as? [String] {
-                let savedEquipment = savedEquipmentStrings.compactMap { Equipment(rawValue: $0) }
+                let savedEquipment = savedEquipmentStrings.compactMap { Equipment.from(string: $0) }
                 selectedEquipment = Set(savedEquipment)
                 print("🔄 Loaded saved equipment: \(savedEquipment.map { $0.rawValue })")
             } else {
