@@ -2469,9 +2469,9 @@ private struct EditExerciseTargetsView: View {
             // xmark on left with glass style (iOS 26+) or ultraThinMaterial fallback
             Button(action: { dismiss() }) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(.primary)
-                    .frame(width: 36, height: 36)
+                    .frame(width: 30, height: 30)
             }
             .editTargetsXmarkStyle()
             .padding(.leading, 12)
@@ -2487,9 +2487,9 @@ private struct EditExerciseTargetsView: View {
             } else {
                 Button(action: { saveTargets() }) {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: 17, weight: .semibold))
                         .foregroundColor(.white)
-                        .frame(width: 36, height: 36)
+                        .frame(width: 30, height: 30)
                 }
                 .editTargetsCheckmarkStyle()
                 .padding(.trailing, 12)

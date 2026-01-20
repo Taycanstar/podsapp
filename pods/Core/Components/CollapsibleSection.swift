@@ -103,25 +103,13 @@ struct FlexibilityExerciseCard: View {
     var body: some View {
         HStack(spacing: 12) {
             // Exercise thumbnail
-            AsyncImage(url: URL(string: getThumbnailURL(for: exercise.exercise.id))) { image in
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } placeholder: {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(.systemGray5))
-                    .overlay(
-                        Image(systemName: "figure.flexibility")
-                            .font(.system(size: 20))
-                            .foregroundColor(.secondary)
-                    )
-            }
-            .frame(width: 50, height: 50)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(accentColor.opacity(0.3), lineWidth: 1)
-            )
+            exerciseThumbnail
+                .frame(width: 50, height: 50)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(accentColor.opacity(0.3), lineWidth: 1)
+                )
             
             // Exercise details
             VStack(alignment: .leading, spacing: 4) {
@@ -162,6 +150,47 @@ struct FlexibilityExerciseCard: View {
         )
     }
     
+    @ViewBuilder
+    private var exerciseThumbnail: some View {
+        let exerciseId = exercise.exercise.id
+        let name = exercise.exercise.name.lowercased()
+
+        // Synthetic exercises (ID < 0) or foam rolling - show system icon
+        if exerciseId < 0 || name.contains("foam roll") {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(.systemGray5))
+                .overlay(
+                    Image(systemName: iconForSyntheticExercise(name: name))
+                        .font(.system(size: 20))
+                        .foregroundColor(accentColor)
+                )
+        } else {
+            AsyncImage(url: URL(string: getThumbnailURL(for: exerciseId))) { image in
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } placeholder: {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(.systemGray5))
+                    .overlay(
+                        Image(systemName: "figure.flexibility")
+                            .font(.system(size: 20))
+                            .foregroundColor(.secondary)
+                    )
+            }
+        }
+    }
+
+    private func iconForSyntheticExercise(name: String) -> String {
+        if name.contains("foam roll") {
+            return "cylinder.fill"  // Represents foam roller
+        } else if name.contains("stretch") {
+            return "figure.flexibility"
+        } else {
+            return "figure.strengthtraining.traditional"
+        }
+    }
+
     private func getThumbnailURL(for exerciseId: Int) -> String {
         return "https://humulistoragecentral.blob.core.windows.net/exercise-thumbnails/\(String(format: "%04d", exerciseId)).jpg"
     }

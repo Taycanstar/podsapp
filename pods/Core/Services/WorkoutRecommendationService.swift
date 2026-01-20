@@ -931,21 +931,84 @@ class WorkoutRecommendationService {
     // MARK: - Private Intelligent Warmup Helpers
 
     private func createFoamRollingExercise(targetMuscle: String) -> TodayWorkoutExercise {
-        // Create a synthetic foam rolling exercise for the target muscle
-        let bodyPart = MuscleGroupNormalizer.bodyPartFor(muscleGroup: targetMuscle)
+        // Find a real foam rolling exercise from the database
+        let allExercises = ExerciseDatabase.getAllExercises()
 
-        let foamRollExercise = ExerciseData(
-            id: -1,  // Synthetic ID for foam rolling
-            name: "Foam Roll - \(targetMuscle)",
-            exerciseType: "Stretching",
-            bodyPart: bodyPart,
-            equipment: "Foam Roller",
-            gender: "Male",
-            target: targetMuscle,
-            synergist: "",
-            category: nil
-        )
+        // Filter to foam rolling exercises (name contains "Roll" but not "Rollout", type is Stretching)
+        let foamRollExercises = allExercises.filter { exercise in
+            let name = exercise.name.lowercased()
+            let exerciseType = exercise.exerciseType.lowercased()
 
+            // Must be a rolling exercise (not rollout which is an ab exercise)
+            let isRolling = name.contains("roll") && !name.contains("rollout") && !name.contains("roll-up")
+            let isStretching = exerciseType == "stretching"
+            let isBodyweight = exercise.equipment.lowercased().contains("body weight")
+
+            return isRolling && isStretching && isBodyweight
+        }
+
+        // Try to find one that targets the specific muscle
+        let targetLower = targetMuscle.lowercased()
+        let bodyPart = MuscleGroupNormalizer.bodyPartFor(muscleGroup: targetMuscle).lowercased()
+
+        // Priority 1: Exercise name or target contains the muscle name
+        var matchingExercise = foamRollExercises.first { exercise in
+            let name = exercise.name.lowercased()
+            let target = exercise.target.lowercased()
+            return name.contains(targetLower) || target.contains(targetLower)
+        }
+
+        // Priority 2: Exercise body part matches
+        if matchingExercise == nil {
+            matchingExercise = foamRollExercises.first { exercise in
+                exercise.bodyPart.lowercased() == bodyPart
+            }
+        }
+
+        // Priority 3: Use muscle-to-exercise mapping for common muscles
+        if matchingExercise == nil {
+            let muscleToExerciseKeywords: [String: [String]] = [
+                "quadriceps": ["rectus femoris", "thigh", "quad"],
+                "hamstrings": ["hamstring"],
+                "glutes": ["glute", "piriformis", "gluteus"],
+                "calves": ["calf", "calves", "tibialis"],
+                "back": ["lat", "thoracic", "upper back", "rhomboid", "erector"],
+                "chest": ["pec", "chest"],
+                "shoulders": ["shoulder", "deltoid"],
+                "hip": ["hip", "iliospsoas", "tensor", "adductor"],
+                "lats": ["lat"],
+            ]
+
+            if let keywords = muscleToExerciseKeywords[targetLower] ?? muscleToExerciseKeywords[bodyPart] {
+                matchingExercise = foamRollExercises.first { exercise in
+                    let name = exercise.name.lowercased()
+                    return keywords.contains { name.contains($0) }
+                }
+            }
+        }
+
+        // Priority 4: Fall back to a general foam roll exercise
+        if matchingExercise == nil {
+            // Common general foam roll exercises by ID
+            let generalFoamRollIds = [3566, 5384, 2206, 5390] // Upper Back, Thoracic Spine, Calves, Glutes
+            matchingExercise = foamRollExercises.first { generalFoamRollIds.contains($0.id) }
+        }
+
+        // Last resort: just pick any foam roll exercise
+        if matchingExercise == nil {
+            matchingExercise = foamRollExercises.first
+        }
+
+        guard let foamRollExercise = matchingExercise else {
+            // Ultimate fallback: use Roll Upper Back (ID 3566) if it exists, or first stretching exercise
+            let fallback = allExercises.first { $0.id == 3566 } ?? allExercises.first { $0.exerciseType == "Stretching" }!
+            return createWarmupExercise(from: fallback)
+        }
+
+        return createWarmupExercise(from: foamRollExercise)
+    }
+
+    private func createWarmupExercise(from exercise: ExerciseData) -> TodayWorkoutExercise {
         var flexibleSets: [FlexibleSetData] = []
         for _ in 0..<2 {
             var set = FlexibleSetData(trackingType: .timeOnly)
@@ -955,7 +1018,7 @@ class WorkoutRecommendationService {
         }
 
         return TodayWorkoutExercise(
-            exercise: foamRollExercise,
+            exercise: exercise,
             sets: 2,
             reps: 1,
             weight: nil,

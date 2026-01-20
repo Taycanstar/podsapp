@@ -1516,7 +1516,7 @@ private struct PlanListRow: View {
 
 // MARK: - Glass Prominent Button Modifier
 
-private struct GlassProminentButtonModifier: ViewModifier {
+ struct GlassProminentButtonModifier: ViewModifier {
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
             content.buttonStyle(.glassProminent)
