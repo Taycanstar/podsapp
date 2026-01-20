@@ -92,22 +92,24 @@ struct ExerciseDatabase {
             assertionFailure("exercisesdb.csv not found in bundle")
             return []
         }
-        
+
         do {
             let contents = try String(contentsOf: url, encoding: .utf8)
             let rows = CSVParser.parse(contents)
             var exercises: [ExerciseData] = []
             var seenIds = Set<Int>()
-            
+
             for row in rows {
                 guard row.count >= 11 else { continue }
                 guard let id = Int(row[0]) else { continue }
                 if seenIds.contains(id) { continue }
                 seenIds.insert(id)
-                
+
                 let trimmed = row.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
                 let categoryValue = trimmed[10].isEmpty ? nil : trimmed[10]
-                
+                // NEW: Parse exercise_role from column 11 (if present)
+                let exerciseRoleValue: String? = row.count > 11 && !trimmed[11].isEmpty ? trimmed[11] : nil
+
                 let exercise = ExerciseData(
                     id: id,
                     name: trimmed[1],
@@ -117,11 +119,12 @@ struct ExerciseDatabase {
                     gender: trimmed[5],
                     target: trimmed[6],
                     synergist: trimmed[7],
-                    category: categoryValue
+                    category: categoryValue,
+                    exerciseRole: exerciseRoleValue
                 )
                 exercises.append(exercise)
             }
-            
+
             return exercises
         } catch {
             assertionFailure("Failed to load exercisesdb.csv: \(error)")

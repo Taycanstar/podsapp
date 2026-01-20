@@ -2805,7 +2805,177 @@ class WorkoutRecommendationService {
         
         return mappedReps
     }
-    
+
+    // MARK: - Role-Based Exercise Selection
+
+    /// Select exercises using role-based structure from session structure service.
+    ///
+    /// This method implements evidence-based workout programming by:
+    /// 1. Determining session structure (how many of each role based on goal)
+    /// 2. Classifying available exercises by role
+    /// 3. Scoring exercises WITHIN each role context
+    /// 4. Filling slots in order: primary compounds → secondary compounds → isolation
+    ///
+    /// - Parameters:
+    ///   - muscleGroup: Target muscle group
+    ///   - goal: Fitness goal (strength, hypertrophy, endurance, balanced)
+    ///   - experience: User's experience level
+    ///   - customEquipment: Available equipment for this session
+    ///   - exerciseCount: Total number of exercises to select
+    ///   - excludedIds: Exercise IDs to exclude from selection
+    /// - Returns: Array of tuples containing (exercise, role, repRange)
+    func selectExercisesByRole(
+        for muscleGroup: String,
+        goal: FitnessGoal,
+        experience: ExperienceLevel,
+        customEquipment: [Equipment]?,
+        exerciseCount: Int,
+        excludedIds: Set<Int> = []
+    ) -> [(exercise: ExerciseData, role: ExerciseRole, repRange: String)] {
+
+        let classifier = ExerciseRoleClassifier.shared
+        let scoring = RoleBasedEquipmentScoring.shared
+        let slots = SessionStructureService.shared.getExerciseSlots(goal: goal, totalExercises: exerciseCount)
+
+        print("🎯 Role-Based Selection for \(muscleGroup): goal=\(goal.rawValue), count=\(exerciseCount)")
+        print("   └── Slot distribution: \(slots.map { $0.role.rawValue }.joined(separator: ", "))")
+
+        var usedIds = excludedIds
+        var selected: [(ExerciseData, ExerciseRole, String)] = []
+
+        // Get filtered candidates for this muscle group
+        let allExercises = ExerciseDatabase.getAllExercises()
+        let muscleExercises = allExercises.filter { exerciseMatchesMuscle($0, muscleGroup: muscleGroup) }
+
+        // Filter by equipment
+        let availableExercises: [ExerciseData]
+        if let customEquipment = customEquipment {
+            let allowedSet = equipmentOverrideSet(from: customEquipment)
+            availableExercises = muscleExercises.filter { exercise in
+                let (canPerform, _, _) = canPerformExerciseWithCustomEquipment(exercise, allowedEquipment: allowedSet)
+                return canPerform
+            }
+        } else {
+            let userProfile = UserProfileService.shared
+            availableExercises = muscleExercises.filter { userProfile.canPerformExercise($0) }
+        }
+
+        print("   └── Available exercises after filtering: \(availableExercises.count)")
+
+        // Group exercises by role with scores
+        var byRole: [ExerciseRole: [(ExerciseData, Double)]] = [
+            .primaryCompound: [],
+            .secondaryCompound: [],
+            .isolation: []
+        ]
+
+        for exercise in availableExercises {
+            guard !usedIds.contains(exercise.id) else { continue }
+
+            let role = classifier.classify(exercise)
+            let score = calculateRoleBasedScore(
+                exercise,
+                goal: goal,
+                role: role,
+                muscleGroup: muscleGroup,
+                experience: experience
+            )
+            byRole[role]?.append((exercise, score))
+        }
+
+        // Sort each role's exercises by score (highest first)
+        for role in byRole.keys {
+            byRole[role]?.sort { $0.1 > $1.1 }
+        }
+
+        print("   └── By role: primary=\(byRole[.primaryCompound]?.count ?? 0), secondary=\(byRole[.secondaryCompound]?.count ?? 0), isolation=\(byRole[.isolation]?.count ?? 0)")
+
+        // Fill slots in order
+        for slot in slots {
+            let role = slot.role
+            let repRange = slot.repRange
+
+            // Find best available exercise for this role
+            if let (exercise, _) = byRole[role]?.first(where: { !usedIds.contains($0.0.id) }) {
+                selected.append((exercise, role, repRange))
+                usedIds.insert(exercise.id)
+                print("   └── Selected [\(role.rawValue)]: \(exercise.name) @ \(repRange) reps")
+            } else {
+                // Fallback: try adjacent roles if current role is exhausted
+                let fallbackRoles: [ExerciseRole] = {
+                    switch role {
+                    case .primaryCompound: return [.secondaryCompound, .isolation]
+                    case .secondaryCompound: return [.primaryCompound, .isolation]
+                    case .isolation: return [.secondaryCompound, .primaryCompound]
+                    }
+                }()
+
+                var found = false
+                for fallbackRole in fallbackRoles {
+                    if let (exercise, _) = byRole[fallbackRole]?.first(where: { !usedIds.contains($0.0.id) }) {
+                        selected.append((exercise, fallbackRole, repRange))
+                        usedIds.insert(exercise.id)
+                        print("   └── Fallback [\(fallbackRole.rawValue)]: \(exercise.name) @ \(repRange) reps")
+                        found = true
+                        break
+                    }
+                }
+
+                if !found {
+                    print("   └── ⚠️ No exercise found for slot \(role.rawValue)")
+                }
+            }
+        }
+
+        print("🎯 Role-Based Selection complete: \(selected.count) exercises")
+        return selected
+    }
+
+    /// Calculate exercise score within its role context.
+    /// Equipment scores vary by (goal, role) - barbells score high for primary compounds,
+    /// but cables/dumbbells score high for isolation.
+    private func calculateRoleBasedScore(
+        _ exercise: ExerciseData,
+        goal: FitnessGoal,
+        role: ExerciseRole,
+        muscleGroup: String,
+        experience: ExperienceLevel
+    ) -> Double {
+        var score = 0.0
+        let scoring = RoleBasedEquipmentScoring.shared
+
+        // 1. Role-aware equipment score (weighted heavily - this is the key differentiator)
+        let equipmentScore = scoring.getScore(goal: goal, role: role, equipment: exercise.equipment)
+        score += Double(equipmentScore) * 3.0
+
+        // 2. Muscle match bonus
+        let muscleKey = muscleGroup.lowercased()
+        if exercise.bodyPart.lowercased().contains(muscleKey) {
+            score += 15.0
+        }
+        if exercise.target.lowercased().contains(muscleKey) {
+            score += 10.0
+        }
+
+        // 3. Equipment tier (general quality)
+        let tier = scoring.getEquipmentTier(exercise.equipment)
+        score += Double(tier) * 0.5
+
+        // 4. Experience-level adjustments
+        let complexity = ExerciseComplexityService.shared.getExerciseComplexity(exercise)
+        switch experience {
+        case .beginner:
+            if complexity <= 2 { score += 5.0 }
+            else if complexity >= 4 { score -= 5.0 }
+        case .intermediate:
+            if complexity == 3 { score += 3.0 }
+        case .advanced:
+            if complexity >= 3 { score += 2.0 }
+        }
+
+        return score
+    }
+
     /// Get duration-optimized exercise recommendations
     func getDurationOptimizedExercises(
         for muscleGroup: String,
@@ -2832,7 +3002,7 @@ class WorkoutRecommendationService {
                 flexibilityPreferences: flexibilityPreferences
             )
         }
-        
+
         // For shorter workouts, prioritize compound movements for time efficiency
         if duration.minutes <= 30 {
             exercises = exercises.sorted { ex1, ex2 in
@@ -2843,13 +3013,71 @@ class WorkoutRecommendationService {
                 return ex1.target.count > ex2.target.count
             }
         }
-        
+
         // Apply final truncation here (single point of control)
         let finalExercises = Array(exercises.prefix(count))
-        
+
         print("🎯 getDurationOptimizedExercises for \(muscleGroup): requested=\(count), available=\(exercises.count), returned=\(finalExercises.count)")
-        
+
         return finalExercises
+    }
+
+    /// Get role-based exercise recommendations with rep ranges.
+    ///
+    /// This method uses the new role-based selection architecture when enabled,
+    /// returning exercises with their assigned roles and goal-specific rep ranges.
+    ///
+    /// - Parameters:
+    ///   - muscleGroup: Target muscle group
+    ///   - count: Number of exercises to select
+    ///   - duration: Workout duration (for time-based adjustments)
+    ///   - fitnessGoal: Fitness goal (determines role distribution)
+    ///   - experienceLevel: User's experience level
+    ///   - customEquipment: Available equipment for this session
+    ///   - excludedIds: Exercise IDs to exclude
+    /// - Returns: Array of tuples containing (exercise, role, repRange)
+    func getRoleBasedExercises(
+        for muscleGroup: String,
+        count: Int,
+        duration: WorkoutDuration,
+        fitnessGoal: FitnessGoal,
+        experienceLevel: ExperienceLevel,
+        customEquipment: [Equipment]?,
+        excludedIds: Set<Int> = []
+    ) -> [(exercise: ExerciseData, role: ExerciseRole, repRange: String)] {
+
+        // Use role-based selection if feature flag is enabled
+        if FeatureFlags.useRoleBasedSelection {
+            return selectExercisesByRole(
+                for: muscleGroup,
+                goal: fitnessGoal,
+                experience: experienceLevel,
+                customEquipment: customEquipment,
+                exerciseCount: count,
+                excludedIds: excludedIds
+            )
+        }
+
+        // Fallback: use traditional selection and classify after the fact
+        let exercises = getDurationOptimizedExercises(
+            for: muscleGroup,
+            count: count,
+            duration: duration,
+            fitnessGoal: fitnessGoal,
+            customEquipment: customEquipment
+        ).filter { !excludedIds.contains($0.id) }
+
+        let classifier = ExerciseRoleClassifier.shared
+
+        // Map exercises to roles with default rep ranges
+        return exercises.map { exercise in
+            let role = classifier.classify(exercise)
+            let repRange = SessionStructureService.shared.getDefaultRepRange(
+                for: fitnessGoal,
+                role: role
+            )
+            return (exercise, role, repRange)
+        }
     }
 
 }

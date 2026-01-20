@@ -602,8 +602,9 @@ struct ExerciseData: Identifiable, Hashable, Codable {
     let synergist: String
     let rawCategory: String?
     let complexityRating: Int? // 1-5 scale: 1=Beginner, 5=Expert (optional for backward compatibility)
-    
-    // Initializer with optional complexity rating for backward compatibility
+    let exerciseRole: String?  // NEW: "primary_compound", "secondary_compound", "isolation"
+
+    // Initializer with optional complexity rating and exercise role for backward compatibility
     init(
         id: Int,
         name: String,
@@ -614,7 +615,8 @@ struct ExerciseData: Identifiable, Hashable, Codable {
         target: String,
         synergist: String,
         category: String? = nil,
-        complexityRating: Int? = nil
+        complexityRating: Int? = nil,
+        exerciseRole: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -626,6 +628,7 @@ struct ExerciseData: Identifiable, Hashable, Codable {
         self.synergist = synergist
         self.rawCategory = category
         self.complexityRating = complexityRating
+        self.exerciseRole = exerciseRole
     }
     
     // Computed properties for compatibility
@@ -649,6 +652,7 @@ struct ExerciseData: Identifiable, Hashable, Codable {
         case synergist
         case rawCategory = "category"
         case complexityRating
+        case exerciseRole
     }
     
     func hash(into hasher: inout Hasher) {

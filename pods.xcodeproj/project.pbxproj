@@ -368,6 +368,9 @@
 		36DAAF932F1BB837008B6442 /* TimelineService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DAAF922F1BB837008B6442 /* TimelineService.swift */; };
 		36DAAF952F1DF029008B6442 /* WorkoutAnalyzerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DAAF942F1DF029008B6442 /* WorkoutAnalyzerService.swift */; };
 		36DAAF972F1DF03E008B6442 /* WorkoutAnalaysisModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DAAF962F1DF03E008B6442 /* WorkoutAnalaysisModel.swift */; };
+		36DAAF992F1EFB1D008B6442 /* ExerciseRoleClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DAAF982F1EFB1D008B6442 /* ExerciseRoleClassifier.swift */; };
+		36DAAF9B2F1EFB39008B6442 /* SessionStructureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DAAF9A2F1EFB39008B6442 /* SessionStructureService.swift */; };
+		36DAAF9D2F1EFB53008B6442 /* RoleBasedEquipmentScoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DAAF9C2F1EFB53008B6442 /* RoleBasedEquipmentScoring.swift */; };
 		36DB82CE2EB924BC004BA082 /* ExercisesDb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DB82CD2EB924B7004BA082 /* ExercisesDb.swift */; };
 		36DB82D02EBA99D5004BA082 /* WorkoutTelemetryEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DB82CF2EBA99D5004BA082 /* WorkoutTelemetryEvent.swift */; };
 		36DB82D22EBA99FD004BA082 /* WorkoutContextV1.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DB82D12EBA99FD004BA082 /* WorkoutContextV1.swift */; };
@@ -855,6 +858,9 @@
 		36DAAF922F1BB837008B6442 /* TimelineService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineService.swift; sourceTree = "<group>"; };
 		36DAAF942F1DF029008B6442 /* WorkoutAnalyzerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutAnalyzerService.swift; sourceTree = "<group>"; };
 		36DAAF962F1DF03E008B6442 /* WorkoutAnalaysisModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutAnalaysisModel.swift; sourceTree = "<group>"; };
+		36DAAF982F1EFB1D008B6442 /* ExerciseRoleClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseRoleClassifier.swift; sourceTree = "<group>"; };
+		36DAAF9A2F1EFB39008B6442 /* SessionStructureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStructureService.swift; sourceTree = "<group>"; };
+		36DAAF9C2F1EFB53008B6442 /* RoleBasedEquipmentScoring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoleBasedEquipmentScoring.swift; sourceTree = "<group>"; };
 		36DB82CD2EB924B7004BA082 /* ExercisesDb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExercisesDb.swift; sourceTree = "<group>"; };
 		36DB82CF2EBA99D5004BA082 /* WorkoutTelemetryEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutTelemetryEvent.swift; sourceTree = "<group>"; };
 		36DB82D12EBA99FD004BA082 /* WorkoutContextV1.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutContextV1.swift; sourceTree = "<group>"; };
@@ -1035,6 +1041,9 @@
 		361FF3162E20612400B7F68E /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				36DAAF9C2F1EFB53008B6442 /* RoleBasedEquipmentScoring.swift */,
+				36DAAF9A2F1EFB39008B6442 /* SessionStructureService.swift */,
+				36DAAF982F1EFB1D008B6442 /* ExerciseRoleClassifier.swift */,
 				36DAAF962F1DF03E008B6442 /* WorkoutAnalaysisModel.swift */,
 				36DAAF942F1DF029008B6442 /* WorkoutAnalyzerService.swift */,
 				36FBD5632F173A4B005F62B9 /* ProgramService.swift */,
@@ -2143,6 +2152,7 @@
 				36667DCA2EF35B590017E9D7 /* TrustedDomains.swift in Sources */,
 				3625329D2E629512003C3B8D /* DurationExerciseTimerSheet.swift in Sources */,
 				36667E0C2EFC4BE50017E9D7 /* LogDetails.swift in Sources */,
+				36DAAF9B2F1EFB39008B6442 /* SessionStructureService.swift in Sources */,
 				36A851A32E5AC0AE004E5CED /* CollapsibleSection.swift in Sources */,
 				36A8519F2E5ABF53004E5CED /* FlexibilityPreferences.swift in Sources */,
 				361FF3412E288D9D00B7F68E /* MuscleRecoveryService.swift in Sources */,
@@ -2236,6 +2246,7 @@
 				3625329F2E629D1A003C3B8D /* CircularProgressView.swift in Sources */,
 				36ED35BA2DD938B900D174FB /* WeightDataView.swift in Sources */,
 				C5815F6130304BA3D7590704 /* BodyFatLogView.swift in Sources */,
+				36DAAF9D2F1EFB53008B6442 /* RoleBasedEquipmentScoring.swift in Sources */,
 				3615D1132EAFEA320063EB8B /* AgentTabBar.swift in Sources */,
 				36FFF1012FBEBE6000A1C0DE /* AgentModels.swift in Sources */,
 				36FFF1112FBEBE6000A1C0DE /* AgentService.swift in Sources */,
@@ -2384,6 +2395,7 @@
 				361FF3232E2065B900B7F68E /* UserProfile.swift in Sources */,
 				36F7228A2DE52E60009C1CA0 /* GalleryHelper.swift in Sources */,
 				361FF3332E2213E300B7F68E /* WorkoutProfile.swift in Sources */,
+				36DAAF992F1EFB1D008B6442 /* ExerciseRoleClassifier.swift in Sources */,
 				368616651F83495CAC9300B4 /* WaterUnit.swift in Sources */,
 				36VITUNIT0001 /* VitaminUnit.swift in Sources */,
 				364A83AE2D87D210009D2620 /* CreateRecipeView.swift in Sources */,
