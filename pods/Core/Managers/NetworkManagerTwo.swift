@@ -6141,6 +6141,31 @@ class NetworkManagerTwo {
         return program
     }
 
+    /// Deactivate a program and activate the next available one
+    /// - Parameters:
+    ///   - programId: The program ID to deactivate
+    ///   - userEmail: The user's email
+    /// - Returns: Tuple of (deactivated program, new active program or nil)
+    func deactivateProgram(programId: Int, userEmail: String) async throws -> (deactivated: TrainingProgram, newActive: TrainingProgram?) {
+        guard let url = URL(string: "\(baseUrl)/api/programs/\(programId)/deactivate/") else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = ["user_email": userEmail]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validate(response: response, data: data)
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let responsePayload = try decoder.decode(DeactivateProgramResponse.self, from: data)
+        return (responsePayload.deactivatedProgram, responsePayload.newActiveProgram)
+    }
+
     /// Add a new day (rest or workout) to all weeks in the program
     /// - Parameters:
     ///   - programId: The program ID

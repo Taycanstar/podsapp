@@ -42,18 +42,42 @@ enum ProgramType: String, Codable, CaseIterable {
         }
     }
 
+    /// Default days per week for this program type
     var daysPerWeek: Int {
         switch self {
         case .fullBody: return 3
-        case .ppl: return 6
+        case .ppl: return 3  // Default to 3 (one push, one pull, one legs)
         case .upperLower: return 4
         }
+    }
+
+    /// Minimum days per week allowed for this program type
+    var minDaysPerWeek: Int {
+        switch self {
+        case .fullBody: return 2
+        case .ppl: return 3  // PPL needs at least Push, Pull, Legs
+        case .upperLower: return 2
+        }
+    }
+
+    /// Maximum days per week allowed for this program type
+    var maxDaysPerWeek: Int {
+        switch self {
+        case .fullBody: return 7
+        case .ppl: return 7
+        case .upperLower: return 7
+        }
+    }
+
+    /// Range of valid days per week for this program type
+    var daysPerWeekRange: ClosedRange<Int> {
+        minDaysPerWeek...maxDaysPerWeek
     }
 
     var description: String {
         switch self {
         case .fullBody: return "3 days/week • Great for beginners"
-        case .ppl: return "6 days/week • High frequency training"
+        case .ppl: return "3-6 days/week • Push, Pull, Legs split"
         case .upperLower: return "4 days/week • Balanced approach"
         }
     }
@@ -309,6 +333,12 @@ struct ProgramRecommendationResponse: Codable {
 
 struct ProgramResponse: Codable {
     let program: TrainingProgram?
+}
+
+struct DeactivateProgramResponse: Codable {
+    let success: Bool
+    let deactivatedProgram: TrainingProgram
+    let newActiveProgram: TrainingProgram?
 }
 
 struct ProgramDayResponse: Codable {

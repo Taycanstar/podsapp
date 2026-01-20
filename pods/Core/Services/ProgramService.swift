@@ -268,6 +268,25 @@ class ProgramService: ObservableObject {
         return program
     }
 
+    // MARK: - Deactivate Program
+
+    /// Deactivate a program. The next most recent program becomes active.
+    /// - Parameters:
+    ///   - programId: The program ID to deactivate
+    ///   - userEmail: The user's email
+    /// - Returns: The new active program (if any)
+    func deactivateProgram(programId: Int, userEmail: String) async throws -> TrainingProgram? {
+        let (_, newActiveProgram) = try await networkManager.deactivateProgram(programId: programId, userEmail: userEmail)
+
+        // Update the active program to the new one
+        self.activeProgram = newActiveProgram
+
+        // Notify WorkoutManager to refresh today's workout
+        NotificationCenter.default.post(name: .trainingProgramCreated, object: nil)
+
+        return newActiveProgram
+    }
+
     // MARK: - Helper Methods
 
     func getCurrentWeekDays() -> [ProgramDay]? {

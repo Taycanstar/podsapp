@@ -950,11 +950,20 @@ struct CreateProgramView: View {
 
                     // Duration
                     Section {
-                        Stepper("\(daysPerWeek) days per week", value: $daysPerWeek, in: 2...7)
+                        Stepper("\(daysPerWeek) days per week", value: $daysPerWeek, in: selectedType.daysPerWeekRange)
                         Stepper("\(sessionDuration) min per session", value: $sessionDuration, in: 30...120, step: 15)
                         Stepper("\(totalWeeks) weeks", value: $totalWeeks, in: 1...12)
                     } header: {
                         Text("Duration")
+                    }
+                    .onChange(of: selectedType) { oldType, newType in
+                        // Clamp daysPerWeek to the new type's valid range
+                        let range = newType.daysPerWeekRange
+                        if daysPerWeek < range.lowerBound {
+                            daysPerWeek = range.lowerBound
+                        } else if daysPerWeek > range.upperBound {
+                            daysPerWeek = range.upperBound
+                        }
                     }
 
                     // Experience Level

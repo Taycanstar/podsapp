@@ -1048,6 +1048,7 @@ private struct PlanSettingsSheet: View {
     @State private var showDeactivateConfirmation = false
     @State private var showDayOrderSheet = false
     @State private var error: String?
+    @State private var totalProgramCount: Int = 0
 
     init(program: TrainingProgram, userEmail: String, onPlanDeleted: (() -> Void)? = nil, onSettingsSaved: (() -> Void)? = nil) {
         self.program = program
@@ -1213,7 +1214,14 @@ private struct PlanSettingsSheet: View {
                             showDeactivateConfirmation = true
                         } label: {
                             Text("Deactivate Plan")
-                                .foregroundColor(.orange)
+                                .foregroundColor(totalProgramCount > 1 ? .orange : .gray)
+                        }
+                        .disabled(totalProgramCount <= 1)
+
+                        if totalProgramCount <= 1 {
+                            Text("Create another program to deactivate this one")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
                         }
                     }
                 }
@@ -1283,6 +1291,17 @@ private struct PlanSettingsSheet: View {
                 }
             } message: {
                 Text("This will deactivate the plan. You can reactivate it later from your saved programs.")
+            }
+            .task {
+                // Fetch total program count to determine if deactivate should be enabled
+                do {
+                    let programs = try await programService.listPrograms(userEmail: userEmail)
+                    await MainActor.run {
+                        totalProgramCount = programs.count
+                    }
+                } catch {
+                    print("[PlanSettings] Failed to fetch program count: \(error)")
+                }
             }
         }
     }
@@ -1364,9 +1383,29 @@ private struct PlanSettingsSheet: View {
     }
 
     private func deactivatePlan() {
-        // TODO: Add deactivate API
-        print("[PlanSettings] Deactivate requested for program \(program.id)")
-        dismiss()
+        Task {
+            do {
+                print("[PlanSettings] Deactivating program \(program.id)")
+                let newActiveProgram = try await programService.deactivateProgram(
+                    programId: program.id,
+                    userEmail: userEmail
+                )
+
+                await MainActor.run {
+                    if let newProgram = newActiveProgram {
+                        print("[PlanSettings] Program deactivated. New active: \(newProgram.name)")
+                    } else {
+                        print("[PlanSettings] Program deactivated. No new active program.")
+                    }
+                    dismiss()
+                }
+            } catch {
+                await MainActor.run {
+                    print("[PlanSettings] Failed to deactivate: \(error.localizedDescription)")
+                    self.error = error.localizedDescription
+                }
+            }
+        }
     }
 }
 
