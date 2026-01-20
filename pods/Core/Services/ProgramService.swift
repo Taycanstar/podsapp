@@ -417,7 +417,7 @@ class ProgramService: ObservableObject {
         let cooldownEnabled = program.defaultCooldownEnabled ?? false
         let includeFoamRolling = program.includeFoamRolling ?? true
 
-        print("🏋️ [todayProgramWorkout] Plan preferences: warmup=\(warmupEnabled), cooldown=\(cooldownEnabled), foamRolling=\(includeFoamRolling)")
+        print("🏋️ [todayProgramWorkout] Plan preferences: warmup=\(warmupEnabled) (raw: \(String(describing: program.defaultWarmupEnabled))), cooldown=\(cooldownEnabled), foamRolling=\(includeFoamRolling)")
 
         var warmUpExercises: [TodayWorkoutExercise]? = nil
         var coolDownExercises: [TodayWorkoutExercise]? = nil

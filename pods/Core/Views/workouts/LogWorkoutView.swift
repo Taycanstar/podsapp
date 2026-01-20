@@ -1416,6 +1416,8 @@ private struct TodayWorkoutView: View {
                     canShowSupersetMenu: canShowSupersetMenu,
                     onShowSuperset: onShowSuperset
                 )
+                // Force view recreation when warmup/cooldown sections change
+                .id("\(workout.id)-\(workout.warmUpExercises?.count ?? 0)-\(workout.coolDownExercises?.count ?? 0)")
             }
         } else {
             WorkoutSkeletonPlaceholderView()
@@ -4180,15 +4182,17 @@ struct WorkoutDurationPickerView: View {
             Divider()
                 .padding(.bottom, 12)
 
-            Button("Set for workout") {
+            Button {
                 onSetForWorkout(tempSelectedDuration)
+            } label: {
+                Text("Set for workout")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Color(.systemBackground))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color.primary)
+                    .cornerRadius(24)
             }
-            .font(.system(size: 14, weight: .semibold))
-            .foregroundColor(Color(.systemBackground))
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(Color.primary)
-            .cornerRadius(24)
             .padding(.horizontal, 24)
             .padding(.bottom, 30)
         }
@@ -4334,15 +4338,17 @@ struct FitnessGoalPickerView: View {
             Divider()
                 .padding(.bottom, 12)
 
-            Button("Set for workout") {
+            Button {
                 onSetForWorkout(tempSelectedGoal)
+            } label: {
+                Text("Set for workout")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Color(.systemBackground))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color.primary)
+                    .cornerRadius(24)
             }
-            .font(.system(size: 14, weight: .semibold))
-            .foregroundColor(Color(.systemBackground))
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(Color.primary)
-            .cornerRadius(24)
             .padding(.horizontal, 24)
             .padding(.bottom, 30)
         }
@@ -4453,15 +4459,17 @@ struct FitnessLevelPickerView: View {
             Divider()
                 .padding(.bottom, 12)
 
-            Button("Set for workout") {
+            Button {
                 onSetForWorkout(tempSelectedLevel)
+            } label: {
+                Text("Set for workout")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Color(.systemBackground))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color.primary)
+                    .cornerRadius(24)
             }
-            .font(.system(size: 14, weight: .semibold))
-            .foregroundColor(Color(.systemBackground))
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(Color.primary)
-            .cornerRadius(24)
             .padding(.horizontal, 24)
             .padding(.bottom, 30)
         }

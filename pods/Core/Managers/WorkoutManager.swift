@@ -419,19 +419,66 @@ class WorkoutManager: ObservableObject {
         print("📋 [syncTodayWorkoutWithProgram] CALLED - current todayWorkout.title='\(todayWorkout?.title ?? "nil")'")
         let programWorkout = ProgramService.shared.todayProgramWorkout
         print("📋 [syncTodayWorkoutWithProgram] programWorkout from ProgramService: '\(programWorkout?.title ?? "nil")'")
+        print("📋 [syncTodayWorkoutWithProgram] programWorkout warmups: \(programWorkout?.warmUpExercises?.count ?? 0), cooldowns: \(programWorkout?.coolDownExercises?.count ?? 0)")
 
         if let programWorkout = programWorkout {
             // ALWAYS assign the program workout - no comparison, no caching logic
             // This ensures Today tab immediately shows the correct workout
             print("📋 Setting todayWorkout from program (day ID: \(programWorkout.programDayId ?? -1), title: \(programWorkout.title))")
-            todayWorkout = programWorkout
-            print("📋 [syncTodayWorkoutWithProgram] AFTER assignment: todayWorkout.title='\(todayWorkout?.title ?? "nil")'")
+
+            // Check if session overrides require warmup/cooldown that the program doesn't have
+            let effectivePrefs = effectiveFlexibilityPreferences
+            let needsWarmup = effectivePrefs.warmUpEnabled && (programWorkout.warmUpExercises?.isEmpty ?? true)
+            let needsCooldown = effectivePrefs.coolDownEnabled && (programWorkout.coolDownExercises?.isEmpty ?? true)
+
+            print("📋 [syncTodayWorkoutWithProgram] effectivePrefs: warmup=\(effectivePrefs.warmUpEnabled), cooldown=\(effectivePrefs.coolDownEnabled)")
+            print("📋 [syncTodayWorkoutWithProgram] needsWarmup=\(needsWarmup), needsCooldown=\(needsCooldown)")
+
+            var finalWorkout = programWorkout
+
+            // Apply session flexibility preferences if they differ from program
+            if needsWarmup || needsCooldown {
+                let warmUpExercises: [TodayWorkoutExercise]? = needsWarmup ?
+                    generateWarmUpExercises(
+                        workoutExercises: programWorkout.exercises,
+                        equipment: customEquipment,
+                        includeFoamRolling: effectivePrefs.includeFoamRolling
+                    ) : programWorkout.warmUpExercises
+
+                let coolDownExercises: [TodayWorkoutExercise]? = needsCooldown ?
+                    generateCoolDownExercises(
+                        workoutExercises: programWorkout.exercises,
+                        equipment: customEquipment
+                    ) : programWorkout.coolDownExercises
+
+                finalWorkout = TodayWorkout(
+                    id: programWorkout.id,
+                    date: programWorkout.date,
+                    title: programWorkout.title,
+                    exercises: programWorkout.exercises,
+                    blocks: programWorkout.blocks,
+                    estimatedDuration: programWorkout.estimatedDuration,
+                    fitnessGoal: programWorkout.fitnessGoal,
+                    difficulty: programWorkout.difficulty,
+                    warmUpExercises: warmUpExercises,
+                    coolDownExercises: coolDownExercises,
+                    programDayId: programWorkout.programDayId
+                )
+                print("📋 [syncTodayWorkoutWithProgram] Applied session overrides: warmups=\(warmUpExercises?.count ?? 0), cooldowns=\(coolDownExercises?.count ?? 0)")
+            }
+
+            // Explicitly notify observers before changing the value
+            objectWillChange.send()
+            todayWorkout = finalWorkout
+
+            print("📋 [syncTodayWorkoutWithProgram] AFTER assignment: todayWorkout.title='\(todayWorkout?.title ?? "nil")', warmups=\(todayWorkout?.warmUpExercises?.count ?? 0)")
             saveTodayWorkout()
             triggerWorkoutRefresh()
         } else if todayWorkout?.isFromProgram == true {
             // We had a program workout but now there isn't one (program deactivated/rest day)
             // Clear it so we can generate a new workout
             print("📋 Program workout no longer available, clearing cached program workout")
+            objectWillChange.send()
             todayWorkout = nil
             triggerWorkoutRefresh()
             // Trigger generation of a new workout
@@ -3718,14 +3765,17 @@ class WorkoutManager: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: key),
            let workout = try? JSONDecoder().decode(TodayWorkout.self, from: data) {
             let sanitized = sanitizeWarmupsIfNeeded(workout)
-            print("📱 [loadTodayWorkout] Found cached workout: '\(sanitized.title)', isFromProgram=\(sanitized.isFromProgram)")
+            print("📱 [loadTodayWorkout] Found cached workout: '\(sanitized.title)', isFromProgram=\(sanitized.isFromProgram), warmups=\(sanitized.warmUpExercises?.count ?? 0)")
 
-            // If cached workout is from a program but no program workout exists now,
-            // don't use it - generate a new one
+            // If cached workout is from a program, USE IT temporarily
+            // The program will load shortly via StartupCoordinator and refreshTodayWorkoutFromProgram()
+            // will update with fresh data if needed. DON'T regenerate - that causes a race condition
+            // where the generated workout (without program context) overwrites the proper program workout.
             if sanitized.isFromProgram {
-                print("📱 WorkoutManager: Cached workout is from program but no program workout now - regenerating")
-                todayWorkout = nil
-                Task { await generateTodayWorkout() }
+                print("📱 WorkoutManager: Cached workout is from program - using it until program loads")
+                todayWorkout = sanitized
+                restoreActiveSessionIfNeeded(for: sanitized)
+                // Program will sync via refreshTodayWorkoutFromProgram() after loading
             } else {
                 todayWorkout = sanitized
                 print("📱 [loadTodayWorkout] Using cached workout: '\(sanitized.title)'")

@@ -2462,57 +2462,53 @@ private struct EditExerciseTargetsView: View {
         .navigationBarHidden(true)
     }
 
-    // MARK: - Top Buttons (xmark left, checkmark right)
+    // MARK: - Top Buttons (xmark left, title center, checkmark right)
     @ViewBuilder
     private var topButtonsView: some View {
-        HStack {
-            // xmark on left with glass style (iOS 26+) or ultraThinMaterial fallback
-            Button(action: { dismiss() }) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(.primary)
-                    .frame(width: 30, height: 30)
-            }
-            .editTargetsXmarkStyle()
-            .padding(.leading, 12)
-            .padding(.top, 4)
+        ZStack {
+            // Centered week label as nav title
+            Text(weekData.displayLabel)
+                .font(.headline)
+                .foregroundColor(.primary)
 
-            Spacer()
-
-            // checkmark on right with glassProminent (iOS 26+) or accentColor fallback
-            if isSaving {
-                ProgressView()
-                    .padding(.trailing, 12)
-                    .padding(.top, 4)
-            } else {
-                Button(action: { saveTargets() }) {
-                    Image(systemName: "checkmark")
+            HStack {
+                // xmark on left with glass style (iOS 26+) or ultraThinMaterial fallback
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark")
                         .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.primary)
                         .frame(width: 30, height: 30)
                 }
-                .editTargetsCheckmarkStyle()
-                .padding(.trailing, 12)
-                .padding(.top, 4)
+                .editTargetsXmarkStyle()
+
+                Spacer()
+
+                // checkmark on right with glassProminent (iOS 26+) or accentColor fallback
+                if isSaving {
+                    ProgressView()
+                } else {
+                    Button(action: { saveTargets() }) {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(width: 30, height: 30)
+                    }
+                    .editTargetsCheckmarkStyle()
+                }
             }
+            .padding(.horizontal, 12)
         }
+        .padding(.top, 4)
     }
 
     // MARK: - Exercise Header Section
     private var exerciseHeaderSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(exercise.exerciseName)
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(.primary)
-
-            // Week label as subtitle
-            Text(weekData.displayLabel)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 8)
+        Text(exercise.exerciseName)
+            .font(.title2)
+            .fontWeight(.bold)
+            .foregroundColor(.primary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 8)
     }
 
     // MARK: - Set Row (matching DynamicSetRowView style from ExerciseLoggingView)
