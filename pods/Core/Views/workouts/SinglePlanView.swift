@@ -2466,22 +2466,20 @@ private struct EditExerciseTargetsView: View {
     @ViewBuilder
     private var topButtonsView: some View {
         HStack {
-            // xmark on left with ultraThinMaterial
+            // xmark on left with glass style (iOS 26+) or ultraThinMaterial fallback
             Button(action: { dismiss() }) {
                 Image(systemName: "xmark")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.primary)
                     .frame(width: 36, height: 36)
-                    .background(.ultraThinMaterial)
-                    .clipShape(Circle())
-                    .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 2)
             }
+            .editTargetsXmarkStyle()
             .padding(.leading, 12)
             .padding(.top, 4)
 
             Spacer()
 
-            // checkmark on right with glassProminent (no container for iOS 26+)
+            // checkmark on right with glassProminent (iOS 26+) or accentColor fallback
             if isSaving {
                 ProgressView()
                     .padding(.trailing, 12)
@@ -2614,7 +2612,7 @@ private struct EditExerciseTargetsView: View {
     }
 }
 
-// Helper extension for glass prominent button style
+// Helper extension for glass button styles
 private extension View {
     @ViewBuilder
     func glassProminentButtonStyle() -> some View {
@@ -2637,6 +2635,20 @@ private extension View {
         } else {
             // Pre-iOS 26: fallback with accentColor background
             self.background(Color.accentColor)
+                .clipShape(Circle())
+                .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 2)
+        }
+    }
+
+    @ViewBuilder
+    func editTargetsXmarkStyle() -> some View {
+        if #available(iOS 26, *) {
+            // iOS 26+: use glass without any container
+            self.buttonStyle(.glass)
+                .buttonBorderShape(.circle)
+        } else {
+            // Pre-iOS 26: fallback with ultraThinMaterial background
+            self.background(.ultraThinMaterial)
                 .clipShape(Circle())
                 .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 2)
         }
