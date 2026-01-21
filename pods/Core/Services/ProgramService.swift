@@ -326,8 +326,9 @@ class ProgramService: ObservableObject {
     }
 
     /// Today's workout from the active program, converted to TodayWorkout format
-    /// MacroFactor-style: Returns the NEXT INCOMPLETE workout by cycle_position order
-    /// NOT date-based - always finds a workout regardless of calendar date
+    /// Calendar-aware: Returns TODAY'S workout from the current week if incomplete,
+    /// otherwise finds the next incomplete workout in the current week,
+    /// then falls back to first incomplete across all weeks.
     var todayProgramWorkout: TodayWorkout? {
         guard let program = activeProgram,
               let weeks = program.weeks else {
@@ -335,8 +336,74 @@ class ProgramService: ObservableObject {
             return nil
         }
 
-        print("🔍 [todayProgramWorkout] Looking for next incomplete workout (MacroFactor-style). Program=\(program.name)")
+        let todayDayNumber = TrainingProgram.todayWeekdayNumber
+        print("🔍 [todayProgramWorkout] Today is dayNumber=\(todayDayNumber) (1=Mon, 7=Sun). Program=\(program.name)")
 
+        // Step 1: Determine current week based on startDate
+        guard let currentWeekNum = program.currentWeekNumber else {
+            print("🔍 [todayProgramWorkout] Cannot determine current week (no startDate?), falling back to cycle_position")
+            return findNextIncompleteByCyclePosition(program: program, weeks: weeks)
+        }
+
+        print("🔍 [todayProgramWorkout] Current week: \(currentWeekNum) of \(weeks.count)")
+
+        // Handle week overflow (program ended but user still using app)
+        let effectiveWeekNum = min(currentWeekNum, weeks.count)
+        guard let currentWeek = weeks.first(where: { $0.weekNumber == effectiveWeekNum }),
+              let currentWeekDays = currentWeek.days else {
+            print("🔍 [todayProgramWorkout] Week \(effectiveWeekNum) not found, falling back to cycle_position")
+            return findNextIncompleteByCyclePosition(program: program, weeks: weeks)
+        }
+
+        // Step 2: Try today's workout from current week
+        if let todayDay = currentWeekDays.first(where: { $0.dayNumber == todayDayNumber }) {
+            if todayDay.dayType == .workout && !todayDay.isCompleted {
+                print("🔍 [todayProgramWorkout] Today's workout: '\(todayDay.workoutLabel)' (not completed)")
+                return convertProgramDayToTodayWorkout(todayDay, program: program)
+            } else if todayDay.dayType == .workout && todayDay.isCompleted {
+                print("🔍 [todayProgramWorkout] Today's workout already completed, finding next in week")
+            } else {
+                print("🔍 [todayProgramWorkout] Today is a REST day, finding next workout in week")
+            }
+        } else {
+            print("🔍 [todayProgramWorkout] Today's dayNumber (\(todayDayNumber)) not found in week \(effectiveWeekNum)")
+        }
+
+        // Step 3: Find next incomplete in current week (later days first, then wrap to earlier)
+        if let nextInWeek = findNextIncompleteInWeek(days: currentWeekDays, afterDayNumber: todayDayNumber) {
+            print("🔍 [todayProgramWorkout] Next incomplete in week: '\(nextInWeek.workoutLabel)' (day \(nextInWeek.dayNumber))")
+            return convertProgramDayToTodayWorkout(nextInWeek, program: program)
+        }
+
+        // Step 4: Current week is complete - fall back to next incomplete across all weeks
+        print("🔍 [todayProgramWorkout] Week \(effectiveWeekNum) complete, checking all weeks")
+        return findNextIncompleteByCyclePosition(program: program, weeks: weeks)
+    }
+
+    /// Find next incomplete workout in the given week's days,
+    /// looking later days first, then wrapping to earlier missed days.
+    private func findNextIncompleteInWeek(days: [ProgramDay], afterDayNumber: Int) -> ProgramDay? {
+        let workoutDays = days.filter { $0.dayType == .workout }
+        guard !workoutDays.isEmpty else { return nil }
+
+        let sortedDays = workoutDays.sorted { $0.dayNumber < $1.dayNumber }
+
+        // First: look for incomplete days LATER in the week
+        if let laterIncomplete = sortedDays.first(where: { $0.dayNumber > afterDayNumber && !$0.isCompleted }) {
+            return laterIncomplete
+        }
+
+        // Then: wrap around to EARLIER missed days (catch-up)
+        if let earlierIncomplete = sortedDays.first(where: { $0.dayNumber <= afterDayNumber && !$0.isCompleted }) {
+            return earlierIncomplete
+        }
+
+        // All complete in this week
+        return nil
+    }
+
+    /// Fallback: Find next incomplete using cycle_position order across all weeks
+    private func findNextIncompleteByCyclePosition(program: TrainingProgram, weeks: [ProgramWeek]) -> TodayWorkout? {
         // Collect ALL workout days across all weeks
         var allWorkoutDays: [ProgramDay] = []
         for week in weeks {
@@ -349,25 +416,22 @@ class ProgramService: ObservableObject {
         // Sort by cycle_position
         allWorkoutDays.sort { ($0.cyclePosition ?? 0) < ($1.cyclePosition ?? 0) }
 
-        print("🔍 [todayProgramWorkout] Found \(allWorkoutDays.count) workout days with cycle positions")
+        print("🔍 [todayProgramWorkout] Fallback: Found \(allWorkoutDays.count) workout days with cycle positions")
 
         // Find NEXT INCOMPLETE workout
-        let targetDay: ProgramDay?
         if let nextIncomplete = allWorkoutDays.first(where: { !$0.isCompleted }) {
-            print("🔍 [todayProgramWorkout] Next incomplete: '\(nextIncomplete.workoutLabel)' (cycle_position=\(nextIncomplete.cyclePosition ?? -1))")
-            targetDay = nextIncomplete
-        } else if let firstWorkout = allWorkoutDays.first {
-            // All complete - cycle restarts from position 1
-            print("🔍 [todayProgramWorkout] All workouts complete, cycling back to: '\(firstWorkout.workoutLabel)'")
-            targetDay = firstWorkout
-        } else {
-            print("❌ [todayProgramWorkout] No workout days found in program")
-            return nil
+            print("🔍 [todayProgramWorkout] Fallback: Next incomplete by cycle_position: '\(nextIncomplete.workoutLabel)'")
+            return convertProgramDayToTodayWorkout(nextIncomplete, program: program)
         }
 
-        // Convert the target day to TodayWorkout
-        guard let day = targetDay else { return nil }
-        return convertProgramDayToTodayWorkout(day, program: program)
+        // All complete - cycle restarts from position 1
+        if let firstWorkout = allWorkoutDays.first {
+            print("🔍 [todayProgramWorkout] All workouts complete, cycling back to: '\(firstWorkout.workoutLabel)'")
+            return convertProgramDayToTodayWorkout(firstWorkout, program: program)
+        }
+
+        print("❌ [todayProgramWorkout] No workout days found in program")
+        return nil
     }
 
     /// Convert a ProgramDay to TodayWorkout format

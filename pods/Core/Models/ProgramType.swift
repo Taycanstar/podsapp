@@ -267,6 +267,16 @@ struct TrainingProgram: Codable, Identifiable {
         return (daysSinceStart / 7) + 1
     }
 
+    /// Today's weekday in backend format (1=Monday, 7=Sunday)
+    /// Swift's Calendar returns 1=Sunday, 2=Monday, ..., 7=Saturday
+    /// Backend uses 1=Monday, 2=Tuesday, ..., 7=Sunday
+    static var todayWeekdayNumber: Int {
+        let swiftWeekday = Calendar.current.component(.weekday, from: Date())
+        // Conversion: (swiftWeekday + 5) % 7 + 1
+        // Sun(1) -> 7, Mon(2) -> 1, Tue(3) -> 2, etc.
+        return (swiftWeekday + 5) % 7 + 1
+    }
+
     var programTypeEnum: ProgramType? {
         ProgramType(rawValue: programType)
     }
