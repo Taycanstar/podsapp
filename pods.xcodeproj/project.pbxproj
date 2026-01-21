@@ -371,6 +371,10 @@
 		36DAAF992F1EFB1D008B6442 /* ExerciseRoleClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DAAF982F1EFB1D008B6442 /* ExerciseRoleClassifier.swift */; };
 		36DAAF9B2F1EFB39008B6442 /* SessionStructureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DAAF9A2F1EFB39008B6442 /* SessionStructureService.swift */; };
 		36DAAF9D2F1EFB53008B6442 /* RoleBasedEquipmentScoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DAAF9C2F1EFB53008B6442 /* RoleBasedEquipmentScoring.swift */; };
+		36DAAF9F2F20779E008B6442 /* TimelineComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DAAF9E2F20779E008B6442 /* TimelineComponents.swift */; };
+		36DAAFA12F2077BB008B6442 /* TimelineDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DAAFA02F2077BB008B6442 /* TimelineDetailsView.swift */; };
+		36DAAFA32F2077E3008B6442 /* TimelineEventViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DAAFA22F2077E3008B6442 /* TimelineEventViews.swift */; };
+		36DAAFA52F2077FC008B6442 /* AddActivityComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DAAFA42F2077FC008B6442 /* AddActivityComponents.swift */; };
 		36DB82CE2EB924BC004BA082 /* ExercisesDb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DB82CD2EB924B7004BA082 /* ExercisesDb.swift */; };
 		36DB82D02EBA99D5004BA082 /* WorkoutTelemetryEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DB82CF2EBA99D5004BA082 /* WorkoutTelemetryEvent.swift */; };
 		36DB82D22EBA99FD004BA082 /* WorkoutContextV1.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DB82D12EBA99FD004BA082 /* WorkoutContextV1.swift */; };
@@ -861,6 +865,10 @@
 		36DAAF982F1EFB1D008B6442 /* ExerciseRoleClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseRoleClassifier.swift; sourceTree = "<group>"; };
 		36DAAF9A2F1EFB39008B6442 /* SessionStructureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStructureService.swift; sourceTree = "<group>"; };
 		36DAAF9C2F1EFB53008B6442 /* RoleBasedEquipmentScoring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoleBasedEquipmentScoring.swift; sourceTree = "<group>"; };
+		36DAAF9E2F20779E008B6442 /* TimelineComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineComponents.swift; sourceTree = "<group>"; };
+		36DAAFA02F2077BB008B6442 /* TimelineDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineDetailsView.swift; sourceTree = "<group>"; };
+		36DAAFA22F2077E3008B6442 /* TimelineEventViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineEventViews.swift; sourceTree = "<group>"; };
+		36DAAFA42F2077FC008B6442 /* AddActivityComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddActivityComponents.swift; sourceTree = "<group>"; };
 		36DB82CD2EB924B7004BA082 /* ExercisesDb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExercisesDb.swift; sourceTree = "<group>"; };
 		36DB82CF2EBA99D5004BA082 /* WorkoutTelemetryEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutTelemetryEvent.swift; sourceTree = "<group>"; };
 		36DB82D12EBA99FD004BA082 /* WorkoutContextV1.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutContextV1.swift; sourceTree = "<group>"; };
@@ -1688,6 +1696,10 @@
 		36ED35AC2DD53B5C00D174FB /* dashboard */ = {
 			isa = PBXGroup;
 			children = (
+				36DAAFA42F2077FC008B6442 /* AddActivityComponents.swift */,
+				36DAAFA22F2077E3008B6442 /* TimelineEventViews.swift */,
+				36DAAFA02F2077BB008B6442 /* TimelineDetailsView.swift */,
+				36DAAF9E2F20779E008B6442 /* TimelineComponents.swift */,
 				36667E292F0207380017E9D7 /* ScaleWeightView.swift */,
 				3650A1772EED12B30068ACE6 /* VitalMetricType.swift */,
 				3650A1732EEB4B000068ACE6 /* ActivityRingView.swift */,
@@ -2126,6 +2138,7 @@
 				36ED35992DCFDE5400D174FB /* ConfirmFoodView.swift in Sources */,
 				363AFA1B2D474FB400C91A14 /* PodsViewModel.swift in Sources */,
 				36ED35C02DDBB0C100D174FB /* GoalProgress.swift in Sources */,
+				36DAAFA12F2077BB008B6442 /* TimelineDetailsView.swift in Sources */,
 				36667DF62EF904740017E9D7 /* NutrientDescriptors.swift in Sources */,
 				36F5C5B12F11C2C600D8F4B3 /* ConfirmLogViewLegacy.swift in Sources */,
 				36F5C5A12F11B8E700D8F4B3 /* NutrientGoalEditorView.swift in Sources */,
@@ -2164,6 +2177,7 @@
 				36667E282F01948D0017E9D7 /* EventTracker.swift in Sources */,
 				36D3A5222E942B7300AD6B94 /* RegisterView.swift in Sources */,
 				36667DC82EF35B490017E9D7 /* SafeLinkHandler.swift in Sources */,
+				36DAAF9F2F20779E008B6442 /* TimelineComponents.swift in Sources */,
 				36FBD55C2F14701E005F62B9 /* DocumentPickerView.swift in Sources */,
 				3650A17C2EEF840E0068ACE6 /* MultiFoodLogView.swift in Sources */,
 				36A85CF12DB43FEE00DD4266 /* ConnectToAppleHealth.swift in Sources */,
@@ -2193,6 +2207,7 @@
 				36A85CDD2DB2BF2000DD4266 /* DobView.swift in Sources */,
 				36667DE32EF4A37F0017E9D7 /* ImportRecipeSheet.swift in Sources */,
 				369474522CB9B8CB00CD197F /* BoundsView.swift in Sources */,
+				36DAAFA52F2077FC008B6442 /* AddActivityComponents.swift in Sources */,
 				3662A5552DFE3B8500847487 /* WorkoutContainerView.swift in Sources */,
 				3650A1682EE7DB760068ACE6 /* AgentTabBarMinimal.swift in Sources */,
 				365B7DC42CA2703D00CC43CC /* ItemTrendsView.swift in Sources */,
@@ -2497,6 +2512,7 @@
 				3619191B2EA5C547007CAA0D /* LogProUpgradeSheet.swift in Sources */,
 				36498B132EE51A1F00F62C97 /* FoodLogAgentView.swift in Sources */,
 				362532A72E6CD98B003C3B8D /* RestTimerSheet.swift in Sources */,
+				36DAAFA32F2077E3008B6442 /* TimelineEventViews.swift in Sources */,
 				36ED35BC2DD938C800D174FB /* HeightDataView.swift in Sources */,
 				369474562CB9C0B600CD197F /* MetricCard.swift in Sources */,
 				0DB4770E990845A8A2F47741 /* ProFeatureModels.swift in Sources */,

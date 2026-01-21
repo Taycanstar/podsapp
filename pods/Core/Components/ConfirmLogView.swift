@@ -187,6 +187,86 @@ struct ConfirmLogView: View {
         }
         return servingSize.isEmpty ? "1 serving" : servingSize
     }
+
+    private var perServingScaleFactor: Double {
+        let servingScale = baselineServingAmount > 0 ? (servingAmount / baselineServingAmount) : servingAmount
+        return measureScalingFactor * servingScale
+    }
+
+    private var servingUnitLabelForLogging: String {
+        let label = sanitizedMeasureLabel(selectedMeasure)
+        if !label.isEmpty {
+            return label
+        }
+        if let measure = selectedMeasure {
+            return measure.measureUnitName
+        }
+        return servingUnit.isEmpty ? "serving" : servingUnit
+    }
+
+    private var servingTextForLogging: String {
+        let amountText = ConfirmLogView.formattedServings(servingAmount)
+        let unitLabel = servingUnitLabelForLogging
+        if unitLabel.isEmpty {
+            return amountText
+        }
+        return "\(amountText) \(unitLabel)"
+    }
+
+    private func scaledNutrients(_ nutrients: [Nutrient], scale: Double) -> [Nutrient] {
+        nutrients.map { nutrient in
+            Nutrient(
+                nutrientName: nutrient.nutrientName,
+                value: (nutrient.value ?? 0) * scale,
+                unitName: nutrient.unitName
+            )
+        }
+    }
+
+    private func scaledNutrientsForLogging(from food: Food, scale: Double) -> [Nutrient] {
+        var scaled = scaledNutrients(food.foodNutrients, scale: scale)
+        let macroOverrides: [(name: String, value: Double, unit: String)] = [
+            ("Energy", baseCalories * scale, "kcal"),
+            ("Protein", baseProtein * scale, "g"),
+            ("Carbohydrate, by difference", baseCarbs * scale, "g"),
+            ("Total lipid (fat)", baseFat * scale, "g"),
+        ]
+        for override in macroOverrides {
+            if let index = scaled.firstIndex(where: { normalizedNutrientKey($0.nutrientName) == normalizedNutrientKey(override.name) }) {
+                scaled[index] = Nutrient(nutrientName: override.name, value: override.value, unitName: override.unit)
+            } else {
+                scaled.append(Nutrient(nutrientName: override.name, value: override.value, unitName: override.unit))
+            }
+        }
+        return scaled
+    }
+
+    private func scaledMealItemsForLogging(scale: Double) -> [MealItem] {
+        guard !mealItems.isEmpty else { return mealItems }
+        guard scale != 1 else { return mealItems }
+        return mealItems.map { $0.scaled(by: scale) }
+    }
+
+    private func makeFoodForLogging(from food: Food) -> Food {
+        let perServingScale = perServingScaleFactor
+        let totalScale = perServingScale * numberOfServings
+        let scaledMealItems = shouldShowMealItemsEditor
+            ? scaledMealItemsForLogging(scale: totalScale)
+            : (food.mealItems ?? [])
+
+        var updatedFood = food
+        updatedFood.description = title.isEmpty ? food.description : title
+        updatedFood.servingSize = servingAmount
+        updatedFood.servingSizeUnit = servingUnit.isEmpty ? (selectedMeasure?.measureUnitName ?? food.servingSizeUnit) : servingUnit
+        updatedFood.householdServingFullText = servingTextForLogging
+        updatedFood.numberOfServings = numberOfServings
+        if let gramWeight = selectedMeasure?.gramWeight, gramWeight > 0 {
+            updatedFood.servingWeightGrams = gramWeight * servingAmount
+        }
+        updatedFood.foodNutrients = scaledNutrientsForLogging(from: food, scale: perServingScale)
+        updatedFood.mealItems = scaledMealItems.isEmpty ? nil : scaledMealItems
+        return updatedFood
+    }
     
     // This view is ONLY for logging scanned foods
     init(path: Binding<NavigationPath>, food: Food, foodLogId: Int? = nil, plateViewModel: PlateViewModel? = nil) {
@@ -2346,13 +2426,7 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
 
         isCreating = true
 
-        var updatedFood = food
-        updatedFood.description = title
-        updatedFood.householdServingFullText = selectedMeasureLabel
-        updatedFood.numberOfServings = effectiveServings
-        if shouldShowMealItemsEditor {
-            updatedFood.mealItems = mealItems
-        }
+        let updatedFood = makeFoodForLogging(from: food)
 
         let mealLabel = selectedMealPeriod.displayName
         let placeholderId = generateTemporaryFoodLogID()
@@ -2371,7 +2445,7 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
             email:    viewModel.email,
             food:     updatedFood,
             meal:     mealLabel,
-            servings: effectiveServings,
+            servings: updatedFood.numberOfServings ?? effectiveServings,
             date:     mealTime,
             notes:    nil
         ) { result in
@@ -2417,13 +2491,15 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
     }
 
     private func makeOptimisticCombinedLog(from food: Food, placeholderId: Int, mealLabel: String) -> CombinedLog {
+        let servingText = food.householdServingFullText ?? selectedMeasureLabel
+        let servings = food.numberOfServings ?? effectiveServings
         let loggedItem = LoggedFoodItem(
             foodLogId: placeholderId,
             fdcId: food.fdcId,
             displayName: food.description,
             calories: perServingValue(adjustedCalories),
-            servingSizeText: selectedMeasureLabel,
-            numberOfServings: effectiveServings,
+            servingSizeText: servingText,
+            numberOfServings: servings,
             brandText: brand.isEmpty ? food.brandText : brand,
             protein: perServingValue(adjustedProtein),
             carbs: perServingValue(adjustedCarbs),
@@ -3714,6 +3790,16 @@ struct PlateView: View {
         (unit ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 
+    private func scaledNutrients(_ nutrients: [Nutrient], scale: Double) -> [Nutrient] {
+        nutrients.map { nutrient in
+            Nutrient(
+                nutrientName: nutrient.nutrientName,
+                value: (nutrient.value ?? 0) * scale,
+                unitName: nutrient.unitName
+            )
+        }
+    }
+
     private var plateFiberValue: Double {
         let keys = ["fiber, total dietary", "dietary fiber"]
         guard let match = keys.compactMap({ plateNutrients[normalizedNutrientKey($0)] }).first else {
@@ -3798,6 +3884,32 @@ struct PlateView: View {
         )
     }
 
+    private func perServingScale(for entry: PlateEntry) -> Double {
+        guard entry.baselineGramWeight > 0 else { return 1 }
+        let selectedWeight = entry.selectedMeasureWeight
+        guard selectedWeight > 0 else { return 1 }
+        return selectedWeight / entry.baselineGramWeight
+    }
+
+    private func foodForLogging(from entry: PlateEntry) -> Food {
+        let perServingScale = perServingScale(for: entry)
+        let totalScale = perServingScale * entry.servings
+        var food = entry.food
+        food.foodNutrients = scaledNutrients(food.foodNutrients, scale: perServingScale)
+        food.numberOfServings = entry.servings
+        food.householdServingFullText = entry.currentMeasureLabel
+        if let measure = entry.selectedMeasure {
+            food.servingSizeUnit = measure.measureUnitName
+        }
+        if entry.selectedMeasureWeight > 0 {
+            food.servingWeightGrams = entry.selectedMeasureWeight
+        }
+        if !entry.mealItems.isEmpty {
+            food.mealItems = entry.mealItems.map { $0.scaled(by: totalScale) }
+        }
+        return food
+    }
+
     private func logPlate() {
         let entriesToLog = viewModel.entries
         guard !entriesToLog.isEmpty else { return }
@@ -3814,9 +3926,7 @@ struct PlateView: View {
         // (CombinedLog.id is computed as "food_\(foodLogId ?? 0)", so nil = "food_0" for ALL logs)
         var optimisticLogIds: [String] = []
         for (index, entry) in entriesToLog.enumerated() {
-            var food = entry.food
-            food.numberOfServings = entry.servings
-            food.householdServingFullText = entry.currentMeasureLabel
+            let food = foodForLogging(from: entry)
 
             // Use a unique negative ID for each optimistic log
             // Negative IDs don't exist in the backend, making them safe as temporary placeholders
@@ -3879,9 +3989,7 @@ struct PlateView: View {
         for (index, entry) in entriesToLog.enumerated() {
             group.enter()
 
-            var food = entry.food
-            food.numberOfServings = entry.servings
-            food.householdServingFullText = entry.currentMeasureLabel
+            let food = foodForLogging(from: entry)
 
             let skipCoach = index != lastIndex
             let context = index == lastIndex ? batchContext : nil

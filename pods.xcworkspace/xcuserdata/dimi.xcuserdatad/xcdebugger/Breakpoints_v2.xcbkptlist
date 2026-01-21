@@ -14,10 +14,10 @@
             filePath = "pods/Core/Views/dashboard/NewHomeView.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "3408"
-            endingLineNumber = "3408"
-            landmarkName = "respiratoryRateStatus(for:)"
-            landmarkType = "7">
+            startingLineNumber = "3407"
+            endingLineNumber = "3407"
+            landmarkName = "remainingCaloriesCard"
+            landmarkType = "24">
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

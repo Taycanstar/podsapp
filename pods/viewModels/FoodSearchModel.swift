@@ -47,7 +47,7 @@ struct Food: Codable, Identifiable, Hashable{
     var servingSize: Double?
     var servingWeightGrams: Double? = nil  // Gram weight per serving (e.g., 85g for 1 drumstick)
     var numberOfServings: Double?
-    let servingSizeUnit: String?
+    var servingSizeUnit: String?
     var householdServingFullText: String?
     var foodNutrients: [Nutrient]
     let foodMeasures: [FoodMeasure]
@@ -480,6 +480,31 @@ struct MealItem: Codable, Identifiable, Hashable {
 
     static func == (lhs: MealItem, rhs: MealItem) -> Bool {
         lhs.id == rhs.id
+    }
+}
+
+extension MealItem {
+    func scaled(by factor: Double) -> MealItem {
+        guard factor != 1 else { return self }
+        var updated = self
+        updated.serving *= factor
+        updated.calories *= factor
+        updated.protein *= factor
+        updated.carbs *= factor
+        updated.fat *= factor
+        if let nutrients = foodNutrients {
+            updated.foodNutrients = nutrients.map { nutrient in
+                Nutrient(
+                    nutrientName: nutrient.nutrientName,
+                    value: (nutrient.value ?? 0) * factor,
+                    unitName: nutrient.unitName
+                )
+            }
+        }
+        if let subitems = subitems {
+            updated.subitems = subitems.map { $0.scaled(by: factor) }
+        }
+        return updated
     }
 }
 

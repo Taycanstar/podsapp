@@ -366,123 +366,123 @@ private struct TimelineLogGroup: Identifiable {
 
 // MARK: - Timeline Spine Overlay (copied from NewHomeView)
 
-private struct TimelineSpineOverlay: View {
-    @Environment(\.colorScheme) private var colorScheme
+// private struct TimelineSpineOverlay: View {
+//     @Environment(\.colorScheme) private var colorScheme
 
-    var body: some View {
-        GeometryReader { geometry in
-            let color = colorScheme == .dark ? Color(.systemGray3) : Color(.systemGray4)
-            ZStack(alignment: .center) {
-                Rectangle()
-                    .fill(color)
-                    .frame(width: 2, height: geometry.size.height)
-                    .position(x: TimelineConnector.iconSize / 2, y: geometry.size.height / 2)
+//     var body: some View {
+//         GeometryReader { geometry in
+//             let color = colorScheme == .dark ? Color(.systemGray3) : Color(.systemGray4)
+//             ZStack(alignment: .center) {
+//                 Rectangle()
+//                     .fill(color)
+//                     .frame(width: 2, height: geometry.size.height)
+//                     .position(x: TimelineConnector.iconSize / 2, y: geometry.size.height / 2)
 
-                Circle()
-                    .fill(color)
-                    .frame(width: 8, height: 8)
-                    .position(x: TimelineConnector.iconSize / 2, y: geometry.size.height - 4)
-            }
-        }
-        .allowsHitTesting(false)
-    }
-}
+//                 Circle()
+//                     .fill(color)
+//                     .frame(width: 8, height: 8)
+//                     .position(x: TimelineConnector.iconSize / 2, y: geometry.size.height - 4)
+//             }
+//         }
+//         .allowsHitTesting(false)
+//     }
+// }
 
 // MARK: - Timeline Connector (copied from NewHomeView)
 
-private struct TimelineConnector: View {
-    @Environment(\.colorScheme) private var colorScheme
-    let iconName: String
-    var overrideColor: Color? = nil
+// private struct TimelineConnector: View {
+//     @Environment(\.colorScheme) private var colorScheme
+//     let iconName: String
+//     var overrideColor: Color? = nil
 
-    static let iconSize: CGFloat = 34
+//     static let iconSize: CGFloat = 34
 
-    var body: some View {
-        let circleColor = overrideColor ?? (colorScheme == .dark ? Color(.systemGray2) : Color.black.opacity(0.9))
+//     var body: some View {
+//         let circleColor = overrideColor ?? (colorScheme == .dark ? Color(.systemGray2) : Color.black.opacity(0.9))
 
-        return ZStack {
-            Circle()
-                .fill(circleColor)
-                .frame(width: Self.iconSize, height: Self.iconSize)
-            Image(systemName: iconName)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(.white)
-        }
-        .frame(width: Self.iconSize, height: Self.iconSize)
-    }
-}
+//         return ZStack {
+//             Circle()
+//                 .fill(circleColor)
+//                 .frame(width: Self.iconSize, height: Self.iconSize)
+//             Image(systemName: iconName)
+//                 .font(.system(size: 12, weight: .semibold))
+//                 .foregroundColor(.white)
+//         }
+//         .frame(width: Self.iconSize, height: Self.iconSize)
+//     }
+// }
 
 // MARK: - Timeline Connector Spacer (copied from NewHomeView)
 
-private struct TimelineConnectorSpacer: View {
-    var body: some View {
-        Color.clear
-            .frame(width: TimelineConnector.iconSize)
-    }
-}
+// private struct TimelineConnectorSpacer: View {
+//     var body: some View {
+//         Color.clear
+//             .frame(width: TimelineConnector.iconSize)
+//     }
+// }
 
 // MARK: - Quick Actions Row (copied from NewHomeView)
 
-private struct TimelineEmptyQuickActionsRow: View {
-    var onAddActivity: (() -> Void)?
-    var onScanMeal: (() -> Void)?
+// private struct TimelineEmptyQuickActionsRow: View {
+//     var onAddActivity: (() -> Void)?
+//     var onScanMeal: (() -> Void)?
 
-    private let foregroundColor = Color("text")
+//     private let foregroundColor = Color("text")
 
-    @Environment(\.colorScheme) private var colorScheme
+//     @Environment(\.colorScheme) private var colorScheme
 
-    var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            TimelineConnector(
-                iconName: "plus",
-                overrideColor: plusColor
-            )
+//     var body: some View {
+//         HStack(alignment: .center, spacing: 12) {
+//             TimelineConnector(
+//                 iconName: "plus",
+//                 overrideColor: plusColor
+//             )
 
-            HStack(spacing: 12) {
-                quickActionChip(
-                    title: "Add Activity",
-                    systemImage: "flame.fill",
-                    action: onAddActivity
-                )
+//             HStack(spacing: 12) {
+//                 quickActionChip(
+//                     title: "Add Activity",
+//                     systemImage: "flame.fill",
+//                     action: onAddActivity
+//                 )
 
-                quickActionChip(
-                    title: "Scan Meal",
-                    systemImage: "fork.knife",
-                    action: onScanMeal
-                )
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
+//                 quickActionChip(
+//                     title: "Scan Meal",
+//                     systemImage: "fork.knife",
+//                     action: onScanMeal
+//                 )
+//             }
+//         }
+//         .frame(maxWidth: .infinity, alignment: .leading)
+//     }
 
-    private func quickActionChip(title: String, systemImage: String, action: (() -> Void)?) -> some View {
-        Button {
-            action?()
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 13, weight: .regular))
-                Text(title)
-                    .font(.system(size: 13, weight: .regular))
-            }
-            .foregroundColor(foregroundColor)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(Color("background"))
-            .clipShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .disabled(action == nil)
-        .opacity(action == nil ? 0.5 : 1)
-    }
+//     private func quickActionChip(title: String, systemImage: String, action: (() -> Void)?) -> some View {
+//         Button {
+//             action?()
+//         } label: {
+//             HStack(spacing: 8) {
+//                 Image(systemName: systemImage)
+//                     .font(.system(size: 13, weight: .regular))
+//                 Text(title)
+//                     .font(.system(size: 13, weight: .regular))
+//             }
+//             .foregroundColor(foregroundColor)
+//             .padding(.horizontal, 16)
+//             .padding(.vertical, 8)
+//             .background(Color("background"))
+//             .clipShape(Capsule())
+//         }
+//         .buttonStyle(.plain)
+//         .disabled(action == nil)
+//         .opacity(action == nil ? 0.5 : 1)
+//     }
 
-    private var plusColor: Color {
-        if colorScheme == .dark {
-            return Color(.systemGray2)
-        }
-        return Color.black.opacity(0.9)
-    }
-}
+//     private var plusColor: Color {
+//         if colorScheme == .dark {
+//             return Color(.systemGray2)
+//         }
+//         return Color.black.opacity(0.9)
+//     }
+// }
 
 // MARK: - Timeline Log Group Row (handles single or multiple logs at same time)
 

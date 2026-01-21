@@ -647,11 +647,6 @@ private func performAnalyzeImageForPreview(_ image: UIImage, userEmail: String) 
                 let embeddedItems = fastResult.foods.first?.mealItems ?? []
                 let resolvedMealItems = !fastResult.mealItems.isEmpty ? fastResult.mealItems : embeddedItems
                 if resolvedMealItems.count > 1 || fastResult.foods.count > 1 {
-                    // If callback is provided (e.g., from PlateView), use it instead of notification
-                    if let callback = onFoodScanned, let firstFood = fastResult.foods.first {
-                        callback(firstFood, nil)
-                        return
-                    }
                     NotificationCenter.default.post(
                         name: NSNotification.Name("ShowMultiFoodLog"),
                         object: nil,
@@ -691,11 +686,6 @@ private func performAnalyzeImageForPreview(_ image: UIImage, userEmail: String) 
                 let embeddedItems = agentResult.foods.first?.mealItems ?? []
                 let resolvedMealItems = !agentResult.mealItems.isEmpty ? agentResult.mealItems : embeddedItems
                 if resolvedMealItems.count > 1 || agentResult.foods.count > 1 {
-                    // If callback is provided (e.g., from PlateView), use it instead of notification
-                    if let callback = onFoodScanned, let firstFood = agentResult.foods.first {
-                        callback(firstFood, nil)
-                        return
-                    }
                     NotificationCenter.default.post(
                         name: NSNotification.Name("ShowMultiFoodLog"),
                         object: nil,
@@ -793,11 +783,6 @@ private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
                 let embeddedItems = fastResult.foods.first?.mealItems ?? []
                 let resolvedMealItems = !fastResult.mealItems.isEmpty ? fastResult.mealItems : embeddedItems
                 if resolvedMealItems.count > 1 || fastResult.foods.count > 1 {
-                    // If callback is provided (e.g., from PlateView), use it instead of notification
-                    if let callback = onFoodScanned, let firstFood = fastResult.foods.first {
-                        callback(firstFood, nil)
-                        return
-                    }
                     NotificationCenter.default.post(
                         name: NSNotification.Name("ShowMultiFoodLog"),
                         object: nil,
@@ -837,11 +822,6 @@ private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
                 let embeddedItems = agentResult.foods.first?.mealItems ?? []
                 let resolvedMealItems = !agentResult.mealItems.isEmpty ? agentResult.mealItems : embeddedItems
                 if resolvedMealItems.count > 1 || agentResult.foods.count > 1 {
-                    // If callback is provided (e.g., from PlateView), use it instead of notification
-                    if let callback = onFoodScanned, let firstFood = agentResult.foods.first {
-                        callback(firstFood, nil)
-                        return
-                    }
                     NotificationCenter.default.post(
                         name: NSNotification.Name("ShowMultiFoodLog"),
                         object: nil,

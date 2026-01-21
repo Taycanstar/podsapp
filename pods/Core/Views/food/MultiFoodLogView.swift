@@ -1033,6 +1033,59 @@ struct MultiFoodLogView: View {
         ]
     }
 
+    private func perServingScale(for editableItem: EditableFoodItem) -> Double {
+        if let baselineWeight = editableItem.measures.first(where: { $0.id == editableItem.baselineMeasureId })?.gramWeight,
+           baselineWeight > 0,
+           let selectedWeight = editableItem.selectedMeasure?.gramWeight,
+           selectedWeight > 0 {
+            return selectedWeight / baselineWeight
+        }
+        return 1
+    }
+
+    private func servingText(for editableItem: EditableFoodItem) -> String {
+        guard let measure = editableItem.selectedMeasure else { return "1 serving" }
+        let description = measure.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !description.isEmpty {
+            return description
+        }
+        let unit = measure.unit.trimmingCharacters(in: .whitespacesAndNewlines)
+        return unit.isEmpty ? "1 serving" : "1 \(unit)"
+    }
+
+    private func scaledNutrients(_ nutrients: [Nutrient], scale: Double) -> [Nutrient] {
+        nutrients.map { nutrient in
+            Nutrient(
+                nutrientName: nutrient.nutrientName,
+                value: (nutrient.value ?? 0) * scale,
+                unitName: nutrient.unitName
+            )
+        }
+    }
+
+    private func foodForLogging(_ food: Food, editableItem: EditableFoodItem?) -> (food: Food, servings: Double) {
+        guard let editableItem else {
+            return (food, food.numberOfServings ?? 1)
+        }
+        let perServingScale = perServingScale(for: editableItem)
+        let servings = max(editableItem.servingAmount, 0.0001)
+        let totalScale = perServingScale * servings
+
+        var updatedFood = food
+        updatedFood.foodNutrients = scaledNutrients(food.foodNutrients, scale: perServingScale)
+        updatedFood.numberOfServings = servings
+        updatedFood.householdServingFullText = servingText(for: editableItem)
+        updatedFood.servingSize = 1
+        updatedFood.servingSizeUnit = editableItem.selectedMeasure?.unit ?? food.servingSizeUnit
+        if let gramWeight = editableItem.selectedMeasure?.gramWeight, gramWeight > 0 {
+            updatedFood.servingWeightGrams = gramWeight
+        }
+        if let mealItems = updatedFood.mealItems, !mealItems.isEmpty {
+            updatedFood.mealItems = mealItems.map { $0.scaled(by: totalScale) }
+        }
+        return (updatedFood, servings)
+    }
+
     private func logFoodFromList(at listIndex: Int, items: [(index: Int, food: Food)]) {
         if listIndex >= items.count {
             isLogging = false
@@ -1048,7 +1101,9 @@ struct MultiFoodLogView: View {
 
         // Get the edited serving amount from editable state
         let editableItem = editableItems[originalIndex]
-        let servings = editableItem?.scalingFactor ?? (food.numberOfServings ?? 1)
+        let loggingPayload = foodForLogging(food, editableItem: editableItem)
+        let servings = loggingPayload.servings
+        let loggingFood = loggingPayload.food
 
         // Skip coach generation for all but the last food
         // For the last food, include batch context so coach message covers the entire meal
@@ -1057,7 +1112,7 @@ struct MultiFoodLogView: View {
 
         foodManager.logFood(
             email: onboardingViewModel.email,
-            food: food,
+            food: loggingFood,
             meal: selectedMealPeriod.title,
             servings: servings,
             date: mealTime,
