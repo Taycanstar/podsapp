@@ -18,11 +18,14 @@ import SwiftUI
 
 struct PlanView: View {
     @ObservedObject private var programService = ProgramService.shared
+    @EnvironmentObject private var workoutManager: WorkoutManager
     @State private var selectedWeekNumber: Int = 1
     @State private var selectedWorkoutDay: ProgramDay?
     @State private var showAllPlans = false
     @State private var showCreateProgram = false
     @State private var showSinglePlanView = false
+    @State private var currentWorkout: TodayWorkout?
+    @State private var optimisticallyCompletedRestDays: Set<Int> = []
 
     private var userEmail: String {
         UserDefaults.standard.string(forKey: "userEmail") ?? ""
@@ -45,10 +48,24 @@ struct PlanView: View {
             ProgramWorkoutDetailView(
                 day: day,
                 onDismiss: { selectedWorkoutDay = nil },
-                onStart: { _ in
-                    // TODO: Start workout from program
+                onStart: { programDay in
                     selectedWorkoutDay = nil
+                    startWorkout(from: programDay)
                 }
+            )
+        }
+        .fullScreenCover(item: $currentWorkout) { workout in
+            WorkoutInProgressView(
+                isPresented: Binding(
+                    get: { currentWorkout != nil },
+                    set: { isPresented in
+                        if !isPresented {
+                            currentWorkout = nil
+                            workoutManager.cancelActiveWorkout()
+                        }
+                    }
+                ),
+                workout: workout
             )
         }
         .sheet(isPresented: $showAllPlans) {
@@ -183,8 +200,12 @@ struct PlanView: View {
                                         selectedWorkoutDay = day
                                     }
                                 } else {
-                                    // Rest day card
-                                    RestDayCard()
+                                    // Rest day card with completion checkbox
+                                    RestDayCard(
+                                        day: day,
+                                        onToggleComplete: { markRestDayComplete(day) },
+                                        isOptimisticallyCompleted: optimisticallyCompletedRestDays.contains(day.id)
+                                    )
                                 }
                             }
                         }
@@ -286,11 +307,86 @@ struct PlanView: View {
             print("Error loading program: \(error)")
         }
     }
+
+    private func markRestDayComplete(_ day: ProgramDay) {
+        // Optimistic update - show as completed immediately
+        optimisticallyCompletedRestDays.insert(day.id)
+        HapticFeedback.generateLigth()
+
+        // Sync in background
+        Task {
+            do {
+                _ = try await programService.markDayComplete(dayId: day.id, userEmail: userEmail)
+                print("✅ PlanView: Marked rest day \(day.id) as complete")
+                // Remove from optimistic set since server confirmed
+                optimisticallyCompletedRestDays.remove(day.id)
+            } catch {
+                print("⚠️ PlanView: Failed to mark rest day complete: \(error)")
+                // Revert optimistic update on failure
+                optimisticallyCompletedRestDays.remove(day.id)
+            }
+        }
+    }
+
+    private func startWorkout(from day: ProgramDay) {
+        guard let workout = buildTodayWorkout(from: day) else {
+            print("⚠️ PlanView: Failed to build workout from program day")
+            return
+        }
+        HapticFeedback.generateLigth()
+        currentWorkout = workout
+    }
+
+    private func buildTodayWorkout(from day: ProgramDay) -> TodayWorkout? {
+        guard let workoutSession = day.workout,
+              let exercises = workoutSession.exercises,
+              !exercises.isEmpty else {
+            return nil
+        }
+
+        let todayExercises: [TodayWorkoutExercise] = exercises.compactMap { programExercise in
+            guard let exerciseData = ExerciseDatabase.findExercise(byId: programExercise.exerciseId) else {
+                return nil
+            }
+            let trackingType = ExerciseClassificationService.determineTrackingType(for: exerciseData)
+            return TodayWorkoutExercise(
+                exercise: exerciseData,
+                sets: programExercise.targetSets ?? 3,
+                reps: programExercise.targetReps ?? 10,
+                weight: nil,
+                restTime: 90,
+                notes: nil,
+                warmupSets: nil,
+                flexibleSets: nil,
+                trackingType: trackingType
+            )
+        }
+
+        guard !todayExercises.isEmpty else { return nil }
+
+        return TodayWorkout(
+            id: UUID(),
+            date: Date(),
+            title: day.workoutLabel,
+            exercises: todayExercises,
+            blocks: nil,
+            estimatedDuration: workoutSession.estimatedDurationMinutes,
+            fitnessGoal: .hypertrophy,
+            difficulty: 5,
+            warmUpExercises: nil,
+            coolDownExercises: nil,
+            programDayId: day.id
+        )
+    }
 }
 
 // MARK: - Rest Day Card
 
 struct RestDayCard: View {
+    let day: ProgramDay
+    let onToggleComplete: () -> Void
+    let isOptimisticallyCompleted: Bool
+
     var body: some View {
         HStack {
             Image(systemName: "bed.double.fill")
@@ -302,6 +398,23 @@ struct RestDayCard: View {
                 .foregroundColor(.secondary)
 
             Spacer()
+
+            // Completion checkbox
+            Button {
+                guard !day.isCompleted && !isOptimisticallyCompleted else { return }
+                onToggleComplete()
+            } label: {
+                if day.isCompleted || isOptimisticallyCompleted {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(.accentColor)
+                } else {
+                    Image(systemName: "circle")
+                        .font(.system(size: 20))
+                        .foregroundColor(.secondary.opacity(0.5))
+                }
+            }
+            .buttonStyle(PlainButtonStyle())
         }
         .padding(16)
         .background(Color("containerbg"))
@@ -333,7 +446,7 @@ struct ProgramWorkoutCard: View {
                     if day.isCompleted {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 20))
-                            .foregroundColor(.green)
+                            .foregroundColor(.accentColor)
                     } else {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 14, weight: .semibold))

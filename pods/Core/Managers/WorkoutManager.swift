@@ -2043,9 +2043,10 @@ class WorkoutManager: ObservableObject {
             self.workoutRefreshTrigger = UUID()
             saveTodayWorkout()
         } else {
-            // No plan exists, generate a new workout with default settings
-            print("📋 WorkoutManager: No plan workout, generating with defaults")
-            await generateTodayWorkout(forceRegenerate: false)
+            // No plan exists - just trigger UI refresh with the current workout
+            // The overrides have already been cleared, so UI will show default values
+            print("📋 WorkoutManager: No plan workout, keeping current workout with cleared overrides")
+            self.workoutRefreshTrigger = UUID()
         }
     }
 
@@ -2888,6 +2889,19 @@ class WorkoutManager: ObservableObject {
 
                 // Sync immediately so workout appears in dashboard before user dismisses summary
                 await workoutDataManager.syncNow(context: resolvedContext)
+
+                // Mark the plan day complete if this workout was from a training program
+                if let programDayId = workout.programDayId {
+                    let userEmail = UserDefaults.standard.string(forKey: "userEmail") ?? ""
+                    if !userEmail.isEmpty {
+                        do {
+                            _ = try await ProgramService.shared.markDayComplete(dayId: programDayId, userEmail: userEmail)
+                            print("✅ WorkoutManager: Marked program day \(programDayId) as complete")
+                        } catch {
+                            print("⚠️ WorkoutManager: Failed to mark program day complete: \(error)")
+                        }
+                    }
+                }
 
                 let status = autoComplete ? "Auto-completed" : "Completed"
                 print("✅ WorkoutManager: \(status) and saved workout")

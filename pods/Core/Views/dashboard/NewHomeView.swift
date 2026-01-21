@@ -247,42 +247,46 @@ private var remainingCal: Double { vm.remainingCalories }
 
     
 
-    private var timelineSection: some View {
-        VStack {
-            TimelineSectionView(
-                events: vm.timelineEvents,
-                selectedDate: vm.selectedDate,
-                onShowAll: nil,  // Timeline now managed by ViewModel
-                onAddActivity: { showAddActivitySheet = true },
-                onScanMeal: onBarcodeTapped,
-                onCoachEditTap: { coachMessage in
-                    openAgentChat(with: coachMessage)
-                },
-                onCoachCopyTap: {
-                    showCoachCopyToastMessage()
-                },
-                onDeleteLog: { deleteLogItem(log: $0) },
-                onSaveLog: { saveMealAction(log: $0) },
-                onUnsaveLog: { unsaveMealAction(log: $0) },
-                isLogSaved: { log in
-                    switch log.type {
-                    case .food:
-                        guard let id = log.foodLogId else { return false }
-                        return foodMgr.isLogSaved(foodLogId: id)
-                    case .meal:
-                        guard let id = log.mealLogId else { return false }
-                        return foodMgr.isLogSaved(mealLogId: id)
-                    default:
-                        return false
+    // Returns AnyView to cap SwiftUI type depth and prevent stack overflow
+    // from deeply nested TimelineSectionView → TimelineEventRow → TimelineEventCard hierarchy
+    private var timelineSection: AnyView {
+        AnyView(
+            VStack {
+                TimelineSectionView(
+                    events: vm.timelineEvents,
+                    selectedDate: vm.selectedDate,
+                    onShowAll: nil,  // Timeline now managed by ViewModel
+                    onAddActivity: { showAddActivitySheet = true },
+                    onScanMeal: onBarcodeTapped,
+                    onCoachEditTap: { coachMessage in
+                        openAgentChat(with: coachMessage)
+                    },
+                    onCoachCopyTap: {
+                        showCoachCopyToastMessage()
+                    },
+                    onDeleteLog: { deleteLogItem(log: $0) },
+                    onSaveLog: { saveMealAction(log: $0) },
+                    onUnsaveLog: { unsaveMealAction(log: $0) },
+                    isLogSaved: { log in
+                        switch log.type {
+                        case .food:
+                            guard let id = log.foodLogId else { return false }
+                            return foodMgr.isLogSaved(foodLogId: id)
+                        case .meal:
+                            guard let id = log.mealLogId else { return false }
+                            return foodMgr.isLogSaved(mealLogId: id)
+                        default:
+                            return false
+                        }
+                    },
+                    onLogTap: { log in
+                        selectedLogForDetails = log
+                        showLogDetails = true
                     }
-                },
-                onLogTap: { log in
-                    selectedLogForDetails = log
-                    showLogDetails = true
-                }
-            )
-        }
-        .padding(.top, 16)
+                )
+            }
+            .padding(.top, 16)
+        )
     }
 
     private var navTitle: String {
@@ -5740,28 +5744,32 @@ private struct TimelineEventCard: View {
         )
     }
 
-    @ViewBuilder
+    // Using AnyView to cap type depth and prevent SwiftUI type explosion
     private var detailView: some View {
         switch event.type {
         case .food:
-            FoodTimelineDetails(details: event.details)
+            AnyView(FoodTimelineDetails(details: event.details))
         case .workout:
-            WorkoutTimelineDetails(details: event.details)
+            AnyView(WorkoutTimelineDetails(details: event.details))
         case .cardio:
-            CardioTimelineDetails(details: event.details)
+            AnyView(CardioTimelineDetails(details: event.details))
         case .water:
             if let amount = event.details.amountText {
-                HStack(spacing: 6) {
-                    Image(systemName: "drop.fill")
-                        .font(.system(size: 13))
-                        .foregroundColor(Color.cyan)
-                    Text(amount)
-                        .font(.system(size: 13))
-                        .foregroundColor(.secondary)
-                }
+                AnyView(
+                    HStack(spacing: 6) {
+                        Image(systemName: "drop.fill")
+                            .font(.system(size: 13))
+                            .foregroundColor(Color.cyan)
+                        Text(amount)
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                    }
+                )
+            } else {
+                AnyView(EmptyView())
             }
         case .wake:
-            WakeTimelineDetails(details: event.details)
+            AnyView(WakeTimelineDetails(details: event.details))
         }
     }
 }
