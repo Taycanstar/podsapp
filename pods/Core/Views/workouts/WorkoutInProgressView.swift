@@ -214,21 +214,46 @@ struct WorkoutInProgressView: View {
                             // This should update the exercise in the workout data structure
                         },
                     onExerciseUpdated: { updatedExercise in
-                        // Update the exercise in the workout data
-                        var updatedExercises = workout.exercises
-                        if let exerciseIndex = updatedExercises.firstIndex(where: { $0.exercise.id == updatedExercise.exercise.id }) {
-                            updatedExercises[exerciseIndex] = updatedExercise
+                        // Update the exercise in workout data (check all sections)
+                        var updatedMain = workout.exercises
+                        var updatedWarmup = workout.warmUpExercises
+                        var updatedCooldown = workout.coolDownExercises
+                        var found = false
+
+                        // Check main exercises
+                        if let idx = updatedMain.firstIndex(where: { $0.exercise.id == updatedExercise.exercise.id }) {
+                            updatedMain[idx] = updatedExercise
+                            found = true
+                        }
+                        // Check warmup exercises
+                        if let warmups = updatedWarmup,
+                           let idx = warmups.firstIndex(where: { $0.exercise.id == updatedExercise.exercise.id }) {
+                            var mutableWarmups = warmups
+                            mutableWarmups[idx] = updatedExercise
+                            updatedWarmup = mutableWarmups
+                            found = true
+                        }
+                        // Check cooldown exercises
+                        if let cooldowns = updatedCooldown,
+                           let idx = cooldowns.firstIndex(where: { $0.exercise.id == updatedExercise.exercise.id }) {
+                            var mutableCooldowns = cooldowns
+                            mutableCooldowns[idx] = updatedExercise
+                            updatedCooldown = mutableCooldowns
+                            found = true
+                        }
+
+                        if found {
                             workout = TodayWorkout(
                                 id: workout.id,
                                 date: workout.date,
                                 title: workout.title,
-                                exercises: updatedExercises,
+                                exercises: updatedMain,
                                 blocks: workout.blocks,
                                 estimatedDuration: workout.estimatedDuration,
                                 fitnessGoal: workout.fitnessGoal,
                                 difficulty: workout.difficulty,
-                                warmUpExercises: workout.warmUpExercises,
-                                coolDownExercises: workout.coolDownExercises
+                                warmUpExercises: updatedWarmup,
+                                coolDownExercises: updatedCooldown
                             )
                             workoutManager.applyActiveExerciseUpdate(updatedExercise)
                         }

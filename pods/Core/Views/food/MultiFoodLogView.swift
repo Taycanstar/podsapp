@@ -42,6 +42,20 @@ struct MultiFoodLogView: View {
     private var chipColor: Color {
         colorScheme == .dark ? Color(.tertiarySystemFill) : Color(.secondarySystemFill)
     }
+    private static let isoDayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .iso8601)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .autoupdatingCurrent
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+    private static let weekdayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.dateFormat = "EEEE"
+        return formatter
+    }()
 
     // MARK: - Display Foods Logic
     /// All foods derived from input (before filtering deleted items)
@@ -545,7 +559,6 @@ struct MultiFoodLogView: View {
             HStack(spacing: 12) {
                 Button(action: {
                     HapticFeedback.generateLigth()
-                    isLogging = true
                     logAllFoods()
                 }) {
                     Text(isLogging ? "Logging..." : "Log Meal")
@@ -998,11 +1011,135 @@ struct MultiFoodLogView: View {
     private func logAllFoods() {
         let foodsToLog = displayFoodsWithIndices
         guard !foodsToLog.isEmpty else { return }
+        isLogging = true
+
+        let mealLabel = selectedMealPeriod.title
+        let logDate = mealTime
+        let batchContext = foodsToLog.count > 1 ? buildBatchContext() : nil
+
+        let baseId = Int(Date().timeIntervalSince1970 * 1000)
+        var optimisticIdentifiers: [Int: String] = [:]
+
+        for (listIndex, item) in foodsToLog.enumerated() {
+            let editableItem = editableItems[item.index]
+            let loggingPayload = foodForLogging(item.food, editableItem: editableItem)
+            let loggingFood = loggingPayload.food
+            let servings = loggingPayload.servings
+
+            let tempFoodLogId = -(baseId + listIndex + 1)
+            let totalCalories = (loggingFood.calories ?? 0) * servings
+            let servingText = loggingFood.householdServingFullText ?? "1 serving"
+
+            let loggedFood = LoggedFoodItem(
+                foodLogId: tempFoodLogId,
+                fdcId: loggingFood.fdcId,
+                displayName: loggingFood.displayName,
+                calories: totalCalories,
+                servingSizeText: servingText,
+                numberOfServings: servings,
+                brandText: loggingFood.brandText,
+                protein: loggingFood.protein,
+                carbs: loggingFood.carbs,
+                fat: loggingFood.fat,
+                healthAnalysis: loggingFood.healthAnalysis,
+                foodNutrients: loggingFood.foodNutrients,
+                aiInsight: loggingFood.aiInsight,
+                nutritionScore: loggingFood.nutritionScore,
+                mealItems: loggingFood.mealItems,
+                servingWeightGrams: loggingFood.servingWeightGrams,
+                foodMeasures: loggingFood.foodMeasures
+            )
+
+            let logDateString = Self.isoDayFormatter.string(from: logDate)
+            let dayName = Self.weekdayFormatter.string(from: logDate)
+
+            var optimisticLog = CombinedLog(
+                type: .food,
+                status: "pending",
+                calories: totalCalories,
+                message: "\(loggingFood.displayName) - \(mealLabel)",
+                foodLogId: tempFoodLogId,
+                food: loggedFood,
+                mealType: mealLabel,
+                mealLogId: nil,
+                meal: nil,
+                mealTime: mealLabel,
+                scheduledAt: logDate,
+                recipeLogId: nil,
+                recipe: nil,
+                servingsConsumed: nil,
+                logDate: logDateString,
+                dayOfWeek: dayName,
+                isOptimistic: true
+            )
+            optimisticLog.isOptimistic = true
+            optimisticIdentifiers[listIndex] = optimisticLog.id
+            dayLogsVM.addPending(optimisticLog)
+            upsertCombinedLog(optimisticLog)
+        }
 
         // Navigate to timeline immediately
         NotificationCenter.default.post(name: NSNotification.Name("NavigateToTimeline"), object: nil)
+        dismiss()
 
-        logFoodFromList(at: 0, items: foodsToLog)
+        for (listIndex, item) in foodsToLog.enumerated() {
+            let editableItem = editableItems[item.index]
+            let loggingPayload = foodForLogging(item.food, editableItem: editableItem)
+            let loggingFood = loggingPayload.food
+            let servings = loggingPayload.servings
+            let isLastFood = listIndex == foodsToLog.count - 1
+
+            let skipCoach = !isLastFood
+            let context: [String: Any]? = isLastFood ? batchContext : nil
+            let placeholderId = optimisticIdentifiers[listIndex] ?? ""
+
+            foodManager.logFood(
+                email: onboardingViewModel.email,
+                food: loggingFood,
+                meal: mealLabel,
+                servings: servings,
+                date: logDate,
+                notes: nil,
+                skipCoach: skipCoach,
+                batchContext: context
+            ) { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let logged):
+                        let combined = CombinedLog(
+                            type: .food,
+                            status: logged.status,
+                            calories: Double(logged.food.calories),
+                            message: "\(logged.food.displayName) - \(logged.mealType)",
+                            foodLogId: logged.foodLogId,
+                            food: logged.food,
+                            mealType: logged.mealType,
+                            mealLogId: nil,
+                            meal: nil,
+                            mealTime: logged.mealType,
+                            scheduledAt: logDate,
+                            recipeLogId: nil,
+                            recipe: nil,
+                            servingsConsumed: nil
+                        )
+                        if !placeholderId.isEmpty {
+                            dayLogsVM.replaceOptimisticLog(identifier: placeholderId, with: combined)
+                            upsertCombinedLog(combined, replacing: placeholderId)
+                        } else {
+                            dayLogsVM.addPending(combined)
+                            upsertCombinedLog(combined)
+                        }
+                    case .failure:
+                        if !placeholderId.isEmpty {
+                            dayLogsVM.removeOptimisticLog(identifier: placeholderId)
+                            removeCombinedLog(identifier: placeholderId)
+                        }
+                    }
+                }
+            }
+        }
+
+        isLogging = false
     }
 
     /// Build batch context for multi-food coach message
@@ -1086,66 +1223,16 @@ struct MultiFoodLogView: View {
         return (updatedFood, servings)
     }
 
-    private func logFoodFromList(at listIndex: Int, items: [(index: Int, food: Food)]) {
-        if listIndex >= items.count {
-            isLogging = false
-            dayLogsVM.loadLogs(for: mealTime, force: true)
-            dismiss()
-            return
+    private func upsertCombinedLog(_ log: CombinedLog, replacing identifier: String? = nil) {
+        if let identifier {
+            foodManager.combinedLogs.removeAll { $0.id == identifier }
         }
+        foodManager.combinedLogs.removeAll { $0.id == log.id }
+        foodManager.combinedLogs.insert(log, at: 0)
+    }
 
-        let item = items[listIndex]
-        let food = item.food
-        let originalIndex = item.index
-        let isLastFood = listIndex == items.count - 1
-
-        // Get the edited serving amount from editable state
-        let editableItem = editableItems[originalIndex]
-        let loggingPayload = foodForLogging(food, editableItem: editableItem)
-        let servings = loggingPayload.servings
-        let loggingFood = loggingPayload.food
-
-        // Skip coach generation for all but the last food
-        // For the last food, include batch context so coach message covers the entire meal
-        let skipCoach = !isLastFood
-        let batchContext: [String: Any]? = isLastFood && items.count > 1 ? buildBatchContext() : nil
-
-        foodManager.logFood(
-            email: onboardingViewModel.email,
-            food: loggingFood,
-            meal: selectedMealPeriod.title,
-            servings: servings,
-            date: mealTime,
-            notes: nil,
-            skipCoach: skipCoach,
-            batchContext: batchContext
-        ) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let logged):
-                    let combined = CombinedLog(
-                        type: .food,
-                        status: logged.status,
-                        calories: Double(logged.food.calories),
-                        message: "\(logged.food.displayName) - \(logged.mealType)",
-                        foodLogId: logged.foodLogId,
-                        food: logged.food,
-                        mealType: logged.mealType,
-                        mealLogId: nil,
-                        meal: nil,
-                        mealTime: logged.mealType,
-                        scheduledAt: mealTime,
-                        recipeLogId: nil,
-                        recipe: nil,
-                        servingsConsumed: nil
-                    )
-                    self.dayLogsVM.addPending(combined)
-                case .failure:
-                    break
-                }
-                self.logFoodFromList(at: listIndex + 1, items: items)
-            }
-        }
+    private func removeCombinedLog(identifier: String) {
+        foodManager.combinedLogs.removeAll { $0.id == identifier }
     }
 
     private func addToPlate() {

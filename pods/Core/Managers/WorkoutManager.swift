@@ -674,11 +674,11 @@ class WorkoutManager: ObservableObject {
         assertMainActor("generateTodayWorkout")
         let startTime = Date()
 
-        // If there's already a program workout for today, no need to generate
-        // The computed todayWorkout property will return the program workout
+        // If there's already a program workout for today, sync it instead of generating
         // UNLESS forceRegenerate is true (user wants to regenerate with session-level changes)
         if !forceRegenerate && ProgramService.shared.todayProgramWorkout != nil {
-            print("📋 Program workout exists for today, skipping generation")
+            print("📋 Program workout exists for today, syncing instead of generating")
+            syncTodayWorkoutWithProgram()
             generationError = nil
             return
         }
@@ -2822,18 +2822,114 @@ class WorkoutManager: ObservableObject {
     func applyActiveExerciseUpdate(_ exercise: TodayWorkoutExercise) {
         let sanitizedExercise = stripWarmups(from: exercise)
 
-        if var active = currentWorkout,
-           let index = active.exercises.firstIndex(where: { $0.exercise.id == sanitizedExercise.exercise.id }) {
-            active.exercises[index] = sanitizedExercise
-            currentWorkout = active
-            persistActiveWorkoutSnapshot(active)
+        // DEBUG: Log incoming exercise data
+        let flexSets = exercise.flexibleSets ?? []
+        let loggedCount = flexSets.filter { $0.wasLogged == true }.count
+        print("🔍 DEBUG applyActiveExerciseUpdate - Exercise '\(exercise.exercise.name)': flexibleSets=\(flexSets.count), wasLogged=\(loggedCount)")
+        print("🔍 DEBUG - currentWorkout is \(currentWorkout == nil ? "nil" : "set")")
+
+        // Update currentWorkout (check all sections: main, warmup, cooldown)
+        if var active = currentWorkout {
+            var updated = false
+
+            // Check main exercises
+            if let index = active.exercises.firstIndex(where: { $0.exercise.id == sanitizedExercise.exercise.id }) {
+                active.exercises[index] = sanitizedExercise
+                updated = true
+            }
+            // Check warmup exercises
+            if var warmups = active.warmUpExercises,
+               let index = warmups.firstIndex(where: { $0.exercise.id == sanitizedExercise.exercise.id }) {
+                warmups[index] = sanitizedExercise
+                active = TodayWorkout(
+                    id: active.id,
+                    date: active.date,
+                    title: active.title,
+                    exercises: active.exercises,
+                    blocks: active.blocks,
+                    estimatedDuration: active.estimatedDuration,
+                    fitnessGoal: active.fitnessGoal,
+                    difficulty: active.difficulty,
+                    warmUpExercises: warmups,
+                    coolDownExercises: active.coolDownExercises
+                )
+                updated = true
+            }
+            // Check cooldown exercises
+            if var cooldowns = active.coolDownExercises,
+               let index = cooldowns.firstIndex(where: { $0.exercise.id == sanitizedExercise.exercise.id }) {
+                cooldowns[index] = sanitizedExercise
+                active = TodayWorkout(
+                    id: active.id,
+                    date: active.date,
+                    title: active.title,
+                    exercises: active.exercises,
+                    blocks: active.blocks,
+                    estimatedDuration: active.estimatedDuration,
+                    fitnessGoal: active.fitnessGoal,
+                    difficulty: active.difficulty,
+                    warmUpExercises: active.warmUpExercises,
+                    coolDownExercises: cooldowns
+                )
+                updated = true
+            }
+
+            if updated {
+                currentWorkout = active
+                persistActiveWorkoutSnapshot(active)
+            }
         }
 
-        if var today = todayWorkout,
-           let index = today.exercises.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) {
-            today.exercises[index] = exercise
-            todayWorkout = sanitizeWarmupsIfNeeded(today)
-            saveTodayWorkout()
+        // Update todayWorkout (check all sections: main, warmup, cooldown)
+        if var today = todayWorkout {
+            var updated = false
+
+            // Check main exercises
+            if let index = today.exercises.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) {
+                today.exercises[index] = exercise
+                updated = true
+            }
+            // Check warmup exercises
+            if var warmups = today.warmUpExercises,
+               let index = warmups.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) {
+                warmups[index] = exercise
+                today = TodayWorkout(
+                    id: today.id,
+                    date: today.date,
+                    title: today.title,
+                    exercises: today.exercises,
+                    blocks: today.blocks,
+                    estimatedDuration: today.estimatedDuration,
+                    fitnessGoal: today.fitnessGoal,
+                    difficulty: today.difficulty,
+                    warmUpExercises: warmups,
+                    coolDownExercises: today.coolDownExercises
+                )
+                updated = true
+            }
+            // Check cooldown exercises
+            if var cooldowns = today.coolDownExercises,
+               let index = cooldowns.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) {
+                cooldowns[index] = exercise
+                today = TodayWorkout(
+                    id: today.id,
+                    date: today.date,
+                    title: today.title,
+                    exercises: today.exercises,
+                    blocks: today.blocks,
+                    estimatedDuration: today.estimatedDuration,
+                    fitnessGoal: today.fitnessGoal,
+                    difficulty: today.difficulty,
+                    warmUpExercises: today.warmUpExercises,
+                    coolDownExercises: cooldowns
+                )
+                updated = true
+            }
+
+            if updated {
+                todayWorkout = sanitizeWarmupsIfNeeded(today)
+                saveTodayWorkout()
+            }
         }
     }
 
@@ -2853,6 +2949,20 @@ class WorkoutManager: ObservableObject {
 
         guard let sourceWorkout = currentWorkout ?? todayWorkout else { return }
         let workout = sanitizeWarmupsIfNeeded(sourceWorkout)
+
+        // DEBUG: Log exercise data to trace logged sets issue
+        print("🔍 DEBUG completeWorkout - Source: \(currentWorkout != nil ? "currentWorkout" : "todayWorkout")")
+        print("🔍 DEBUG completeWorkout - Exercise count: \(workout.exercises.count)")
+        for (i, ex) in workout.exercises.enumerated() {
+            let flexSets = ex.flexibleSets ?? []
+            let loggedCount = flexSets.filter { $0.wasLogged == true }.count
+            let completedCount = flexSets.filter { $0.isCompleted == true }.count
+            print("🔍 DEBUG Exercise[\(i)] '\(ex.exercise.name)': flexibleSets=\(flexSets.count), wasLogged=\(loggedCount), isCompleted=\(completedCount)")
+            for (j, set) in flexSets.enumerated() {
+                print("   Set[\(j)]: wasLogged=\(set.wasLogged ?? false), isCompleted=\(set.isCompleted), reps=\(set.reps ?? "nil"), weight=\(set.weight ?? "nil")")
+            }
+        }
+
         let now = Date()
         let state = activeWorkoutState
         let startTime = state?.startedAt ?? now
@@ -2977,7 +3087,12 @@ class WorkoutManager: ObservableObject {
 
         if pendingSummaryRegeneration {
             pendingSummaryRegeneration = false
-            scheduleNextWorkoutGeneration()
+            // First try to sync from program (handles case where markDayComplete already updated the program)
+            // If no program workout exists, scheduleNextWorkoutGeneration will generate a new workout
+            syncTodayWorkoutWithProgram()
+            if todayWorkout == nil {
+                scheduleNextWorkoutGeneration()
+            }
         }
 
         // Note: Sync already happened immediately in completeWorkout(), no need to sync again here

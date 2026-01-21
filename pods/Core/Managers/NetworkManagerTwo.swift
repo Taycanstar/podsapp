@@ -5947,6 +5947,25 @@ class NetworkManagerTwo {
         return responsePayload.day
     }
 
+    func toggleProgramDayComplete(dayId: Int, userEmail: String) async throws -> ProgramDay {
+        guard let url = URL(string: "\(baseUrl)/api/programs/day/\(dayId)/toggle-complete/") else { throw NetworkError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body: [String: Any] = ["user_email": userEmail]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validate(response: response, data: data)
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let responsePayload = try decoder.decode(MarkDayCompleteResponse.self, from: data)
+        return responsePayload.day
+    }
+
     func deleteProgram(programId: Int, userEmail: String) async throws {
         guard let url = URL(string: "\(baseUrl)/api/programs/\(programId)/delete/") else { throw NetworkError.invalidURL }
 

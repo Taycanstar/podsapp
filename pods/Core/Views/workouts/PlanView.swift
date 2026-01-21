@@ -25,7 +25,9 @@ struct PlanView: View {
     @State private var showCreateProgram = false
     @State private var showSinglePlanView = false
     @State private var currentWorkout: TodayWorkout?
-    @State private var optimisticallyCompletedRestDays: Set<Int> = []
+    /// Tracks days that are optimistically toggled (pending server confirmation)
+    /// Value: true = optimistically completed, false = optimistically uncompleted
+    @State private var optimisticRestDayStates: [Int: Bool] = [:]
 
     private var userEmail: String {
         UserDefaults.standard.string(forKey: "userEmail") ?? ""
@@ -203,8 +205,8 @@ struct PlanView: View {
                                     // Rest day card with completion checkbox
                                     RestDayCard(
                                         day: day,
-                                        onToggleComplete: { markRestDayComplete(day) },
-                                        isOptimisticallyCompleted: optimisticallyCompletedRestDays.contains(day.id)
+                                        onToggleComplete: { toggleRestDayComplete(day) },
+                                        optimisticState: optimisticRestDayStates[day.id]
                                     )
                                 }
                             }
@@ -308,22 +310,31 @@ struct PlanView: View {
         }
     }
 
-    private func markRestDayComplete(_ day: ProgramDay) {
-        // Optimistic update - show as completed immediately
-        optimisticallyCompletedRestDays.insert(day.id)
+    private func toggleRestDayComplete(_ day: ProgramDay) {
+        // Determine current visual state (considering any pending optimistic update)
+        let currentlyShownAsCompleted: Bool
+        if let optimistic = optimisticRestDayStates[day.id] {
+            currentlyShownAsCompleted = optimistic
+        } else {
+            currentlyShownAsCompleted = day.isCompleted
+        }
+
+        // Optimistic update - toggle immediately (UI updates instantly)
+        let newState = !currentlyShownAsCompleted
+        optimisticRestDayStates[day.id] = newState
         HapticFeedback.generateLigth()
 
         // Sync in background
         Task {
             do {
-                _ = try await programService.markDayComplete(dayId: day.id, userEmail: userEmail)
-                print("✅ PlanView: Marked rest day \(day.id) as complete")
-                // Remove from optimistic set since server confirmed
-                optimisticallyCompletedRestDays.remove(day.id)
+                let updatedDay = try await programService.toggleDayComplete(dayId: day.id, userEmail: userEmail)
+                print("✅ PlanView: Toggled rest day \(day.id) completion to: \(updatedDay.isCompleted)")
+                // Clear optimistic state - server state is now authoritative
+                optimisticRestDayStates.removeValue(forKey: day.id)
             } catch {
-                print("⚠️ PlanView: Failed to mark rest day complete: \(error)")
+                print("⚠️ PlanView: Failed to toggle rest day complete: \(error)")
                 // Revert optimistic update on failure
-                optimisticallyCompletedRestDays.remove(day.id)
+                optimisticRestDayStates.removeValue(forKey: day.id)
             }
         }
     }
@@ -385,7 +396,13 @@ struct PlanView: View {
 struct RestDayCard: View {
     let day: ProgramDay
     let onToggleComplete: () -> Void
-    let isOptimisticallyCompleted: Bool
+    /// nil = use server state, true = optimistically completed, false = optimistically uncompleted
+    let optimisticState: Bool?
+
+    /// Computed property that respects optimistic state over server state
+    private var isCompleted: Bool {
+        optimisticState ?? day.isCompleted
+    }
 
     var body: some View {
         HStack {
@@ -399,12 +416,11 @@ struct RestDayCard: View {
 
             Spacer()
 
-            // Completion checkbox
+            // Completion checkbox - toggleable
             Button {
-                guard !day.isCompleted && !isOptimisticallyCompleted else { return }
                 onToggleComplete()
             } label: {
-                if day.isCompleted || isOptimisticallyCompleted {
+                if isCompleted {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 20))
                         .foregroundColor(.accentColor)

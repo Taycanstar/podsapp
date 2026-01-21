@@ -137,6 +137,27 @@ class ProgramService: ObservableObject {
         // Refresh active program to update completion status
         _ = try? await fetchActiveProgram(userEmail: userEmail)
 
+        // Notify WorkoutManager to sync the next workout
+        await MainActor.run {
+            WorkoutManager.shared.refreshTodayWorkoutFromProgram()
+        }
+
+        return day
+    }
+
+    // MARK: - Toggle Day Complete
+
+    func toggleDayComplete(dayId: Int, userEmail: String) async throws -> ProgramDay {
+        let day = try await networkManager.toggleProgramDayComplete(dayId: dayId, userEmail: userEmail)
+
+        // Refresh active program to update completion status
+        _ = try? await fetchActiveProgram(userEmail: userEmail)
+
+        // Notify WorkoutManager to sync the next workout
+        await MainActor.run {
+            WorkoutManager.shared.refreshTodayWorkoutFromProgram()
+        }
+
         return day
     }
 
