@@ -5813,7 +5813,8 @@ class NetworkManagerTwo {
         sessionDurationMinutes: Int? = nil,
         defaultWarmupEnabled: Bool? = nil,
         defaultCooldownEnabled: Bool? = nil,
-        includeFoamRolling: Bool? = nil
+        includeFoamRolling: Bool? = nil,
+        includeCardio: Bool? = nil
     ) async throws -> TrainingProgram {
         guard let url = URL(string: "\(baseUrl)/api/programs/\(programId)/preferences/") else {
             throw NetworkError.invalidURL
@@ -5842,6 +5843,9 @@ class NetworkManagerTwo {
         }
         if let includeFoamRolling = includeFoamRolling {
             body["include_foam_rolling"] = includeFoamRolling
+        }
+        if let includeCardio = includeCardio {
+            body["include_cardio"] = includeCardio
         }
 
         urlRequest.httpBody = try JSONSerialization.data(withJSONObject: body)

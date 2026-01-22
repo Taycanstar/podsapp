@@ -298,7 +298,7 @@ class WorkoutManager: ObservableObject {
     var effectiveFlexibilityPreferences: FlexibilityPreferences {
         // 1. Session override (this workout only)
         if let sessionPrefs = sessionFlexibilityPreferences {
-            print("[WorkoutManager] effectiveFlexibilityPreferences: Using SESSION override - warmup=\(sessionPrefs.warmUpEnabled), cooldown=\(sessionPrefs.coolDownEnabled)")
+            print("[WorkoutManager] effectiveFlexibilityPreferences: Using SESSION override - warmup=\(sessionPrefs.warmUpEnabled), cooldown=\(sessionPrefs.coolDownEnabled), cardio=\(sessionPrefs.includeCardio)")
             return sessionPrefs
         }
         // 2. Active Plan preference
@@ -306,11 +306,13 @@ class WorkoutManager: ObservableObject {
             let warmup = program.defaultWarmupEnabled ?? false
             let cooldown = program.defaultCooldownEnabled ?? false
             let foamRolling = program.includeFoamRolling ?? true
-            print("[WorkoutManager] effectiveFlexibilityPreferences: Using PLAN '\(program.name)' - warmup=\(warmup), cooldown=\(cooldown), foamRolling=\(foamRolling)")
+            let cardio = program.includeCardio ?? false
+            print("[WorkoutManager] effectiveFlexibilityPreferences: Using PLAN '\(program.name)' - warmup=\(warmup), cooldown=\(cooldown), foamRolling=\(foamRolling), cardio=\(cardio)")
             return FlexibilityPreferences(
                 warmUpEnabled: warmup,
                 coolDownEnabled: cooldown,
-                includeFoamRolling: foamRolling
+                includeFoamRolling: foamRolling,
+                includeCardio: cardio
             )
         }
         // 3. Account-level defaults from WorkoutProfile (safety net when no plan)
@@ -426,18 +428,19 @@ class WorkoutManager: ObservableObject {
             // This ensures Today tab immediately shows the correct workout
             print("📋 Setting todayWorkout from program (day ID: \(programWorkout.programDayId ?? -1), title: \(programWorkout.title))")
 
-            // Check if session overrides require warmup/cooldown that the program doesn't have
+            // Check if session overrides require warmup/cooldown/cardio that the program doesn't have
             let effectivePrefs = effectiveFlexibilityPreferences
             let needsWarmup = effectivePrefs.warmUpEnabled && (programWorkout.warmUpExercises?.isEmpty ?? true)
             let needsCooldown = effectivePrefs.coolDownEnabled && (programWorkout.coolDownExercises?.isEmpty ?? true)
+            let needsCardio = effectivePrefs.includeCardio && (programWorkout.cardioExercises?.isEmpty ?? true)
 
-            print("📋 [syncTodayWorkoutWithProgram] effectivePrefs: warmup=\(effectivePrefs.warmUpEnabled), cooldown=\(effectivePrefs.coolDownEnabled)")
-            print("📋 [syncTodayWorkoutWithProgram] needsWarmup=\(needsWarmup), needsCooldown=\(needsCooldown)")
+            print("📋 [syncTodayWorkoutWithProgram] effectivePrefs: warmup=\(effectivePrefs.warmUpEnabled), cooldown=\(effectivePrefs.coolDownEnabled), cardio=\(effectivePrefs.includeCardio)")
+            print("📋 [syncTodayWorkoutWithProgram] needsWarmup=\(needsWarmup), needsCooldown=\(needsCooldown), needsCardio=\(needsCardio)")
 
             var finalWorkout = programWorkout
 
             // Apply session flexibility preferences if they differ from program
-            if needsWarmup || needsCooldown {
+            if needsWarmup || needsCooldown || needsCardio {
                 let warmUpExercises: [TodayWorkoutExercise]? = needsWarmup ?
                     generateWarmUpExercises(
                         workoutExercises: programWorkout.exercises,
@@ -451,6 +454,9 @@ class WorkoutManager: ObservableObject {
                         equipment: customEquipment
                     ) : programWorkout.coolDownExercises
 
+                let cardioExercises: [TodayWorkoutExercise]? = needsCardio ?
+                    generateCardioExercises(equipment: customEquipment, fitnessGoal: programWorkout.fitnessGoal) : programWorkout.cardioExercises
+
                 finalWorkout = TodayWorkout(
                     id: programWorkout.id,
                     date: programWorkout.date,
@@ -462,9 +468,10 @@ class WorkoutManager: ObservableObject {
                     difficulty: programWorkout.difficulty,
                     warmUpExercises: warmUpExercises,
                     coolDownExercises: coolDownExercises,
+                    cardioExercises: cardioExercises,
                     programDayId: programWorkout.programDayId
                 )
-                print("📋 [syncTodayWorkoutWithProgram] Applied session overrides: warmups=\(warmUpExercises?.count ?? 0), cooldowns=\(coolDownExercises?.count ?? 0)")
+                print("📋 [syncTodayWorkoutWithProgram] Applied session overrides: warmups=\(warmUpExercises?.count ?? 0), cooldowns=\(coolDownExercises?.count ?? 0), cardio=\(cardioExercises?.count ?? 0)")
             }
 
             // Explicitly notify observers before changing the value
@@ -3170,9 +3177,9 @@ class WorkoutManager: ObservableObject {
             return
         }
 
-        print("🔄 WorkoutManager: Updating flexibility exercises only (warmup=\(preferences.warmUpEnabled), cooldown=\(preferences.coolDownEnabled))")
+        print("🔄 WorkoutManager: Updating flexibility exercises only (warmup=\(preferences.warmUpEnabled), cooldown=\(preferences.coolDownEnabled), cardio=\(preferences.includeCardio))")
 
-        // Generate new warmup/cooldown based on existing main exercises
+        // Generate new warmup/cooldown/cardio based on existing main exercises
         let warmUpExercises: [TodayWorkoutExercise]? = preferences.warmUpEnabled ?
             generateWarmUpExercises(
                 workoutExercises: currentWorkout.exercises,
@@ -3186,7 +3193,10 @@ class WorkoutManager: ObservableObject {
                 equipment: customEquipment
             ) : nil
 
-        // Create new workout with same main exercises but updated warmup/cooldown
+        let cardioExercises: [TodayWorkoutExercise]? = preferences.includeCardio ?
+            generateCardioExercises(equipment: customEquipment, fitnessGoal: currentWorkout.fitnessGoal) : nil
+
+        // Create new workout with same main exercises but updated warmup/cooldown/cardio
         let updatedWorkout = TodayWorkout(
             id: currentWorkout.id,
             date: currentWorkout.date,
@@ -3198,6 +3208,7 @@ class WorkoutManager: ObservableObject {
             difficulty: currentWorkout.difficulty,
             warmUpExercises: warmUpExercises,
             coolDownExercises: coolDownExercises,
+            cardioExercises: cardioExercises,
             programDayId: currentWorkout.programDayId
         )
 
@@ -3205,7 +3216,7 @@ class WorkoutManager: ObservableObject {
         self.todayWorkout = updatedWorkout
         self.workoutRefreshTrigger = UUID()
 
-        print("✅ WorkoutManager: Flexibility exercises updated - warmup: \(warmUpExercises?.count ?? 0), cooldown: \(coolDownExercises?.count ?? 0)")
+        print("✅ WorkoutManager: Flexibility exercises updated - warmup: \(warmUpExercises?.count ?? 0), cooldown: \(coolDownExercises?.count ?? 0), cardio: \(cardioExercises?.count ?? 0)")
     }
 
     /// Clear all session overrides
@@ -3513,7 +3524,19 @@ class WorkoutManager: ObservableObject {
             totalCount: 3
         )
     }
-    
+
+    private func generateCardioExercises(
+        equipment: [Equipment]?,
+        fitnessGoal: FitnessGoal
+    ) -> [TodayWorkoutExercise] {
+        // Generate 1 cardio exercise for the workout (goal-aware selection)
+        return recommendationService.getCardioExercises(
+            fitnessGoal: fitnessGoal,
+            customEquipment: equipment,
+            count: 1
+        )
+    }
+
     // MARK: - Debug Helper Functions
     
     /// Debug function to force inclusion of a duration-based exercise in the workout

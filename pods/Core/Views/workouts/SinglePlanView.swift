@@ -2724,6 +2724,7 @@ private extension View {
             defaultWarmupEnabled: true,
             defaultCooldownEnabled: false,
             includeFoamRolling: true,
+            includeCardio: false,
             isActive: true,
             createdAt: "2026-01-01",
             syncVersion: 1,

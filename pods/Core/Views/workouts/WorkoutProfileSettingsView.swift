@@ -346,18 +346,12 @@ struct WorkoutProfileSettingsView: View {
         } message: {
             Text("Some changes require regenerating your training plan. Your completed workouts will be preserved, but upcoming workouts will change.")
         }
-        .overlay {
-            if isRegenerating {
-                Color.black.opacity(0.3)
-                    .ignoresSafeArea()
-                VStack(spacing: 12) {
-                    ProgressView()
-                        .tint(.white)
-                    Text("Regenerating Plan...")
-                        .font(.subheadline)
-                        .foregroundColor(.white)
-                }
-            }
+        .fullScreenCover(isPresented: $isRegenerating) {
+            PlanRegenerationView(
+                experienceLevel: selectedExperience.displayName,
+                splitName: trainingSplit.displayName,
+                weeks: totalWeeks
+            )
         }
         .onAppear {
             syncFromActiveProgram()
@@ -454,13 +448,15 @@ struct WorkoutProfileSettingsView: View {
             )
         }
 
-        // Apply warmup/cooldown preference changes
+        // Apply warmup/cooldown/cardio preference changes
         if warmupEnabled != originalWarmupEnabled ||
-           cooldownEnabled != originalCooldownEnabled {
+           cooldownEnabled != originalCooldownEnabled ||
+           cardioEnabled != originalCardioEnabled {
             try? await programService.updatePlanPreference(
                 userEmail: userEmail,
                 warmupEnabled: warmupEnabled != originalWarmupEnabled ? warmupEnabled : nil,
-                cooldownEnabled: cooldownEnabled != originalCooldownEnabled ? cooldownEnabled : nil
+                cooldownEnabled: cooldownEnabled != originalCooldownEnabled ? cooldownEnabled : nil,
+                includeCardio: cardioEnabled != originalCardioEnabled ? cardioEnabled : nil
             )
         }
 
@@ -484,6 +480,7 @@ struct WorkoutProfileSettingsView: View {
         periodizationEnabled = program.periodizationEnabled ?? true
         warmupEnabled = program.defaultWarmupEnabled ?? true
         cooldownEnabled = program.defaultCooldownEnabled ?? true
+        cardioEnabled = program.includeCardio ?? false
 
         // Sync from profile for settings not stored in program
         warmupSetsEnabled = profile.warmupSetsEnabled

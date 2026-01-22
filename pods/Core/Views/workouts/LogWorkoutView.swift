@@ -1239,7 +1239,8 @@ struct LogWorkoutView: View {
                     fitnessGoal: current.fitnessGoal,
                     difficulty: current.difficulty,
                     warmUpExercises: current.warmUpExercises,
-                    coolDownExercises: current.coolDownExercises
+                    coolDownExercises: current.coolDownExercises,
+                    cardioExercises: current.cardioExercises
                 )
 
                 workoutManager.setTodayWorkout(updated)
@@ -1423,8 +1424,8 @@ private struct TodayWorkoutView: View {
                     canShowSupersetMenu: canShowSupersetMenu,
                     onShowSuperset: onShowSuperset
                 )
-                // Force view recreation when warmup/cooldown sections change
-                .id("\(workout.id)-\(workout.warmUpExercises?.count ?? 0)-\(workout.coolDownExercises?.count ?? 0)")
+                // Force view recreation when warmup/cooldown/cardio sections change
+                .id("\(workout.id)-\(workout.warmUpExercises?.count ?? 0)-\(workout.coolDownExercises?.count ?? 0)-\(workout.cardioExercises?.count ?? 0)")
             }
         } else {
             WorkoutSkeletonPlaceholderView()
@@ -1542,14 +1543,26 @@ private struct TodayWorkoutView: View {
         } else {
             coolDownExercises = nil
         }
-            
+
+        // Generate cardio exercises if enabled (goal-aware selection)
+        let cardioExercises: [TodayWorkoutExercise]?
+        if effectiveFlexibilityPreferences.includeCardio {
+            cardioExercises = recommendationService.getCardioExercises(
+                fitnessGoal: fitnessGoal,
+                customEquipment: customEquipment,
+                count: 1
+            )
+        } else {
+            cardioExercises = nil
+        }
+
         // FITBOD-ALIGNED SYSTEM SUMMARY
         recommendationService.logFlexibilitySystemSummary(
             warmupCount: warmUpExercises?.count ?? 0,
             cooldownCount: coolDownExercises?.count ?? 0,
             targetMuscles: muscleGroups
         )
-        
+
         return TodayWorkout(
             id: UUID(),
             date: Date(),
@@ -1559,7 +1572,8 @@ private struct TodayWorkoutView: View {
             fitnessGoal: fitnessGoal,
             difficulty: experienceLevel.workoutComplexity,
             warmUpExercises: warmUpExercises,
-            coolDownExercises: coolDownExercises
+            coolDownExercises: coolDownExercises,
+            cardioExercises: cardioExercises
         )
     }
     
@@ -3269,6 +3283,7 @@ private extension View {
             mainTitleSection
             mainExercisesSection
             coolDownSection
+            cardioSection
             addExerciseSection
         }
         .listStyle(PlainListStyle())
@@ -3339,7 +3354,7 @@ private extension View {
 
     @ViewBuilder
     private var mainTitleSection: some View {
-        if (workout.warmUpExercises?.isEmpty == false) || (workout.coolDownExercises?.isEmpty == false) {
+        if (workout.warmUpExercises?.isEmpty == false) || (workout.coolDownExercises?.isEmpty == false) || (workout.cardioExercises?.isEmpty == false) {
             Section {
                 Text("Main Sets")
                     .font(.title)
@@ -3533,6 +3548,48 @@ private extension View {
     }
 
     @ViewBuilder
+    private var cardioSection: some View {
+        if let cardioExercises = workout.cardioExercises, !cardioExercises.isEmpty {
+            Section {
+                Text("Cardio")
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+                    .padding(.bottom, 8)
+            }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+
+            ForEach(Array(cardioExercises.enumerated()), id: \.element.exercise.id) { index, exercise in
+                VStack(spacing: 0) {
+                    ExerciseWorkoutCard(
+                        exercise: exercise,
+                        allExercises: cardioExercises,
+                        exerciseIndex: index,
+                        onExerciseReplaced: { _, _ in },
+                        onOpen: {
+                            onPresentLogSheet(LogExerciseSheetContext(exercise: exercise, allExercises: cardioExercises, index: index))
+                        },
+                        useBackground: false
+                    )
+                    if index != cardioExercises.count - 1 {
+                        Divider()
+                            .padding(.leading, 92)  // Align with text after thumbnail
+                    }
+                }
+                .padding(.vertical, 4)
+                .listRowInsets(EdgeInsets(top: index == 0 ? 16 : 8, leading: 0, bottom: index == cardioExercises.count - 1 ? 8 : 0, trailing: 0))
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+            }
+        }
+    }
+
+    @ViewBuilder
     private var addExerciseSection: some View {
         Section {
             Button(action: { showAddExerciseSheet = true }) {
@@ -3599,15 +3656,16 @@ private extension View {
                 fitnessGoal: workout.fitnessGoal,
                 difficulty: workout.difficulty,
                 warmUpExercises: workout.warmUpExercises,
-                coolDownExercises: workout.coolDownExercises
+                coolDownExercises: workout.coolDownExercises,
+                cardioExercises: workout.cardioExercises
             )
-            
+
             if let encoded = try? JSONEncoder().encode(updatedWorkout) {
                 UserDefaults.standard.set(encoded, forKey: "todayWorkout_\(userEmail)")
             }
         }
     }
-    
+
     private func replaceExercise(at index: Int, with newExercise: ExerciseData) {
         guard index < exercises.count else { return }
         
@@ -3640,16 +3698,16 @@ private extension View {
                 fitnessGoal: workout.fitnessGoal,
                 difficulty: workout.difficulty,
                 warmUpExercises: workout.warmUpExercises,
-                coolDownExercises: workout.coolDownExercises
+                coolDownExercises: workout.coolDownExercises,
+                cardioExercises: workout.cardioExercises
             )
-            
+
             if let encoded = try? JSONEncoder().encode(updatedWorkout) {
                 UserDefaults.standard.set(encoded, forKey: "todayWorkout_\(userEmail)")
             }
         }
     }
-    
-    
+
 
 }
 

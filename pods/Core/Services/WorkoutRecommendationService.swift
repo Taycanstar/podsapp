@@ -928,6 +928,268 @@ class WorkoutRecommendationService {
         return cooldownExercises
     }
 
+    // MARK: - Cardio Exercise Generation
+
+    // Key cardio exercise IDs from the database
+    private static let rowingExerciseId = 1161        // Rowing (with rowing machine) - BEST DEFAULT
+    private static let handsBikeId = 2139             // Hands bike
+    private static let burpeeId = 1160                // Burpee
+    private static let mountainClimberId = 630        // Mountain Climber
+    private static let jumpingJackId = 3094           // Jumping Jack
+    private static let jumpRopeId = 2612              // Jump Rope
+    private static let sledWalkId = 2908              // Power Sled Anti-Rotation Forward Walk
+    private static let briskWalkingId = 3004          // Briskly Walking (not in DB - fallback only)
+    private static let jumpSquatId = 513              // Jump Squat
+
+    /// Generate cardio exercises based on fitness goal (sports science-based selection)
+    /// - Hypertrophy/Balanced: Rowing preferred (full-body, Zone 2, muscle preservation)
+    /// - Strength: Minimal/light cardio only (sled work or walking)
+    /// - Endurance: Rowing or high-intensity HIIT
+    func getCardioExercises(
+        fitnessGoal: ProgramFitnessGoal = .balanced,
+        customEquipment: [Equipment]? = nil,
+        count: Int = 1
+    ) -> [TodayWorkoutExercise] {
+        let allExercises = ExerciseDatabase.getAllExercises()
+
+        print("🏃 CARDIO: Selecting for goal: \(fitnessGoal.displayName)")
+
+        // Goal-based cardio selection
+        let selectedExercises: [ExerciseData]
+
+        switch fitnessGoal {
+        case .hypertrophy, .balanced:
+            // Prefer rowing (full-body, high EPOC, muscle preservation)
+            selectedExercises = selectRowingOrFallback(
+                from: allExercises,
+                equipment: customEquipment
+            )
+
+        case .strength:
+            // Minimal cardio - light HIIT or sled work only
+            selectedExercises = selectLightCardio(
+                from: allExercises,
+                equipment: customEquipment
+            )
+
+        case .endurance:
+            // Prefer rowing for VO2 max
+            selectedExercises = selectEnduranceCardio(
+                from: allExercises,
+                equipment: customEquipment
+            )
+        }
+
+        guard !selectedExercises.isEmpty else {
+            print("   └── No suitable cardio exercises found")
+            return []
+        }
+
+        return selectedExercises.prefix(count).map { exercise in
+            createCardioTodayExercise(exercise, goal: fitnessGoal)
+        }
+    }
+
+    /// Prefer rowing machine, fallback to bodyweight cardio
+    private func selectRowingOrFallback(
+        from exercises: [ExerciseData],
+        equipment: [Equipment]?
+    ) -> [ExerciseData] {
+        // Priority 1: Rowing machine (ID 1161) - 85% body engagement
+        if let rowing = exercises.first(where: { $0.id == Self.rowingExerciseId }) {
+            // Check if user has rowing-compatible equipment
+            let hasRowingMachine = equipment?.contains(where: {
+                $0.rawValue.lowercased().contains("machine") ||
+                $0.rawValue.lowercased().contains("leverage")
+            }) ?? true
+
+            if hasRowingMachine {
+                print("   └── Selected: Rowing (full-body cardio, 85% muscle engagement)")
+                return [rowing]
+            }
+        }
+
+        // Priority 2: Stationary bike / hands bike (ID 2139)
+        if let bike = exercises.first(where: { $0.id == Self.handsBikeId }) {
+            print("   └── Fallback: Hands bike (upper body cardio)")
+            return [bike]
+        }
+
+        // Priority 3: Bodyweight HIIT fallback
+        let hiitIds = [Self.burpeeId, Self.mountainClimberId, Self.jumpingJackId]
+        let hiitExercises = exercises.filter { hiitIds.contains($0.id) }
+
+        if let selected = hiitExercises.randomElement() {
+            print("   └── Fallback: \(selected.name) (bodyweight HIIT)")
+            return [selected]
+        }
+
+        return []
+    }
+
+    /// Light cardio for strength goals (minimal interference with recovery)
+    private func selectLightCardio(
+        from exercises: [ExerciseData],
+        equipment: [Equipment]?
+    ) -> [ExerciseData] {
+        // For strength: prefer sled work or very light cardio
+        // Strength training + excessive cardio = interference effect
+
+        // Priority 1: Sled work (strength-compatible, minimal interference)
+        if let sled = exercises.first(where: { $0.id == Self.sledWalkId }),
+           equipment?.contains(where: { $0.rawValue.lowercased().contains("sled") }) ?? false {
+            print("   └── Selected: Sled work (strength-compatible cardio)")
+            return [sled]
+        }
+
+        // Priority 2: Jump rope - quick, minimal, effective
+        if let jumpRope = exercises.first(where: { $0.id == Self.jumpRopeId }) {
+            print("   └── Selected: Jump rope (light cardio for strength)")
+            return [jumpRope]
+        }
+
+        // Priority 3: Walking would be ideal but not in DB - use mountain climber as light option
+        if let mountainClimber = exercises.first(where: { $0.id == Self.mountainClimberId }) {
+            print("   └── Selected: Mountain climber (light intensity for strength)")
+            return [mountainClimber]
+        }
+
+        // For strength goals, it's OK to return empty - separate cardio sessions recommended
+        print("   └── No cardio added (strength goal - separate cardio session recommended)")
+        return []
+    }
+
+    /// Endurance-focused cardio selection (higher intensity, longer duration)
+    private func selectEnduranceCardio(
+        from exercises: [ExerciseData],
+        equipment: [Equipment]?
+    ) -> [ExerciseData] {
+        // Prefer rowing for VO2 max (closest to running benefits)
+        if let rowing = exercises.first(where: { $0.id == Self.rowingExerciseId }) {
+            let hasRowingMachine = equipment?.contains(where: {
+                $0.rawValue.lowercased().contains("machine") ||
+                $0.rawValue.lowercased().contains("leverage")
+            }) ?? true
+
+            if hasRowingMachine {
+                print("   └── Selected: Rowing (endurance focus, VO2 max)")
+                return [rowing]
+            }
+        }
+
+        // Fallback to high-intensity bodyweight exercises
+        let enduranceIds = [Self.burpeeId, Self.mountainClimberId, Self.jumpRopeId, Self.jumpSquatId]
+        let enduranceExercises = exercises.filter { enduranceIds.contains($0.id) }
+
+        if let selected = enduranceExercises.randomElement() {
+            print("   └── Selected: \(selected.name) (endurance HIIT)")
+            return [selected]
+        }
+
+        return []
+    }
+
+    /// Create TodayWorkoutExercise with goal-appropriate parameters
+    private func createCardioTodayExercise(
+        _ exercise: ExerciseData,
+        goal: ProgramFitnessGoal
+    ) -> TodayWorkoutExercise {
+        let tracking = ExerciseClassificationService.determineTrackingType(for: exercise)
+
+        // Goal-based duration and intensity
+        // Based on sports science research:
+        // - Hypertrophy: Zone 2 (60-70% HR), 15-20 min, post-workout
+        // - Strength: Light only, 10-15 min max
+        // - Balanced: Zone 2, 15-20 min
+        // - Endurance: Zone 3-4 (race pace), 25-30 min
+        let (sets, intervalDuration, restTime, notes): (Int, TimeInterval, Int, String) = {
+            switch goal {
+            case .hypertrophy, .balanced:
+                return (
+                    3,
+                    300,  // 5 min intervals
+                    60,
+                    "Zone 2 intensity (can hold conversation)"
+                )
+            case .strength:
+                return (
+                    2,
+                    180,  // 3 min intervals
+                    90,
+                    "Light intensity only - preserve strength"
+                )
+            case .endurance:
+                return (
+                    4,
+                    420,  // 7 min intervals
+                    45,
+                    "Zone 3-4 intensity (race pace)"
+                )
+            }
+        }()
+
+        var flex: [FlexibleSetData] = []
+        for _ in 0..<sets {
+            var set = FlexibleSetData(trackingType: tracking)
+            set.duration = intervalDuration
+            set.durationString = formatDuration(intervalDuration)
+            flex.append(set)
+        }
+
+        print("   └── \(exercise.name): \(sets) sets × \(formatDuration(intervalDuration)) (\(notes))")
+
+        return TodayWorkoutExercise(
+            exercise: exercise,
+            sets: sets,
+            reps: 1,
+            weight: nil,
+            restTime: restTime,
+            notes: notes,
+            warmupSets: nil,
+            flexibleSets: flex,
+            trackingType: tracking
+        )
+    }
+
+    private func formatDuration(_ seconds: TimeInterval) -> String {
+        let minutes = Int(seconds) / 60
+        let secs = Int(seconds) % 60
+        if secs == 0 {
+            return "\(minutes):00"
+        }
+        return String(format: "%d:%02d", minutes, secs)
+    }
+
+    /// Overloaded version that accepts FitnessGoal (used in LogWorkoutView)
+    /// Converts FitnessGoal to ProgramFitnessGoal for cardio selection
+    func getCardioExercises(
+        fitnessGoal: FitnessGoal,
+        customEquipment: [Equipment]? = nil,
+        count: Int = 1
+    ) -> [TodayWorkoutExercise] {
+        // Convert FitnessGoal to ProgramFitnessGoal
+        let programGoal: ProgramFitnessGoal = {
+            switch fitnessGoal.normalized {
+            case .hypertrophy:
+                return .hypertrophy
+            case .strength, .powerlifting, .olympicWeightlifting:
+                return .strength
+            case .endurance, .circuitTraining:
+                return .endurance
+            case .balanced, .general:
+                return .balanced
+            default:
+                return .balanced
+            }
+        }()
+
+        return getCardioExercises(
+            fitnessGoal: programGoal,
+            customEquipment: customEquipment,
+            count: count
+        )
+    }
+
     // MARK: - Private Intelligent Warmup Helpers
 
     private func createFoamRollingExercise(targetMuscle: String) -> TodayWorkoutExercise {

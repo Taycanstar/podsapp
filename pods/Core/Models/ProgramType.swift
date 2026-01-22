@@ -236,6 +236,7 @@ struct TrainingProgram: Codable, Identifiable {
     let defaultWarmupEnabled: Bool?
     let defaultCooldownEnabled: Bool?
     let includeFoamRolling: Bool?
+    let includeCardio: Bool?
     let isActive: Bool
     let createdAt: String
     let syncVersion: Int

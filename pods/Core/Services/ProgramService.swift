@@ -202,7 +202,8 @@ class ProgramService: ObservableObject {
         sessionDurationMinutes: Int? = nil,
         warmupEnabled: Bool? = nil,
         cooldownEnabled: Bool? = nil,
-        includeFoamRolling: Bool? = nil
+        includeFoamRolling: Bool? = nil,
+        includeCardio: Bool? = nil
     ) async throws {
         guard let program = activeProgram else {
             print("[ProgramService] Cannot update preferences: no active program")
@@ -220,7 +221,8 @@ class ProgramService: ObservableObject {
             sessionDurationMinutes: sessionDurationMinutes,
             defaultWarmupEnabled: warmupEnabled,
             defaultCooldownEnabled: cooldownEnabled,
-            includeFoamRolling: includeFoamRolling
+            includeFoamRolling: includeFoamRolling,
+            includeCardio: includeCardio
         )
 
         // Update local activeProgram with the response
@@ -643,6 +645,7 @@ class ProgramService: ObservableObject {
             defaultWarmupEnabled: program.defaultWarmupEnabled,
             defaultCooldownEnabled: program.defaultCooldownEnabled,
             includeFoamRolling: program.includeFoamRolling,
+            includeCardio: program.includeCardio,
             isActive: program.isActive,
             createdAt: program.createdAt,
             syncVersion: program.syncVersion,
@@ -724,6 +727,7 @@ class ProgramService: ObservableObject {
             defaultWarmupEnabled: program.defaultWarmupEnabled,
             defaultCooldownEnabled: program.defaultCooldownEnabled,
             includeFoamRolling: program.includeFoamRolling,
+            includeCardio: program.includeCardio,
             isActive: program.isActive,
             createdAt: program.createdAt,
             syncVersion: program.syncVersion,
@@ -779,6 +783,7 @@ class ProgramService: ObservableObject {
             defaultWarmupEnabled: program.defaultWarmupEnabled,
             defaultCooldownEnabled: program.defaultCooldownEnabled,
             includeFoamRolling: program.includeFoamRolling,
+            includeCardio: program.includeCardio,
             isActive: program.isActive,
             createdAt: program.createdAt,
             syncVersion: program.syncVersion,
@@ -888,6 +893,7 @@ class ProgramService: ObservableObject {
             defaultWarmupEnabled: program.defaultWarmupEnabled,
             defaultCooldownEnabled: program.defaultCooldownEnabled,
             includeFoamRolling: program.includeFoamRolling,
+            includeCardio: program.includeCardio,
             isActive: program.isActive,
             createdAt: program.createdAt,
             syncVersion: program.syncVersion,
@@ -957,6 +963,7 @@ class ProgramService: ObservableObject {
             defaultWarmupEnabled: program.defaultWarmupEnabled,
             defaultCooldownEnabled: program.defaultCooldownEnabled,
             includeFoamRolling: program.includeFoamRolling,
+            includeCardio: program.includeCardio,
             isActive: program.isActive,
             createdAt: program.createdAt,
             syncVersion: program.syncVersion,

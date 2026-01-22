@@ -12,18 +12,21 @@ struct FlexibilityPreferences: Codable, Equatable {
     let warmUpEnabled: Bool
     let coolDownEnabled: Bool
     let includeFoamRolling: Bool
+    let includeCardio: Bool
 
-    init(warmUpEnabled: Bool = false, coolDownEnabled: Bool = false, includeFoamRolling: Bool = true) {
+    init(warmUpEnabled: Bool = false, coolDownEnabled: Bool = false, includeFoamRolling: Bool = true, includeCardio: Bool = false) {
         self.warmUpEnabled = warmUpEnabled
         self.coolDownEnabled = coolDownEnabled
         self.includeFoamRolling = includeFoamRolling
+        self.includeCardio = includeCardio
     }
 
-    // CodingKeys to handle optional foam rolling for backwards compatibility
+    // CodingKeys to handle optional fields for backwards compatibility
     enum CodingKeys: String, CodingKey {
         case warmUpEnabled
         case coolDownEnabled
         case includeFoamRolling
+        case includeCardio
     }
 
     init(from decoder: Decoder) throws {
@@ -32,6 +35,8 @@ struct FlexibilityPreferences: Codable, Equatable {
         coolDownEnabled = try container.decode(Bool.self, forKey: .coolDownEnabled)
         // Default to true if not present (backwards compatibility)
         includeFoamRolling = try container.decodeIfPresent(Bool.self, forKey: .includeFoamRolling) ?? true
+        // Default to false if not present (backwards compatibility)
+        includeCardio = try container.decodeIfPresent(Bool.self, forKey: .includeCardio) ?? false
     }
     
     // Display text for the button
