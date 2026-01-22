@@ -243,6 +243,13 @@ struct LogWorkoutView: View {
             .onAppear {
                 workoutManager.setModelContext(modelContext)
                 workoutManager.setWorkoutViewActive(true)
+
+                // Restore active workout session if app was terminated while workout in progress
+                if currentWorkout == nil, workoutManager.hasActiveWorkout {
+                    currentWorkout = workoutManager.currentWorkout
+                    print("🏃‍♂️ LogWorkoutView: Auto-restored active workout from cold start")
+                }
+
                 // Ensure workout weights match user's units when view appears
                 let savedUnits = UserDefaults.standard.string(forKey: "workoutUnitsSystem")
                 let currentUnits = onboarding.unitsSystem.rawValue

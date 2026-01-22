@@ -2811,6 +2811,17 @@ class WorkoutManager: ObservableObject {
         activeWorkoutState?.pauseBeganAt != nil
     }
 
+    /// Returns true if there's an active (non-timed-out) workout session that can be restored.
+    /// Used by views to auto-present WorkoutInProgressView on cold start.
+    var hasActiveWorkout: Bool {
+        guard let workout = currentWorkout,
+              let state = activeWorkoutState,
+              state.workoutId == workout.id else {
+            return false
+        }
+        return !state.hasTimedOut(timeout: sessionTimeoutInterval)
+    }
+
     func currentActiveWorkoutDuration(asOf referenceDate: Date = Date()) -> TimeInterval? {
         guard let state = activeWorkoutState else { return nil }
         let endTime = max(referenceDate, state.lastActivityAt)

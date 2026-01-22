@@ -193,12 +193,8 @@ struct WorkoutSummarySheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
+                    checkmarkToolbarButton {
                         dismiss()
-                    } label: {
-                        Image(systemName: "checkmark")
-                            .font(.title2)
-                            .foregroundStyle(Color.accentColor)
                     }
                     .accessibilityLabel("Dismiss workout summary")
                 }
@@ -331,6 +327,22 @@ struct WorkoutSummarySheet: View {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         return formatter.string(from: date)
+    }
+
+    @ViewBuilder
+    private func checkmarkToolbarButton(action: @escaping () -> Void) -> some View {
+        if #available(iOS 26.0, *) {
+            Button(action: action) {
+                Image(systemName: "checkmark")
+            }
+            .buttonStyle(.glassProminent)
+        } else {
+            Button(action: action) {
+                Image(systemName: "checkmark")
+                    .font(.title2)
+                    .foregroundStyle(Color.accentColor)
+            }
+        }
     }
 }
 

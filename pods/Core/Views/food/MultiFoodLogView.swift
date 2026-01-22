@@ -1181,13 +1181,34 @@ struct MultiFoodLogView: View {
     }
 
     private func servingText(for editableItem: EditableFoodItem) -> String {
-        guard let measure = editableItem.selectedMeasure else { return "1 serving" }
-        let description = measure.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        let amountText = EditableFoodItem.formatServing(editableItem.servingAmount)
+        let unitLabel = servingUnitLabel(for: editableItem.selectedMeasure)
+        if unitLabel.isEmpty {
+            return amountText
+        }
+        return "\(amountText) \(unitLabel)"
+    }
+
+    private func servingUnitLabel(for measure: MealItemMeasure?) -> String {
+        guard let measure else { return "serving" }
+        let description = sanitizedServingDescription(measure.description)
         if !description.isEmpty {
             return description
         }
-        let unit = measure.unit.trimmingCharacters(in: .whitespacesAndNewlines)
-        return unit.isEmpty ? "1 serving" : "1 \(unit)"
+        return measure.unit.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func sanitizedServingDescription(_ text: String) -> String {
+        var trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return "" }
+
+        if let range = trimmed.range(of: "(") {
+            trimmed = String(trimmed[..<range.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        let numberPrefixPattern = "^[0-9]+(\\.[0-9]+)?([/][0-9]+)?\\s*(x|×)?\\s*"
+        trimmed = trimmed.replacingOccurrences(of: numberPrefixPattern, with: "", options: .regularExpression)
+        return trimmed.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func scaledNutrients(_ nutrients: [Nutrient], scale: Double) -> [Nutrient] {

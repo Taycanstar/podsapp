@@ -1765,7 +1765,10 @@ private func performLoadMoreLogs(refresh: Bool) async -> Bool {
                   
                 }
 
-                // Mixpanel tracking removed - now handled by backend
+                // Track Log Food event
+                AnalyticsManager.shared.track("Log Food", properties: [
+                    "calories": loggedFood.food.calories
+                ])
 
                 // Create a new CombinedLog from the logged food
                 let combinedLog = CombinedLog(
@@ -2075,6 +2078,12 @@ func refreshMeals() {
                 case .success(let logged):
                     // caller will build CombinedLog & update DayLogsVM
                     completion?(.success(logged))
+
+                    // Track Log Food event for meal
+                    AnalyticsManager.shared.track("Log Food", properties: [
+                        "calories": calories,
+                        "type": "meal"
+                    ])
 
                                     self.lastLoggedItem = (name: meal.title, calories: calories)
                 self.showLogSuccess = true
@@ -2557,6 +2566,12 @@ func logRecipe(
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                     self.showLogSuccess = false
                 }
+
+                // Track Log Food event for recipe
+                AnalyticsManager.shared.track("Log Food", properties: [
+                    "calories": calories,
+                    "type": "recipe"
+                ])
 
                 // Call completion handlers
                 completion?(.success(recipeLog))

@@ -986,6 +986,7 @@ private struct MealItemServingControls: View {
             set: { newValue in
                 let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
                 item.servingUnit = trimmed.isEmpty ? nil : trimmed
+                updateOriginalServing()
                 onChange()
             }
         )
@@ -998,6 +999,7 @@ private struct MealItemServingControls: View {
                 guard let parsed = ConfirmLogView.parseServingsInput(newValue) else { return }
                 if abs(parsed - item.serving) > 0.0001 {
                     item.serving = parsed
+                    updateOriginalServing()
                     onChange()
                 }
             }
@@ -1008,7 +1010,16 @@ private struct MealItemServingControls: View {
         guard item.selectedMeasureId != measure.id else { return }
         item.selectedMeasureId = measure.id
         item.servingUnit = measure.unit
+        updateOriginalServing()
         onChange()
+    }
+
+    private func updateOriginalServing() {
+        let unitText = item.servingUnit?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanedUnit = (unitText?.isEmpty == false) ? unitText : nil
+        let amountText = ConfirmLogView.formattedServings(item.serving)
+        let text = cleanedUnit == nil ? amountText : "\(amountText) \(cleanedUnit ?? "")"
+        item.originalServing = MealItemServingDescriptor(amount: item.serving, unit: cleanedUnit, text: text)
     }
 
     private func unitLabel(for measure: MealItemMeasure?) -> String {
@@ -3897,7 +3908,7 @@ struct PlateView: View {
         var food = entry.food
         food.foodNutrients = scaledNutrients(food.foodNutrients, scale: perServingScale)
         food.numberOfServings = entry.servings
-        food.householdServingFullText = entry.currentMeasureLabel
+        food.householdServingFullText = servingText(for: entry)
         if let measure = entry.selectedMeasure {
             food.servingSizeUnit = measure.measureUnitName
         }
@@ -3908,6 +3919,28 @@ struct PlateView: View {
             food.mealItems = entry.mealItems.map { $0.scaled(by: totalScale) }
         }
         return food
+    }
+
+    private func servingText(for entry: PlateEntry) -> String {
+        let amountText = ConfirmLogView.formattedServings(entry.servings)
+        let unitLabel = servingUnitLabel(for: entry.selectedMeasure ?? entry.availableMeasures.first)
+        if unitLabel.isEmpty {
+            return amountText
+        }
+        return "\(amountText) \(unitLabel)"
+    }
+
+    private func servingUnitLabel(for measure: FoodMeasure?) -> String {
+        guard let measure else { return "serving" }
+        var label = measure.disseminationText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if label.isEmpty {
+            label = measure.measureUnitName.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        let weightParenPattern = "\\s*\\([0-9.]+\\s*(g|oz|ml|mL|fl oz)\\)"
+        label = label.replacingOccurrences(of: weightParenPattern, with: "", options: .regularExpression)
+        let numberPrefixPattern = "^[0-9]+(\\.[0-9]+)?([/][0-9]+)?\\s*(x|×)?\\s*"
+        label = label.replacingOccurrences(of: numberPrefixPattern, with: "", options: .regularExpression)
+        return label.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func logPlate() {

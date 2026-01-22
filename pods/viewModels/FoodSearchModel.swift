@@ -366,6 +366,17 @@ struct MealItem: Codable, Identifiable, Hashable {
     }
 
     func toDictionary() -> [String: Any] {
+        let unitText = servingUnit?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanedUnit = (unitText?.isEmpty == false) ? unitText : nil
+        let fallbackOriginal = MealItemServingDescriptor(
+            amount: serving,
+            unit: cleanedUnit,
+            text: MealItem.formattedServingText(serving, unit: cleanedUnit)
+        )
+        let resolvedOriginal = originalServing.flatMap { original in
+            originalServingMatchesCurrent(original) ? original : fallbackOriginal
+        }
+
         var dict: [String: Any] = [
             "name": name,
             "serving": serving,
@@ -381,7 +392,7 @@ struct MealItem: Codable, Identifiable, Hashable {
         if !measures.isEmpty {
             dict["measures"] = measures.map { $0.toDictionary() }
         }
-        if let originalServing {
+        if let originalServing = resolvedOriginal {
             var originalDict: [String: Any] = [:]
             if let amount = originalServing.amount {
                 originalDict["amount"] = amount
@@ -411,17 +422,53 @@ struct MealItem: Codable, Identifiable, Hashable {
     }
 
     var preferredServingDescription: String? {
-        if let label = originalServing?.resolvedText, !label.isEmpty {
+        let computedText = MealItem.formattedServingText(serving, unit: servingUnit)
+        if let original = originalServing,
+           let label = original.resolvedText,
+           !label.isEmpty,
+           originalServingMatchesCurrent(original) {
             return label
         }
-        let formatter = NumberFormatter()
-        formatter.minimumFractionDigits = 0
-        formatter.maximumFractionDigits = 2
-        let amount = formatter.string(from: NSNumber(value: serving)) ?? String(format: "%.2f", serving)
-        if let unit = servingUnit, !unit.isEmpty {
-            return "\(amount) \(unit)"
+        return computedText
+    }
+
+    private static func formattedServingText(_ value: Double, unit: String?) -> String {
+        let amountText = formattedServingValue(value)
+        guard let unit = unit?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !unit.isEmpty else {
+            return amountText
         }
-        return amount
+        return "\(amountText) \(unit)"
+    }
+
+    private static func formattedServingValue(_ value: Double) -> String {
+        if value.truncatingRemainder(dividingBy: 1) == 0 {
+            return String(Int(value))
+        }
+        var string = String(format: "%.2f", value)
+        while string.last == "0" { string.removeLast() }
+        if string.last == "." { string.removeLast() }
+        return string
+    }
+
+    private func originalServingMatchesCurrent(_ original: MealItemServingDescriptor) -> Bool {
+        if let amount = original.amount, abs(amount - serving) > 0.0001 {
+            return false
+        }
+        let originalUnit = canonicalUnitLabel(original.unit ?? "")
+        let currentUnit = canonicalUnitLabel(servingUnit ?? "")
+        if !originalUnit.isEmpty || !currentUnit.isEmpty {
+            if originalUnit != currentUnit {
+                return false
+            }
+        }
+        if original.amount == nil {
+            let computedText = MealItem.formattedServingText(serving, unit: servingUnit)
+            if let text = original.resolvedText, !text.isEmpty {
+                return text == computedText
+            }
+        }
+        return true
     }
 
     var baselineMeasure: MealItemMeasure? {
@@ -492,6 +539,15 @@ extension MealItem {
         updated.protein *= factor
         updated.carbs *= factor
         updated.fat *= factor
+        if updated.originalServing != nil {
+            let unitText = updated.servingUnit?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let cleanedUnit = (unitText?.isEmpty == false) ? unitText : nil
+            updated.originalServing = MealItemServingDescriptor(
+                amount: updated.serving,
+                unit: cleanedUnit,
+                text: MealItem.formattedServingText(updated.serving, unit: cleanedUnit)
+            )
+        }
         if let nutrients = foodNutrients {
             updated.foodNutrients = nutrients.map { nutrient in
                 Nutrient(

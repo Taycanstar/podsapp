@@ -161,6 +161,13 @@ struct SinglePlanView: View {
             }
         }
         .background(Color("primarybg"))
+        .onAppear {
+            // Restore active workout session if app was terminated while workout in progress
+            if currentWorkout == nil, workoutManager.hasActiveWorkout {
+                currentWorkout = workoutManager.currentWorkout
+                print("🏃‍♂️ SinglePlanView: Auto-restored active workout from cold start")
+            }
+        }
         .navigationTitle(program.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

@@ -264,6 +264,12 @@ struct PlanView: View {
             await loadData()
         }
         .onAppear {
+            // Restore active workout session if app was terminated while workout in progress
+            if currentWorkout == nil, workoutManager.hasActiveWorkout {
+                currentWorkout = workoutManager.currentWorkout
+                print("🏃‍♂️ PlanView: Auto-restored active workout from cold start")
+            }
+
             // Set selected week to the active week (first incomplete week, sequence-based)
             let activeWeek = program.activeWeekNumber
             selectedWeekNumber = min(activeWeek, program.totalCalendarWeeks)

@@ -135,26 +135,13 @@ struct AgentChatView: View {
                 inputBar
 
                 // "Start talking" overlay when in voice mode and chat is empty
-                if viewModel.messages.isEmpty && realtimeSession.messages.isEmpty {
-                    if realtimeSession.state == .connecting {
-                        VStack {
-                            Spacer()
-                            ProgressView()
-                                .scaleEffect(1.2)
-                                .padding(.bottom, 8)
-                            Text("Connecting...")
-                                .font(.title2)
-                                .foregroundColor(.secondary)
-                            Spacer()
-                        }
-                    } else if realtimeSession.state == .connected {
-                        VStack {
-                            Spacer()
-                            Text("Start talking")
-                                .font(.title2)
-                                .foregroundColor(.secondary)
-                            Spacer()
-                        }
+                if viewModel.messages.isEmpty && realtimeSession.messages.isEmpty && realtimeSession.state == .connected {
+                    VStack {
+                        Spacer()
+                        Text("Start talking")
+                            .font(.title2)
+                            .foregroundColor(.secondary)
+                        Spacer()
                     }
                 }
             }
