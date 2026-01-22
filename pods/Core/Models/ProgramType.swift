@@ -232,6 +232,7 @@ struct TrainingProgram: Codable, Identifiable {
     let endDate: String
     let totalWeeks: Int
     let includeDeload: Bool
+    let periodizationEnabled: Bool?
     let defaultWarmupEnabled: Bool?
     let defaultCooldownEnabled: Bool?
     let includeFoamRolling: Bool?

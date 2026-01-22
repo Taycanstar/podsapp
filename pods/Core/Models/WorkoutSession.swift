@@ -13,7 +13,10 @@ class WorkoutSession {
     var remoteId: Int?
     var notes: String?
     var totalDuration: TimeInterval?
-    
+
+    // Block-based workout structure (JSON encoded)
+    var blocksData: Data?
+
     // Sync properties
     var createdAt: Date
     var updatedAt: Date
@@ -21,7 +24,7 @@ class WorkoutSession {
     var isDeleted: Bool
     var needsSync: Bool
     
-    init(name: String, userEmail: String, notes: String? = nil) {
+    init(name: String, userEmail: String, notes: String? = nil, blocks: [WorkoutBlock]? = nil) {
         self.id = UUID()
         self.name = name
         self.startedAt = Date()
@@ -29,13 +32,25 @@ class WorkoutSession {
         self.userEmail = userEmail
         self.remoteId = nil
         self.notes = notes
-        
+        self.blocksData = blocks.flatMap { try? JSONEncoder().encode($0) }
+
         // Initialize sync properties
         self.createdAt = Date()
         self.updatedAt = Date()
         self.syncVersion = 1
         self.isDeleted = false
         self.needsSync = true
+    }
+
+    // Computed property to access blocks
+    var blocks: [WorkoutBlock]? {
+        get {
+            guard let data = blocksData else { return nil }
+            return try? JSONDecoder().decode([WorkoutBlock].self, from: data)
+        }
+        set {
+            blocksData = newValue.flatMap { try? JSONEncoder().encode($0) }
+        }
     }
     
     var isCompleted: Bool {

@@ -231,13 +231,14 @@ class ProgramService: ObservableObject {
     // MARK: - Update Plan Settings (MacroFactor-style)
 
     /// Update plan settings that don't require regeneration.
-    /// Includes: name, total_weeks, include_deload, day_order
+    /// Includes: name, total_weeks, include_deload, periodization_enabled, day_order
     func updatePlanSettings(
         programId: Int,
         userEmail: String,
         name: String? = nil,
         totalWeeks: Int? = nil,
         includeDeload: Bool? = nil,
+        periodizationEnabled: Bool? = nil,
         dayOrder: [[String: String]]? = nil
     ) async throws -> TrainingProgram {
         print("[ProgramService] Updating plan settings for program: \(programId)")
@@ -249,6 +250,7 @@ class ProgramService: ObservableObject {
             name: name,
             totalWeeks: totalWeeks,
             includeDeload: includeDeload,
+            periodizationEnabled: periodizationEnabled,
             dayOrder: dayOrder
         )
 
@@ -637,6 +639,7 @@ class ProgramService: ObservableObject {
             endDate: program.endDate,
             totalWeeks: program.totalWeeks,
             includeDeload: program.includeDeload,
+            periodizationEnabled: program.periodizationEnabled,
             defaultWarmupEnabled: program.defaultWarmupEnabled,
             defaultCooldownEnabled: program.defaultCooldownEnabled,
             includeFoamRolling: program.includeFoamRolling,
@@ -717,6 +720,7 @@ class ProgramService: ObservableObject {
             endDate: program.endDate,
             totalWeeks: program.totalWeeks,
             includeDeload: program.includeDeload,
+            periodizationEnabled: program.periodizationEnabled,
             defaultWarmupEnabled: program.defaultWarmupEnabled,
             defaultCooldownEnabled: program.defaultCooldownEnabled,
             includeFoamRolling: program.includeFoamRolling,
@@ -771,6 +775,7 @@ class ProgramService: ObservableObject {
             endDate: program.endDate,
             totalWeeks: program.totalWeeks,
             includeDeload: program.includeDeload,
+            periodizationEnabled: program.periodizationEnabled,
             defaultWarmupEnabled: program.defaultWarmupEnabled,
             defaultCooldownEnabled: program.defaultCooldownEnabled,
             includeFoamRolling: program.includeFoamRolling,
@@ -879,6 +884,7 @@ class ProgramService: ObservableObject {
             endDate: program.endDate,
             totalWeeks: program.totalWeeks,
             includeDeload: program.includeDeload,
+            periodizationEnabled: program.periodizationEnabled,
             defaultWarmupEnabled: program.defaultWarmupEnabled,
             defaultCooldownEnabled: program.defaultCooldownEnabled,
             includeFoamRolling: program.includeFoamRolling,
@@ -947,6 +953,7 @@ class ProgramService: ObservableObject {
             endDate: program.endDate,
             totalWeeks: program.totalWeeks,
             includeDeload: program.includeDeload,
+            periodizationEnabled: program.periodizationEnabled,
             defaultWarmupEnabled: program.defaultWarmupEnabled,
             defaultCooldownEnabled: program.defaultCooldownEnabled,
             includeFoamRolling: program.includeFoamRolling,

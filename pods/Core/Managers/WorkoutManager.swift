@@ -1723,7 +1723,8 @@ class WorkoutManager: ObservableObject {
             estimatedDurationMinutes: estimatedDuration,
             actualDurationMinutes: nil,
             notes: workout.notes,
-            exercises: exercisesPayload
+            exercises: exercisesPayload,
+            blocks: nil
         )
     }
 
@@ -2410,7 +2411,8 @@ class WorkoutManager: ObservableObject {
                                      startTime: Date,
                                      duration: TimeInterval,
                                      context: ModelContext) -> WorkoutSession {
-        let session = WorkoutSession(name: workout.title, userEmail: userEmail)
+        // Include blocks for server sync (block-based workout visibility)
+        let session = WorkoutSession(name: workout.title, userEmail: userEmail, blocks: workout.blocks)
         session.startedAt = startTime
         context.insert(session)
 
@@ -2453,8 +2455,9 @@ class WorkoutManager: ObservableObject {
         var capturedFlexibleSets: [FlexibleSetData] = []
 
         for setData in flexibleSets where !setData.isWarmupSet {
-            let wasLogged = setData.wasLogged ?? setData.isCompleted
-            guard wasLogged else { continue }
+            // Use isActuallyCompleted to capture sets that have real data entered,
+            // not just wasLogged/isCompleted flags (fixes 0 exercises in timeline)
+            guard setData.isActuallyCompleted else { continue }
 
             var sanitizedSet = setData
             sanitizedSet.wasLogged = true
@@ -2966,11 +2969,12 @@ class WorkoutManager: ObservableObject {
         print("🔍 DEBUG completeWorkout - Exercise count: \(workout.exercises.count)")
         for (i, ex) in workout.exercises.enumerated() {
             let flexSets = ex.flexibleSets ?? []
+            let actuallyCompletedCount = flexSets.filter { $0.isActuallyCompleted }.count
             let loggedCount = flexSets.filter { $0.wasLogged == true }.count
             let completedCount = flexSets.filter { $0.isCompleted == true }.count
-            print("🔍 DEBUG Exercise[\(i)] '\(ex.exercise.name)': flexibleSets=\(flexSets.count), wasLogged=\(loggedCount), isCompleted=\(completedCount)")
+            print("🔍 DEBUG Exercise[\(i)] '\(ex.exercise.name)': flexibleSets=\(flexSets.count), actuallyCompleted=\(actuallyCompletedCount), wasLogged=\(loggedCount), isCompleted=\(completedCount)")
             for (j, set) in flexSets.enumerated() {
-                print("   Set[\(j)]: wasLogged=\(set.wasLogged ?? false), isCompleted=\(set.isCompleted), reps=\(set.reps ?? "nil"), weight=\(set.weight ?? "nil")")
+                print("   Set[\(j)]: isActuallyCompleted=\(set.isActuallyCompleted), wasLogged=\(set.wasLogged ?? false), isCompleted=\(set.isCompleted), reps=\(set.reps ?? "nil"), weight=\(set.weight ?? "nil")")
             }
         }
 

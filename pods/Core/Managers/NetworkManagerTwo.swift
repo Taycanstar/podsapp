@@ -548,6 +548,46 @@ class NetworkManagerTwo {
             let notes: String?
         }
 
+        // Block-based workout structures
+        struct Block: Codable {
+            let orderIndex: Int
+            let blockType: String  // standard, superset, circuit
+            let rounds: Int
+            let restBetweenExercisesSec: Int?
+            let restBetweenRoundsSec: Int?
+            let weightNormalization: String?
+            let timingConfig: TimingConfig?
+            let exercises: [BlockExerciseRequest]
+        }
+
+        struct BlockExerciseRequest: Codable {
+            let orderIndex: Int
+            let exerciseId: Int
+            let exerciseName: String
+            let schemeType: String  // rep, interval
+            let repScheme: RepSchemeRequest?
+            let intervalScheme: IntervalSchemeRequest?
+        }
+
+        struct RepSchemeRequest: Codable {
+            let sets: Int
+            let reps: Int?
+            let rir: Int?
+            let restSec: Int?
+        }
+
+        struct IntervalSchemeRequest: Codable {
+            let workSec: Int
+            let restSec: Int
+            let targetReps: Int?
+        }
+
+        struct TimingConfig: Codable {
+            let prepareSec: Int?
+            let transitionSec: Int?
+            let autoAdvance: Bool?
+        }
+
         let userEmail: String
         let name: String
         let status: String
@@ -559,6 +599,7 @@ class NetworkManagerTwo {
         let actualDurationMinutes: Int?
         let notes: String?
         let exercises: [Exercise]
+        let blocks: [Block]?  // Optional blocks for block-based workout sync
     }
     
     struct UsernameEligibilityResponse: Codable {
@@ -6000,6 +6041,7 @@ class NetworkManagerTwo {
         name: String? = nil,
         totalWeeks: Int? = nil,
         includeDeload: Bool? = nil,
+        periodizationEnabled: Bool? = nil,
         dayOrder: [[String: String]]? = nil
     ) async throws -> TrainingProgram {
         guard let url = URL(string: "\(baseUrl)/api/programs/\(programId)/settings/") else { throw NetworkError.invalidURL }
@@ -6012,6 +6054,7 @@ class NetworkManagerTwo {
         if let name = name { body["name"] = name }
         if let totalWeeks = totalWeeks { body["total_weeks"] = totalWeeks }
         if let includeDeload = includeDeload { body["include_deload"] = includeDeload }
+        if let periodizationEnabled = periodizationEnabled { body["periodization_enabled"] = periodizationEnabled }
         if let dayOrder = dayOrder { body["day_order"] = dayOrder }
 
         request.httpBody = try JSONSerialization.data(withJSONObject: body)

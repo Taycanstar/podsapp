@@ -659,16 +659,16 @@ class WorkoutCloudSync {
                         weightKg: set.actualWeight ?? set.targetWeight,
                         reps: repsValue,
                         durationSeconds: durationSeconds,
-                        restSeconds: nil,
+                        restSeconds: set.restSeconds,
                         distanceMeters: distanceMeters,
                         distanceUnit: nil,
-                        paceSecondsPerKm: nil,
-                        rpe: nil,
-                        heartRateBpm: nil,
-                        intensityZone: nil,
-                        stretchIntensity: nil,
-                        rangeOfMotionNotes: nil,
-                        roundsCompleted: roundsCompleted,
+                        paceSecondsPerKm: set.paceSecondsPerKm,
+                        rpe: set.rpe,
+                        heartRateBpm: set.heartRateBpm,
+                        intensityZone: set.intensityZone,
+                        stretchIntensity: set.stretchIntensity,
+                        rangeOfMotionNotes: set.rangeOfMotionNotes,
+                        roundsCompleted: set.roundsCompleted ?? roundsCompleted,
                         isWarmup: false,
                         isCompleted: set.completed,
                         notes: set.notes
@@ -681,6 +681,48 @@ class WorkoutCloudSync {
         // Fallback to workout's stored email only if UserDefaults is empty (shouldn't happen)
         let currentUserEmail = UserDefaults.standard.string(forKey: "userEmail") ?? workout.userEmail
 
+        // Convert blocks to network request format for server-side block visibility
+        let blockRequests: [NetworkManagerTwo.WorkoutRequest.Block]? = workout.blocks?.enumerated().map { index, block in
+            NetworkManagerTwo.WorkoutRequest.Block(
+                orderIndex: index + 1,
+                blockType: block.type.rawValue,
+                rounds: block.rounds,
+                restBetweenExercisesSec: block.restBetweenExercises,
+                restBetweenRoundsSec: block.restBetweenRounds,
+                weightNormalization: block.weightNormalization?.rawValue,
+                timingConfig: block.timingConfig.map {
+                    NetworkManagerTwo.WorkoutRequest.TimingConfig(
+                        prepareSec: $0.prepareSec,
+                        transitionSec: $0.transitionSec,
+                        autoAdvance: $0.autoAdvance
+                    )
+                },
+                exercises: block.exercises.enumerated().map { exIndex, blockExercise in
+                    NetworkManagerTwo.WorkoutRequest.BlockExerciseRequest(
+                        orderIndex: exIndex + 1,
+                        exerciseId: blockExercise.exercise.id,
+                        exerciseName: blockExercise.exercise.name,
+                        schemeType: blockExercise.schemeType.rawValue,
+                        repScheme: blockExercise.repScheme.map {
+                            NetworkManagerTwo.WorkoutRequest.RepSchemeRequest(
+                                sets: $0.sets,
+                                reps: $0.reps,
+                                rir: $0.rir,
+                                restSec: $0.restSec
+                            )
+                        },
+                        intervalScheme: blockExercise.intervalScheme.map {
+                            NetworkManagerTwo.WorkoutRequest.IntervalSchemeRequest(
+                                workSec: $0.workSec,
+                                restSec: $0.restSec,
+                                targetReps: $0.targetReps
+                            )
+                        }
+                    )
+                }
+            )
+        }
+
         return NetworkManagerTwo.WorkoutRequest(
             userEmail: currentUserEmail,
             name: workout.name,
@@ -692,7 +734,8 @@ class WorkoutCloudSync {
             estimatedDurationMinutes: estimatedMinutes,
             actualDurationMinutes: actualMinutes,
             notes: workout.notes,
-            exercises: exercises
+            exercises: exercises,
+            blocks: blockRequests
         )
     }
 }

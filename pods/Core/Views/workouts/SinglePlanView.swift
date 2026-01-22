@@ -35,9 +35,17 @@ struct SinglePlanView: View {
     // Workout in progress
     @State private var currentWorkout: TodayWorkout?
 
+    // Periodization setting - refreshed when settings sheet closes
+    @State private var periodizationEnabled: Bool = true
+
     // Use the active program from ProgramService if available, otherwise use initial
     private var program: TrainingProgram {
         programService.activeProgram ?? initialProgram
+    }
+
+    // Load periodization setting from program model
+    private func loadPeriodizationSetting() {
+        periodizationEnabled = program.periodizationEnabled ?? true
     }
 
     // Computed: Get all days from week 1 as the template
@@ -52,9 +60,11 @@ struct SinglePlanView: View {
     }
 
     // Get exercise with per-week data
-    // Shows Week 1-N for training weeks, plus "Deload" for deload week if enabled
+    // When periodization is ON: Shows Week 1-N for training weeks, plus "Deload" for deload week if enabled
+    // When periodization is OFF: Shows single card with "X Weeks" label and consistent sets/reps
     private func weeklyDataForExercise(_ exerciseId: Int) -> [WeeklyExerciseData] {
-        let result = program.weeks?.compactMap { week -> WeeklyExerciseData? in
+        // Get all weekly data first
+        let allWeeklyData = program.weeks?.compactMap { week -> WeeklyExerciseData? in
             guard let day = week.days?.first(where: { $0.workoutLabel == selectedDay?.workoutLabel }),
                   let exercise = day.workout?.exercises?.first(where: { $0.exerciseId == exerciseId }) else {
                 return nil
@@ -73,7 +83,37 @@ struct SinglePlanView: View {
             )
         } ?? []
 
-        return result
+        // If periodization is OFF, consolidate into a single card
+        if !periodizationEnabled {
+            // Separate training weeks from deload
+            let trainingWeeks = allWeeklyData.filter { !$0.isDeload }
+            let deloadWeek = allWeeklyData.first(where: { $0.isDeload })
+
+            // Use week 1's sets/reps as the consistent value (or first available)
+            guard let firstWeek = trainingWeeks.first else { return allWeeklyData }
+
+            // Count non-deload weeks for label
+            let weekCount = trainingWeeks.count
+            let consolidatedLabel = "\(weekCount) Week\(weekCount == 1 ? "" : "s")"
+
+            var result = [WeeklyExerciseData(
+                week: 1,
+                sets: firstWeek.sets,
+                reps: firstWeek.reps,
+                isDeload: false,
+                displayLabel: consolidatedLabel,
+                exerciseInstanceId: firstWeek.exerciseInstanceId
+            )]
+
+            // Still show deload separately if it exists (deload is always separate)
+            if let deload = deloadWeek {
+                result.append(deload)
+            }
+
+            return result
+        }
+
+        return allWeeklyData
     }
 
     // Build a TodayWorkout from the selected day's exercises
@@ -162,6 +202,9 @@ struct SinglePlanView: View {
         }
         .background(Color("primarybg"))
         .onAppear {
+            // Load periodization setting from UserDefaults
+            loadPeriodizationSetting()
+
             // Restore active workout session if app was terminated while workout in progress
             if currentWorkout == nil, workoutManager.hasActiveWorkout {
                 currentWorkout = workoutManager.currentWorkout
@@ -185,6 +228,8 @@ struct SinglePlanView: View {
                 // Plan was deleted - dismiss this view
                 shouldDismiss = true
             } onSettingsSaved: {
+                // Reload periodization setting (stored locally)
+                loadPeriodizationSetting()
                 // Refresh program data from backend
                 Task {
                     _ = try? await programService.fetchActiveProgram(userEmail: userEmail)
@@ -1067,7 +1112,8 @@ private struct PlanSettingsSheet: View {
         _includeDeload = State(initialValue: program.includeDeload)
         _warmupEnabled = State(initialValue: program.defaultWarmupEnabled ?? false)
         _cooldownEnabled = State(initialValue: program.defaultCooldownEnabled ?? false)
-        _periodizationEnabled = State(initialValue: true) // Default enabled (MacroFactor-style)
+        // Load periodization setting from program model (default: true)
+        _periodizationEnabled = State(initialValue: program.periodizationEnabled ?? true)
 
         // Initialize day order from week 1 days (use actual day count, not hardcoded 7)
         let week1Days = program.weeks?.first?.days?.sorted(by: { $0.dayNumber < $1.dayNumber }) ?? []
@@ -1158,11 +1204,11 @@ private struct PlanSettingsSheet: View {
 
                 // Editable: Periodization
                 Section {
-                    Toggle("Periodization", isOn: $periodizationEnabled)
+                    Toggle("Structured Progression", isOn: $periodizationEnabled)
                 } header: {
                     Text("Periodization")
                 } footer: {
-                    Text("Automatically adjusts volume and intensity across weeks for optimal progress.")
+                    Text("Organize your workouts into phases that automatically increase difficulty. Rest weeks are included to prevent burnout and support recovery.")
                 }
 
                 // Read-only: Generation Settings (baked in, can't change)
@@ -1332,20 +1378,22 @@ private struct PlanSettingsSheet: View {
                 let nameToSend = planName != program.name ? planName : nil
                 let weeksToSend = totalWeeks != program.totalWeeks ? totalWeeks : nil
                 let deloadToSend = includeDeload != program.includeDeload ? includeDeload : nil
+                let periodizationToSend = periodizationEnabled != (program.periodizationEnabled ?? true) ? periodizationEnabled : nil
 
                 // Check if warmup/cooldown changed
                 let warmupChanged = warmupEnabled != (program.defaultWarmupEnabled ?? false)
                 let cooldownChanged = cooldownEnabled != (program.defaultCooldownEnabled ?? false)
 
-                print("[PlanSettings] Saving: name='\(planName)', weeks=\(totalWeeks), includeDeload=\(includeDeload), warmup=\(warmupEnabled), cooldown=\(cooldownEnabled), dayOrder=\(dayOrderPattern)")
+                print("[PlanSettings] Saving: name='\(planName)', weeks=\(totalWeeks), includeDeload=\(includeDeload), periodization=\(periodizationEnabled), warmup=\(warmupEnabled), cooldown=\(cooldownEnabled), dayOrder=\(dayOrderPattern)")
 
-                // Update plan settings (name, weeks, deload, day order)
+                // Update plan settings (name, weeks, deload, periodization, day order)
                 _ = try await programService.updatePlanSettings(
                     programId: program.id,
                     userEmail: userEmail,
                     name: nameToSend,
                     totalWeeks: weeksToSend,
                     includeDeload: deloadToSend,
+                    periodizationEnabled: periodizationToSend,
                     dayOrder: dayOrderArray
                 )
 
@@ -2672,6 +2720,7 @@ private extension View {
             endDate: "2026-03-25",
             totalWeeks: 12,
             includeDeload: true,
+            periodizationEnabled: true,
             defaultWarmupEnabled: true,
             defaultCooldownEnabled: false,
             includeFoamRolling: true,

@@ -17,9 +17,19 @@ class SetInstance {
     var distanceMeters: Double?
     var trackingTypeRawValue: String?
 
-    // Additional properties for sync compatibility
+    // Additional properties for sync compatibility with Django
     var completed: Bool { isCompleted } // Computed property for backward compatibility
     var completedAt: Date?
+
+    // Extended fields matching Django ExerciseSet model
+    var rpe: Int?                    // Rate of Perceived Exertion (1-10)
+    var heartRateBpm: Int?           // Heart rate during set
+    var intensityZone: Int?          // Training intensity zone (1-5)
+    var stretchIntensity: Int?       // For stretching exercises
+    var rangeOfMotionNotes: String?  // Notes about ROM
+    var restSeconds: Int?            // Rest time after set
+    var paceSecondsPerKm: Int?       // Pace for cardio exercises
+    var roundsCompleted: Int?        // For circuit/rounds tracking
 
     init(setNumber: Int, targetReps: Int, targetWeight: Double? = nil) {
         self.id = UUID()
@@ -32,6 +42,14 @@ class SetInstance {
         self.durationSeconds = nil
         self.distanceMeters = nil
         self.trackingTypeRawValue = nil
+        self.rpe = nil
+        self.heartRateBpm = nil
+        self.intensityZone = nil
+        self.stretchIntensity = nil
+        self.rangeOfMotionNotes = nil
+        self.restSeconds = nil
+        self.paceSecondsPerKm = nil
+        self.roundsCompleted = nil
     }
     
     var displayWeight: String {
@@ -72,6 +90,14 @@ class SetInstance {
         self.durationSeconds = nil
         self.distanceMeters = nil
         self.trackingTypeRawValue = nil
+        self.rpe = nil
+        self.heartRateBpm = nil
+        self.intensityZone = nil
+        self.stretchIntensity = nil
+        self.rangeOfMotionNotes = nil
+        self.restSeconds = nil
+        self.paceSecondsPerKm = nil
+        self.roundsCompleted = nil
     }
     
     // Helper method to update target values

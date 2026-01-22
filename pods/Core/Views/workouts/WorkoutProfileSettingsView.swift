@@ -5,38 +5,22 @@ struct WorkoutProfileSettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
     @ObservedObject private var profile = UserProfileService.shared
     @ObservedObject private var workoutManager = WorkoutManager.shared
+    @AppStorage("userEmail") private var userEmail: String = ""
 
     @State private var showDurationPicker = false
     @State private var durationHours: Int = 0
     @State private var durationMinutes: Int = 45
-    @State private var showNewProfileSheet = false
-    @State private var showSwitchProfileSheet = false
-    @State private var newProfileName: String = ""
-    @State private var isCreatingProfile = false
-    @State private var isSwitchingProfile = false
-    @FocusState private var isNewProfileFieldFocused: Bool
-    @State private var showDeleteProfileAlert = false
-    @State private var profilePendingDeletion: WorkoutProfile?
-    @State private var isDeletingProfile = false
-    @State private var deletionError: String?
-    @State private var showEquipmentSheet = false
-    @State private var equipmentSelection: Set<Equipment> = []
-    @State private var equipmentSelectionBackup: Set<Equipment> = []
+    @State private var showGymProfilesSheet = false
 
     private var rowBackground: Color { Color("altcard") }
     private var iconColor: Color { colorScheme == .dark ? .white : .primary }
 
-    private var currentProfileTitle: String {
-        profile.activeWorkoutProfile?.displayName ?? "Gym Profile"
-    }
-
-    private var canSwitchProfiles: Bool {
-        profile.workoutProfiles.count > 1
-    }
-
-    private var canDeleteProfiles: Bool {
-        profile.workoutProfiles.count > 1
-    }
+    // Limited training splits as per requirements
+    private static let allowedSplits: [TrainingSplitPreference] = [
+        .fullBody,
+        .pushPullLower,
+        .upperLower
+    ]
 
     private var formattedDuration: String {
         let total = profile.availableTime
@@ -94,12 +78,11 @@ struct WorkoutProfileSettingsView: View {
 
     var body: some View {
         Form {
+            // MARK: - Gym Equipment Section
             Section(header: Text("Gym Equipment")) {
+                // Gym Profile selector - tap to manage profiles
                 Button {
-                    let currentSelection = Set(profile.availableEquipment)
-                    equipmentSelection = currentSelection
-                    equipmentSelectionBackup = currentSelection
-                    showEquipmentSheet = true
+                    showGymProfilesSheet = true
                 } label: {
                     HStack {
                         HStack(spacing: 12) {
@@ -107,78 +90,63 @@ struct WorkoutProfileSettingsView: View {
                                 .font(.system(size: 16))
                                 .fontWeight(.semibold)
                                 .foregroundColor(iconColor)
-                            Text("Available Equipment")
-                                .font(.system(size: 15))
-                                .foregroundColor(iconColor)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Gym Profile")
+                                    .font(.system(size: 15))
+                                    .foregroundColor(iconColor)
+                                Text(profile.activeWorkoutProfile?.displayName ?? "Default")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(.secondary)
+                            }
                         }
                         Spacer()
                         Text(equipmentSelectionSummary)
                             .foregroundColor(.secondary)
-                            .font(.system(size: 15))
+                            .font(.system(size: 14))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.secondary.opacity(0.6))
                     }
                 }
                 .buttonStyle(.plain)
                 .listRowBackground(rowBackground)
-
-                Toggle(isOn: Binding(
-                    get: { profile.bodyweightOnlyWorkouts },
-                    set: { newValue in
-                        profile.bodyweightOnlyWorkouts = newValue
-                        sendPreferenceUpdate(["bodyweight_only_workout": newValue])
-                        if newValue {
-                            let bodyweightEquipment = EquipmentView.EquipmentType.bodyweightOnly.equipmentList
-                            workoutManager.customEquipment = bodyweightEquipment
-                        } else {
-                            workoutManager.customEquipment = nil
-                        }
-                        Task { await workoutManager.generateTodayWorkout(forceRegenerate: true) }
-                    }
-                )) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "figure.strengthtraining.traditional")
-                            .font(.system(size: 16))
-                            .fontWeight(.semibold)
-                            .foregroundColor(iconColor)
-                        Text("Bodyweight Only Workout")
-                            .font(.system(size: 15))
-                            .foregroundColor(iconColor)
-                    }
-                }
-                .tint(.accentColor)
-                .listRowBackground(rowBackground)
             }
 
+            // MARK: - Workout Settings Section
             Section(header: Text("Workout Settings")) {
-                // Fitness Goal
+                // Training Split
                 HStack {
                     HStack(spacing: 12) {
-                        Image(systemName: "target")
+                        Image(systemName: "square.split.2x2")
                             .font(.system(size: 16))
                             .fontWeight(.semibold)
                             .foregroundColor(iconColor)
-                        Text("Fitness Goal")
+                        Text("Training Split")
                             .font(.system(size: 15))
                             .foregroundColor(iconColor)
                     }
                     Spacer()
                     Menu {
-                        ForEach(FitnessGoalPickerView.pickerGoals, id: \.self) { goal in
+                        ForEach(Self.allowedSplits, id: \.self) { split in
                             Button(action: {
-                                profile.fitnessGoal = goal
-                                sendPreferenceUpdate(["preferred_fitness_goal": goal.rawValue])
+                                profile.trainingSplit = split
+                                sendPreferenceUpdate(["training_split": split.rawValue])
+
+                                Task {
+                                    await workoutManager.generateTodayWorkout(forceRegenerate: true)
+                                }
                             }) {
                                 HStack {
-                                    Text(goal.displayName)
-                                  
-                                    if profile.fitnessGoal.normalized == goal.normalized { Image(systemName: "checkmark") }
+                                    Text(split.displayName)
+                                    if profile.trainingSplit == split { Image(systemName: "checkmark") }
                                 }
                             }
                         }
                     } label: {
                         HStack {
-                            Text(profile.fitnessGoal.displayName)
-                                .foregroundColor(.secondary)
+                            Text(profile.trainingSplit.displayName)
                                 .font(.system(size: 15))
+                                .foregroundColor(.secondary)
                             Image(systemName: "chevron.up.chevron.down")
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
@@ -187,129 +155,7 @@ struct WorkoutProfileSettingsView: View {
                 }
                 .listRowBackground(rowBackground)
 
-                // Fitness Experience
-                HStack {
-                    HStack(spacing: 12) {
-                        Image(systemName: "aqi.medium")
-                            .font(.system(size: 16))
-                            .fontWeight(.semibold)
-                            .foregroundColor(iconColor)
-                        Text("Fitness Experience")
-                            .font(.system(size: 15))
-                            .foregroundColor(iconColor)
-                    }
-                    Spacer()
-                    Menu {
-                        ForEach(ExperienceLevel.allCases, id: \.self) { lvl in
-                            Button(action: {
-                                profile.experienceLevel = lvl
-                                sendPreferenceUpdate(["experience_level": lvl.rawValue])
-                            }) {
-                                HStack {
-                                    Text(lvl.displayName)
-                                 
-                                    if profile.experienceLevel == lvl { Image(systemName: "checkmark") }
-                                }
-                            }
-                        }
-                    } label: {
-                        HStack {
-                            Text(profile.experienceLevel.displayName)
-                                .foregroundColor(.secondary)
-                                .font(.system(size: 15))
-                            Image(systemName: "chevron.up.chevron.down")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                }
-                .listRowBackground(rowBackground)
-
-                // Exercise Variability
-                HStack {
-                    HStack(spacing: 12) {
-                        Image(systemName: "shuffle")
-                            .font(.system(size: 16))
-                            .fontWeight(.semibold)
-                            .foregroundColor(iconColor)
-                        Text("Exercise Variability")
-                            .font(.system(size: 15))
-                            .foregroundColor(iconColor)
-                    }
-                    Spacer()
-                    Menu {
-                        ForEach(ExerciseVariabilityPreference.allCases, id: \.self) { pref in
-                            Button(action: {
-                                profile.exerciseVariability = pref
-                                sendPreferenceUpdate(["exercise_variability": pref.rawValue])
-                            }) {
-                                HStack {
-                                    Text(pref.displayName)
-
-                                    if profile.exerciseVariability == pref { Image(systemName: "checkmark") }
-                                }
-                            }
-                        }
-                    } label: {
-                        HStack {
-                            Text(profile.exerciseVariability.displayName)
-                                .foregroundColor(.secondary)
-                                .font(.system(size: 15))
-                            Image(systemName: "chevron.up.chevron.down")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                }
-                .listRowBackground(rowBackground)
-
-                // Circuits and Supersets
-                Toggle(isOn: Binding(
-                    get: { profile.circuitsAndSupersetsEnabled },
-                    set: { newVal in
-                        profile.circuitsAndSupersetsEnabled = newVal
-                        sendPreferenceUpdate(["enable_circuits_and_supersets": newVal])
-                    }
-                )) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "square.grid.3x3")
-                            .font(.system(size: 16))
-                            .fontWeight(.semibold)
-                            .foregroundColor(iconColor)
-                        Text("Circuits and Supersets")
-                            .font(.system(size: 15))
-                            .foregroundColor(iconColor)
-                    }
-                }
-                .tint(.accentColor)
-                .listRowBackground(rowBackground)
-
-                // Warm-up Sets
-                Toggle(isOn: Binding(
-                    get: { profile.warmupSetsEnabled },
-                    set: { newVal in
-                        profile.warmupSetsEnabled = newVal
-                        if !newVal {
-                            WorkoutManager.shared.clearWarmupSetsForCurrentWorkout()
-                        }
-                        // Per-exercise warm-up sets flag (distinct from warm-up section)
-                        sendPreferenceUpdate(["enable_warmup_sets": newVal])
-                    }
-                )) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "flame")
-                            .font(.system(size: 16))
-                            .fontWeight(.semibold)
-                            .foregroundColor(iconColor)
-                        Text("Warm-up Sets")
-                            .font(.system(size: 15))
-                            .foregroundColor(iconColor)
-                    }
-                }
-                .tint(.accentColor)
-                .listRowBackground(rowBackground)
-
-                // Workout Duration (inline picker on tap)
+                // Workout Duration
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
                         HStack(spacing: 12) {
@@ -332,18 +178,17 @@ struct WorkoutProfileSettingsView: View {
                         .buttonStyle(.plain)
                     }
 
-                if showDurationPicker {
-                    HStack {
-                            // Hours
+                    if showDurationPicker {
+                        HStack {
                             Picker("Hours", selection: $durationHours.onChange { _ in updateDuration() }) {
                                 ForEach(0...2, id: \.self) { Text("\($0) h").tag($0) }
                             }
                             .pickerStyle(.wheel)
                             .frame(maxWidth: .infinity)
-                            // Minutes
+
                             Picker("Minutes", selection: $durationMinutes.onChange { _ in updateDuration() }) {
                                 ForEach([0,15,30,45], id: \.self) { Text("\($0) m").tag($0) }
-                              }
+                            }
                             .pickerStyle(.wheel)
                             .frame(maxWidth: .infinity)
                         }
@@ -351,130 +196,137 @@ struct WorkoutProfileSettingsView: View {
                     }
                 }
                 .listRowBackground(rowBackground)
-              
 
-                // Training Splits
+                // Experience Level
                 HStack {
                     HStack(spacing: 12) {
-                        Image(systemName: "square.split.2x2")
+                        Image(systemName: "aqi.medium")
                             .font(.system(size: 16))
                             .fontWeight(.semibold)
                             .foregroundColor(iconColor)
-                        Text("Training Splits")
+                        Text("Experience Level")
                             .font(.system(size: 15))
                             .foregroundColor(iconColor)
                     }
                     Spacer()
                     Menu {
-                        ForEach(TrainingSplitPreference.allCases, id: \.self) { split in
+                        ForEach(ExperienceLevel.allCases, id: \.self) { lvl in
                             Button(action: {
-                                profile.trainingSplit = split
-                                sendPreferenceUpdate(["training_split": split.rawValue])
-
-                                // Directly regenerate workout (no race condition)
-                                Task {
-                                    await workoutManager.generateTodayWorkout(forceRegenerate: true)
-                                }
+                                profile.experienceLevel = lvl
+                                sendPreferenceUpdate(["experience_level": lvl.rawValue])
                             }) {
                                 HStack {
-                                    Text(split.displayName)
-
-                                    if profile.trainingSplit == split { Image(systemName: "checkmark") }
+                                    Text(lvl.displayName)
+                                    if profile.experienceLevel == lvl { Image(systemName: "checkmark") }
                                 }
                             }
                         }
                     } label: {
                         HStack {
-                            Text(profile.trainingSplit.displayName)
-                            .font(.system(size: 15))
+                            Text(profile.experienceLevel.displayName)
                                 .foregroundColor(.secondary)
+                                .font(.system(size: 15))
                             Image(systemName: "chevron.up.chevron.down")
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
-                                
                         }
                     }
                 }
                 .listRowBackground(rowBackground)
 
-                // Muscle Recovery Percentage
-                NavigationLink {
-                    EditMuscleRecoveryView()
-                } label: {
-                    HStack {
-                        HStack(spacing: 12) {
-                            Image(systemName: "bolt.heart")
-                                .font(.system(size: 16))
-                                .fontWeight(.semibold)
-                                .foregroundColor(iconColor)
-                            Text("Muscle Recovery Percentage")
-                                .font(.system(size: 15))
-                                .foregroundColor(iconColor)
+                // Training Goal
+                HStack {
+                    HStack(spacing: 12) {
+                        Image(systemName: "target")
+                            .font(.system(size: 16))
+                            .fontWeight(.semibold)
+                            .foregroundColor(iconColor)
+                        Text("Training Goal")
+                            .font(.system(size: 15))
+                            .foregroundColor(iconColor)
+                    }
+                    Spacer()
+                    Menu {
+                        ForEach(FitnessGoalPickerView.pickerGoals, id: \.self) { goal in
+                            Button(action: {
+                                profile.fitnessGoal = goal
+                                sendPreferenceUpdate(["preferred_fitness_goal": goal.rawValue])
+                            }) {
+                                HStack {
+                                    Text(goal.displayName)
+                                    if profile.fitnessGoal.normalized == goal.normalized { Image(systemName: "checkmark") }
+                                }
+                            }
                         }
-                        
+                    } label: {
+                        HStack {
+                            Text(profile.fitnessGoal.displayName)
+                                .foregroundColor(.secondary)
+                                .font(.system(size: 15))
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
                 .listRowBackground(rowBackground)
-            }
-        }
-        .environment(\.defaultMinListRowHeight,52)
-        .navigationTitle(currentProfileTitle)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Menu {
-                    Button {
-                        presentNewProfileSheet()
-                    } label: {
-                        Label("New Profile", systemImage: "plus")
-                    }
-                    Button {
-                        showSwitchProfileSheet = true
-                    } label: {
-                        Label("Switch Profile", systemImage: "arrow.left.arrow.right")
-                    }
-                    .disabled(!canSwitchProfiles)
-                    if let activeProfile = profile.activeWorkoutProfile {
-                        Button(role: .destructive) {
-                            profilePendingDeletion = activeProfile
-                            showDeleteProfileAlert = true
-                        } label: {
-                            Label("Delete Profile", systemImage: "trash")
+
+                // Warm-up Sets
+                Toggle(isOn: Binding(
+                    get: { profile.warmupSetsEnabled },
+                    set: { newVal in
+                        profile.warmupSetsEnabled = newVal
+                        if !newVal {
+                            WorkoutManager.shared.clearWarmupSetsForCurrentWorkout()
                         }
-                        .disabled(!canDeleteProfiles || isDeletingProfile)
+                        sendPreferenceUpdate(["enable_warmup_sets": newVal])
                     }
-                } label: {
-                    Image(systemName: "ellipsis")
+                )) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "flame")
+                            .font(.system(size: 16))
+                            .fontWeight(.semibold)
+                            .foregroundColor(iconColor)
+                        Text("Warm-up Sets")
+                            .font(.system(size: 15))
+                            .foregroundColor(iconColor)
+                    }
                 }
+                .tint(.accentColor)
+                .listRowBackground(rowBackground)
+
+                // Circuits and Supersets
+                Toggle(isOn: Binding(
+                    get: { profile.circuitsAndSupersetsEnabled },
+                    set: { newVal in
+                        profile.circuitsAndSupersetsEnabled = newVal
+                        sendPreferenceUpdate(["enable_circuits_and_supersets": newVal])
+                    }
+                )) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "square.grid.3x3")
+                            .font(.system(size: 16))
+                            .fontWeight(.semibold)
+                            .foregroundColor(iconColor)
+                        Text("Circuits and Supersets")
+                            .font(.system(size: 15))
+                            .foregroundColor(iconColor)
+                    }
+                }
+                .tint(.accentColor)
+                .listRowBackground(rowBackground)
             }
         }
-        .sheet(isPresented: $showNewProfileSheet) { newProfileSheet() }
-        .sheet(isPresented: $showSwitchProfileSheet) { switchProfileSheet() }
-        .sheet(isPresented: $showEquipmentSheet) { equipmentSelectionSheet() }
-        .alert("Delete Gym Profile?", isPresented: $showDeleteProfileAlert, presenting: profilePendingDeletion) { pending in
-            Button("Delete", role: .destructive) {
-                Task { await deleteProfile(pending) }
-            }
-            Button("Cancel", role: .cancel) {
-                profilePendingDeletion = nil
-            }
-        } message: { pending in
-            Text("This will remove \(pending.displayName). You cannot undo this action.")
-        }
-        .alert("Unable to Delete Profile", isPresented: deletionErrorBinding) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text(deletionError ?? "Please try again later.")
-        }
-        .task {
-            if profile.workoutProfiles.isEmpty {
-                await profile.refreshWorkoutProfiles()
-            }
+        .environment(\.defaultMinListRowHeight, 52)
+        .navigationTitle("Workout Settings")
+        .sheet(isPresented: $showGymProfilesSheet) {
+            GymProfilesSheet(userEmail: userEmail)
         }
         .onAppear { syncInitialDuration() }
         .scrollContentBackground(.hidden)
         .background(Color("altbg").ignoresSafeArea())
         .onChange(of: showDurationPicker) { newVal in
-            if newVal == false { // picker closed → persist to server
+            if newVal == false {
                 sendPreferenceUpdate(["preferred_workout_duration": profile.availableTime])
             }
         }
@@ -484,183 +336,456 @@ struct WorkoutProfileSettingsView: View {
     }
 }
 
-extension WorkoutProfileSettingsView {
-    private func presentNewProfileSheet() {
-        newProfileName = ""
-        showNewProfileSheet = true
-    }
+// MARK: - Gym Profiles Sheet
 
-    @ViewBuilder
-    private func newProfileSheet() -> some View {
-        NavigationStack {
-            Form {
-                Section {
-                    TextField("Name", text: $newProfileName)
-                        .disabled(isCreatingProfile)
-                        .submitLabel(.done)
-                        .onSubmit { Task { await createProfile() } }
-                        .focused($isNewProfileFieldFocused)
-                }
-            }
-            .formStyle(.grouped)
-            .padding(.top, -12)
-            .navigationTitle("New Gym Profile")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button {
-                        showNewProfileSheet = false
-                    } label: {
-                        Image(systemName: "xmark")
-                    }
-                    .disabled(isCreatingProfile)
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button {
-                        Task { await createProfile() }
-                    } label: {
-                        if isCreatingProfile {
-                            ProgressView()
-                        } else {
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                    .disabled(isCreatingProfile || newProfileName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
-            }
-            .onAppear {
-                DispatchQueue.main.async {
-                    isNewProfileFieldFocused = true
-                }
-            }
-            .onDisappear {
-                isNewProfileFieldFocused = false
-            }
-        }
-    }
+private struct GymProfilesSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var userProfileService = UserProfileService.shared
+    let userEmail: String
 
-    @ViewBuilder
-    private func switchProfileSheet() -> some View {
+    @State private var showManageProfiles = false
+    @State private var showCreateProfile = false
+
+    var body: some View {
         NavigationStack {
             List {
-                ForEach(profile.workoutProfiles) { item in
-                    Button {
-                        Task { await switchProfile(to: item) }
-                    } label: {
-                        HStack {
-                            Text(item.displayName)
-                            .foregroundColor(.primary)
-                            Spacer()
-                            if item.id == profile.activeWorkoutProfile?.id {
-                                Image(systemName: "checkmark")
-                                    .foregroundColor(.accentColor)
+                Section {
+                    ForEach(userProfileService.workoutProfiles, id: \.id) { profile in
+                        Button {
+                            selectProfile(profile)
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(profile.displayName)
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundColor(.primary)
+                                    Text("\(profile.availableEquipment.count) equipment items")
+                                        .font(.system(size: 13))
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                if profile.id == userProfileService.activeWorkoutProfileId {
+                                    Image(systemName: "checkmark")
+                                        .foregroundColor(.accentColor)
+                                }
                             }
                         }
                     }
-                    .disabled(isSwitchingProfile || item.id == nil || item.id == profile.activeWorkoutProfile?.id)
+                } header: {
+                    Text("Select Gym Profile")
+                }
+
+                Section {
+                    Button {
+                        showManageProfiles = true
+                    } label: {
+                        Label("Manage Gym Profiles", systemImage: "gearshape")
+                            .foregroundColor(.primary)
+                    }
                 }
             }
-            .navigationTitle("Switch Profile")
+            .navigationTitle("Gym Profiles")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button {
-                        showSwitchProfileSheet = false
+                        dismiss()
                     } label: {
                         Image(systemName: "xmark")
+                            .font(.system(size: 15, weight: .semibold))
                     }
-                    .disabled(isSwitchingProfile)
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        showCreateProfile = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 15, weight: .semibold))
+                    }
+                }
+            }
+            .navigationDestination(isPresented: $showManageProfiles) {
+                ManageGymProfilesSheet(userEmail: userEmail)
+            }
+            .navigationDestination(isPresented: $showCreateProfile) {
+                CreateGymProfileSheet(userEmail: userEmail)
+            }
+        }
+    }
+
+    private func selectProfile(_ profile: WorkoutProfile) {
+        guard let profileId = profile.id else {
+            dismiss()
+            return
+        }
+
+        guard profileId != userProfileService.activeWorkoutProfileId else {
+            dismiss()
+            return
+        }
+
+        Task {
+            do {
+                try await userProfileService.activateWorkoutProfile(profileId: profileId)
+            } catch {
+                print("❌ Failed to activate profile: \(error.localizedDescription)")
+            }
+        }
+
+        dismiss()
+    }
+}
+
+// MARK: - Manage Gym Profiles Sheet
+
+private struct ManageGymProfilesSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var userProfileService = UserProfileService.shared
+    let userEmail: String
+
+    @State private var showCreateProfile = false
+
+    var body: some View {
+        List {
+            ForEach(userProfileService.workoutProfiles, id: \.id) { profile in
+                NavigationLink {
+                    GymProfileEquipmentSheet(profile: profile, userEmail: userEmail)
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(profile.displayName)
+                                .font(.system(size: 16, weight: .medium))
+
+                            Text("\(profile.availableEquipment.count) equipment items")
+                                .font(.system(size: 13))
+                                .foregroundColor(.secondary)
+                        }
+
+                        Spacer()
+
+                        if profile.id == userProfileService.activeWorkoutProfileId {
+                            Text("Active")
+                                .font(.caption)
+                                .foregroundColor(.accentColor)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.accentColor.opacity(0.15))
+                                .cornerRadius(6)
+                        }
+                    }
                 }
             }
         }
+        .navigationTitle("Manage Profiles")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    showCreateProfile = true
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 15, weight: .semibold))
+                }
+            }
+        }
+        .navigationDestination(isPresented: $showCreateProfile) {
+            CreateGymProfileSheet(userEmail: userEmail)
+        }
     }
+}
 
-    private func persistEquipmentSelection(_ selection: Set<Equipment>) {
-        let ordered = Equipment.allCases.filter { selection.contains($0) && $0 != .bodyWeight }
-        equipmentSelection = Set(ordered)
-        equipmentSelectionBackup = Set(ordered)
-        profile.availableEquipment = ordered
-        sendPreferenceUpdate(["available_equipment": ordered.map { $0.rawValue }])
-        showEquipmentSheet = false
-        Task {
-            await workoutManager.generateTodayWorkout(forceRegenerate: true)
+// MARK: - Create Gym Profile Sheet
+
+private struct CreateGymProfileSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var userProfileService = UserProfileService.shared
+    let userEmail: String
+
+    @State private var profileName: String = ""
+    @State private var selectedOption: OnboardingViewModel.GymLocationOption = .largeGym
+    @State private var selectedEquipment: Set<Equipment> = Set(Equipment.allCases.filter { $0 != .bodyWeight })
+    @State private var isSaving = false
+    @State private var errorMessage: String?
+
+    // Get default equipment for a gym location option
+    private static func equipmentDefaults(for option: OnboardingViewModel.GymLocationOption) -> Set<Equipment> {
+        switch option {
+        case .largeGym:
+            return Set(Equipment.allCases.filter { $0 != .bodyWeight })
+        case .smallGym:
+            return Set(EquipmentView.EquipmentType.smallGym.equipmentList)
+        case .garageGym:
+            return Set(EquipmentView.EquipmentType.garageGym.equipmentList)
+        case .atHome:
+            return Set(EquipmentView.EquipmentType.atHome.equipmentList)
+        case .noEquipment:
+            return []
+        case .custom:
+            return []
         }
     }
 
-    @ViewBuilder
-    private func equipmentSelectionSheet() -> some View {
-        GymEquipmentSelectionSheet(
-            selection: $equipmentSelection,
-            onSave: { persistEquipmentSelection($0) },
-            onCancel: {
-                equipmentSelection = equipmentSelectionBackup
-                showEquipmentSheet = false
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                // Profile name
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Profile Name")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    TextField("Gym Name", text: $profileName)
+                        .textFieldStyle(.plain)
+                        .padding()
+                        .background(Color("containerbg"))
+                        .cornerRadius(100)
+                        .submitLabel(.done)
+                }
+
+                // Gym type
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Gym Type")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+
+                    ForEach(OnboardingViewModel.GymLocationOption.allCases) { option in
+                        Button {
+                            selectedOption = option
+                            if option != .custom {
+                                selectedEquipment = Self.equipmentDefaults(for: option)
+                            }
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text(option.title)
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundColor(.primary)
+                                    Text(option.description)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                if selectedOption == option {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.accentColor)
+                                } else {
+                                    Image(systemName: "circle")
+                                        .foregroundColor(.secondary.opacity(0.5))
+                                }
+                            }
+                            .padding()
+                            .background(Color("containerbg"))
+                            .cornerRadius(12)
+                        }
+                    }
+                }
+
+                // Equipment selection
+                EquipmentGridView(selectedEquipment: $selectedEquipment)
             }
-        )
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+        }
+        .background(Color("primarybg").ignoresSafeArea())
+        .navigationTitle("New Gym Profile")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button {
+                    Task { await createProfile() }
+                } label: {
+                    if isSaving {
+                        ProgressView()
+                    } else {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 15, weight: .semibold))
+                    }
+                }
+                .disabled(isSaving || trimmedProfileName.isEmpty)
+            }
+        }
+        .alert("Unable to Create Gym Profile", isPresented: errorBinding) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(errorMessage ?? "Please try again.")
+        }
+    }
+
+    private var trimmedProfileName: String {
+        profileName.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     @MainActor
     private func createProfile() async {
-        let trimmed = newProfileName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        isCreatingProfile = true
-        defer { isCreatingProfile = false }
+        guard !trimmedProfileName.isEmpty else { return }
+        isSaving = true
+
         do {
-            try await profile.createWorkoutProfile(named: trimmed)
-            newProfileName = ""
-            showNewProfileSheet = false
+            try await userProfileService.createWorkoutProfile(named: trimmedProfileName)
+
+            // Update equipment for the newly created profile
+            if let newProfile = userProfileService.workoutProfiles.first(where: { $0.displayName == trimmedProfileName }),
+               let profileId = newProfile.id {
+                let orderedEquipment = Equipment.allCases.filter { selectedEquipment.contains($0) && $0 != .bodyWeight }
+
+                NetworkManagerTwo.shared.updateWorkoutPreferences(
+                    email: userEmail,
+                    workoutData: [
+                        "profile_id": profileId,
+                        "available_equipment": orderedEquipment.map { $0.rawValue }
+                    ]
+                ) { _ in }
+            }
+
+            dismiss()
         } catch {
-            print("❌ Failed to create workout profile: \(error)")
+            errorMessage = error.localizedDescription
+            isSaving = false
         }
     }
 
-    @MainActor
-    private func switchProfile(to item: WorkoutProfile) async {
-        guard let identifier = item.id else { return }
-        isSwitchingProfile = true
-        defer { isSwitchingProfile = false }
-        do {
-            try await profile.activateWorkoutProfile(profileId: identifier)
-            showSwitchProfileSheet = false
-        } catch {
-            print("❌ Failed to switch workout profile: \(error)")
-        }
-    }
-
-    @MainActor
-    private func deleteProfile(_ workoutProfile: WorkoutProfile) async {
-        guard let identifier = workoutProfile.id else { return }
-        guard canDeleteProfiles else {
-            deletionError = "You must keep at least one gym profile."
-            showDeleteProfileAlert = false
-            return
-        }
-
-        isDeletingProfile = true
-        defer { isDeletingProfile = false }
-
-        do {
-            try await profile.deleteWorkoutProfile(profileId: identifier)
-            profilePendingDeletion = nil
-            showDeleteProfileAlert = false
-        } catch {
-            deletionError = error.localizedDescription
-        }
-    }
-
-    private var deletionErrorBinding: Binding<Bool> {
+    private var errorBinding: Binding<Bool> {
         Binding(
-            get: { deletionError != nil },
-            set: { if !$0 { deletionError = nil } }
+            get: { errorMessage != nil },
+            set: { if !$0 { errorMessage = nil } }
         )
     }
 }
 
-private struct GymEquipmentSelectionSheet: View {
+// MARK: - Gym Profile Equipment Sheet
+
+private struct GymProfileEquipmentSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @Binding var selection: Set<Equipment>
-    let onSave: (Set<Equipment>) -> Void
-    let onCancel: () -> Void
+    @ObservedObject private var userProfileService = UserProfileService.shared
+    let profile: WorkoutProfile
+    let userEmail: String
+
+    @State private var editedName: String
+    @State private var selectedEquipment: Set<Equipment>
+    @State private var showDeleteConfirmation = false
+    @State private var isDeleting = false
+
+    init(profile: WorkoutProfile, userEmail: String) {
+        self.profile = profile
+        self.userEmail = userEmail
+        _editedName = State(initialValue: profile.displayName)
+        // Convert String array to Set<Equipment>
+        let equipmentSet = Set(profile.availableEquipment.compactMap { Equipment(rawValue: $0) })
+        _selectedEquipment = State(initialValue: equipmentSet)
+    }
+
+    private var canDelete: Bool {
+        userProfileService.workoutProfiles.count > 1
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                // Profile name
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Profile Name")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    TextField("Name", text: $editedName)
+                        .textFieldStyle(.plain)
+                        .padding()
+                        .background(Color("containerbg"))
+                        .cornerRadius(100)
+                        .submitLabel(.done)
+                        .onChange(of: editedName) { newValue in
+                            saveProfileName(newValue)
+                        }
+                }
+
+                // Equipment selection
+                EquipmentGridView(selectedEquipment: $selectedEquipment)
+                    .onChange(of: selectedEquipment) { newValue in
+                        saveEquipment(newValue)
+                    }
+
+                // Delete button
+                if canDelete {
+                    Button(role: .destructive) {
+                        showDeleteConfirmation = true
+                    } label: {
+                        HStack {
+                            Spacer()
+                            if isDeleting {
+                                ProgressView()
+                            } else {
+                                Label("Delete Profile", systemImage: "trash")
+                            }
+                            Spacer()
+                        }
+                        .foregroundColor(.red)
+                        .padding()
+                        .background(Color.red.opacity(0.1))
+                        .cornerRadius(12)
+                    }
+                    .disabled(isDeleting)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+        }
+        .background(Color("primarybg").ignoresSafeArea())
+        .navigationTitle(profile.displayName)
+        .navigationBarTitleDisplayMode(.inline)
+        .confirmationDialog("Delete Profile?", isPresented: $showDeleteConfirmation) {
+            Button("Delete", role: .destructive) {
+                Task { await deleteProfile() }
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This gym profile will be permanently deleted. This action cannot be undone.")
+        }
+    }
+
+    private func saveProfileName(_ name: String) {
+        guard let profileId = profile.id else { return }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        NetworkManagerTwo.shared.updateWorkoutPreferences(
+            email: userEmail,
+            workoutData: [
+                "profile_id": profileId,
+                "profile_name": trimmed
+            ]
+        ) { _ in }
+    }
+
+    private func saveEquipment(_ equipment: Set<Equipment>) {
+        guard let profileId = profile.id else { return }
+        let orderedEquipment = Equipment.allCases.filter { equipment.contains($0) && $0 != .bodyWeight }
+
+        NetworkManagerTwo.shared.updateWorkoutPreferences(
+            email: userEmail,
+            workoutData: [
+                "profile_id": profileId,
+                "available_equipment": orderedEquipment.map { $0.rawValue }
+            ]
+        ) { _ in }
+    }
+
+    @MainActor
+    private func deleteProfile() async {
+        guard let profileId = profile.id, canDelete else { return }
+        isDeleting = true
+
+        do {
+            try await userProfileService.deleteWorkoutProfile(profileId: profileId)
+            dismiss()
+        } catch {
+            print("❌ Failed to delete profile: \(error.localizedDescription)")
+            isDeleting = false
+        }
+    }
+}
+
+// MARK: - Equipment Grid View
+
+private struct EquipmentGridView: View {
+    @Binding var selectedEquipment: Set<Equipment>
 
     private var equipmentSections: [(title: String, items: [Equipment])] {
         let allEquipment = Set(Equipment.allCases)
@@ -692,52 +817,27 @@ private struct GymEquipmentSelectionSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    Text("Pick the equipment available at your gym. We use this to tailor workouts to what you can actually use.")
+        VStack(alignment: .leading, spacing: 24) {
+            Text("Available Equipment")
+                .font(.headline)
+                .foregroundColor(.primary)
+
+            ForEach(equipmentSections, id: \.title) { section in
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(section.title)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.top, 8)
 
-                    ForEach(equipmentSections, id: \.title) { section in
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text(section.title)
-                                .font(.headline)
-                                .foregroundColor(.primary)
+                    let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
 
-                            let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
-
-                            LazyVGrid(columns: columns, spacing: 16) {
-                                ForEach(section.items, id: \.self) { equipment in
-                                    EquipmentSelectionButton(
-                                        equipment: equipment,
-                                        isSelected: selection.contains(equipment),
-                                        onTap: { toggleSelection(for: equipment) }
-                                    )
-                                }
-                            }
+                    LazyVGrid(columns: columns, spacing: 16) {
+                        ForEach(section.items, id: \.self) { equipment in
+                            EquipmentSelectionButton(
+                                equipment: equipment,
+                                isSelected: selectedEquipment.contains(equipment),
+                                onTap: { toggleSelection(for: equipment) }
+                            )
                         }
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 32)
-            }
-            .background(Color("altbg").ignoresSafeArea())
-            .navigationTitle("Gym Equipment")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        onCancel()
-                        dismiss()
-                    }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        onSave(selection)
-                        dismiss()
                     }
                 }
             }
@@ -746,11 +846,10 @@ private struct GymEquipmentSelectionSheet: View {
 
     private func toggleSelection(for equipment: Equipment) {
         HapticFeedback.generate()
-        UISelectionFeedbackGenerator().selectionChanged()
-        if selection.contains(equipment) {
-            selection.remove(equipment)
+        if selectedEquipment.contains(equipment) {
+            selectedEquipment.remove(equipment)
         } else {
-            selection.insert(equipment)
+            selectedEquipment.insert(equipment)
         }
     }
 }
