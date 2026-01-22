@@ -307,6 +307,10 @@ struct TrainingProgram: Codable, Identifiable {
     var fitnessGoalEnum: ProgramFitnessGoal? {
         ProgramFitnessGoal(rawValue: fitnessGoal)
     }
+
+    var experienceLevelEnum: ProgramExperienceLevel? {
+        ProgramExperienceLevel(rawValue: experienceLevel)
+    }
 }
 
 private func parseProgramDate(_ value: String) -> Date? {

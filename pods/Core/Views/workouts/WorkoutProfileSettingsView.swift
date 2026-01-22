@@ -1,35 +1,84 @@
 import SwiftUI
 import UIKit
 
+// MARK: - Plan Settings View
+
 struct WorkoutProfileSettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
     @ObservedObject private var profile = UserProfileService.shared
-    @ObservedObject private var workoutManager = WorkoutManager.shared
+    @ObservedObject private var programService = ProgramService.shared
     @AppStorage("userEmail") private var userEmail: String = ""
 
-    @State private var showDurationPicker = false
-    @State private var durationHours: Int = 0
-    @State private var durationMinutes: Int = 45
+    // Sheet states
     @State private var showGymProfilesSheet = false
+    @State private var showAllPlansSheet = false
+    @State private var showFitnessGoalSheet = false
+
+    // Regeneration states
+    @State private var showRegenerationAlert = false
+    @State private var isRegenerating = false
+
+    // Local state (current values being edited)
+    @State private var selectedGoal: ProgramFitnessGoal = .hypertrophy
+    @State private var selectedExperience: ProgramExperienceLevel = .intermediate
+    @State private var daysPerWeek: Int = 4
+    @State private var sessionDuration: Int = 45
+    @State private var totalWeeks: Int = 8
+    @State private var trainingSplit: ProgramType = .fullBody
+    @State private var warmupSetsEnabled: Bool = false
+    @State private var circuitsEnabled: Bool = false
+    @State private var deloadEnabled: Bool = true
+    @State private var periodizationEnabled: Bool = true
+    @State private var cardioEnabled: Bool = false
+    @State private var warmupEnabled: Bool = true
+    @State private var cooldownEnabled: Bool = true
+
+    // Original state (values when view appeared, for change detection)
+    @State private var originalGoal: ProgramFitnessGoal = .hypertrophy
+    @State private var originalExperience: ProgramExperienceLevel = .intermediate
+    @State private var originalDaysPerWeek: Int = 4
+    @State private var originalSessionDuration: Int = 45
+    @State private var originalTotalWeeks: Int = 8
+    @State private var originalTrainingSplit: ProgramType = .fullBody
+    @State private var originalWarmupSetsEnabled: Bool = false
+    @State private var originalCircuitsEnabled: Bool = false
+    @State private var originalDeloadEnabled: Bool = true
+    @State private var originalPeriodizationEnabled: Bool = true
+    @State private var originalCardioEnabled: Bool = false
+    @State private var originalWarmupEnabled: Bool = true
+    @State private var originalCooldownEnabled: Bool = true
+
+    // Computed property: has any setting changed?
+    private var hasUnsavedChanges: Bool {
+        selectedGoal != originalGoal ||
+        selectedExperience != originalExperience ||
+        daysPerWeek != originalDaysPerWeek ||
+        sessionDuration != originalSessionDuration ||
+        totalWeeks != originalTotalWeeks ||
+        trainingSplit != originalTrainingSplit ||
+        warmupSetsEnabled != originalWarmupSetsEnabled ||
+        circuitsEnabled != originalCircuitsEnabled ||
+        deloadEnabled != originalDeloadEnabled ||
+        periodizationEnabled != originalPeriodizationEnabled ||
+        cardioEnabled != originalCardioEnabled ||
+        warmupEnabled != originalWarmupEnabled ||
+        cooldownEnabled != originalCooldownEnabled
+    }
+
+    // Computed property: do any changes require plan regeneration?
+    private var hasRegeneratingChanges: Bool {
+        selectedGoal != originalGoal ||
+        selectedExperience != originalExperience ||
+        daysPerWeek != originalDaysPerWeek ||
+        sessionDuration != originalSessionDuration ||
+        trainingSplit != originalTrainingSplit ||
+        warmupSetsEnabled != originalWarmupSetsEnabled ||
+        circuitsEnabled != originalCircuitsEnabled
+    }
+
 
     private var rowBackground: Color { Color("altcard") }
     private var iconColor: Color { colorScheme == .dark ? .white : .primary }
-
-    // Limited training splits as per requirements
-    private static let allowedSplits: [TrainingSplitPreference] = [
-        .fullBody,
-        .pushPullLower,
-        .upperLower
-    ]
-
-    private var formattedDuration: String {
-        let total = profile.availableTime
-        let h = total / 60
-        let m = total % 60
-        if h > 0 && m > 0 { return String(format: "%dh %02dm", h, m) }
-        if h > 0 { return String(format: "%dh", h) }
-        return String(format: "%dm", m)
-    }
 
     private var equipmentSelectionSummary: String {
         if profile.bodyweightOnlyWorkouts {
@@ -39,48 +88,10 @@ struct WorkoutProfileSettingsView: View {
         return count == 0 ? "Select" : "\(count) selected"
     }
 
-    private func syncInitialDuration() {
-        let total = max(15, profile.availableTime)
-        durationHours = total / 60
-        durationMinutes = total % 60
-        // snap minutes to 0/15/30/45
-        let options = [0,15,30,45]
-        durationMinutes = options.min(by: { abs($0 - durationMinutes) < abs($1 - durationMinutes) }) ?? 45
-    }
-
-    private func updateDuration() {
-        let clampedH = min(max(durationHours, 0), 2)
-        let allowedMins = [0,15,30,45]
-        let snappedM = allowedMins.contains(durationMinutes) ? durationMinutes : 45
-        profile.availableTime = max(15, clampedH * 60 + snappedM)
-    }
-
-    private func sendPreferenceUpdate(_ data: [String: Any]) {
-        let email = UserDefaults.standard.string(forKey: "userEmail") ?? ""
-        guard !email.isEmpty else { return }
-        var payload = data
-        if let profileId = profile.activeWorkoutProfile?.id {
-            payload["profile_id"] = profileId
-        }
-        NetworkManagerTwo.shared.updateWorkoutPreferences(email: email, workoutData: payload) { result in
-            switch result {
-            case .success:
-                // CRITICAL FIX: Use Task { @MainActor in } to ensure DataLayer runs on main thread
-                // This prevents "Publishing changes from background threads" violations
-                Task { @MainActor in
-                    await DataLayer.shared.updateProfileData(payload)
-                }
-            case .failure(let err):
-                print("❌ Failed to update workout prefs: \(err)")
-            }
-        }
-    }
-
     var body: some View {
         Form {
-            // MARK: - Gym Equipment Section
-            Section(header: Text("Gym Equipment")) {
-                // Gym Profile selector - tap to manage profiles
+            // MARK: - Section 1: Equipment
+            Section(header: Text("Equipment")) {
                 Button {
                     showGymProfilesSheet = true
                 } label: {
@@ -90,19 +101,14 @@ struct WorkoutProfileSettingsView: View {
                                 .font(.system(size: 16))
                                 .fontWeight(.semibold)
                                 .foregroundColor(iconColor)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Gym Profile")
-                                    .font(.system(size: 15))
-                                    .foregroundColor(iconColor)
-                                Text(profile.activeWorkoutProfile?.displayName ?? "Default")
-                                    .font(.system(size: 13))
-                                    .foregroundColor(.secondary)
-                            }
+                            Text("Gym Profile")
+                                .font(.system(size: 15))
+                                .foregroundColor(iconColor)
                         }
                         Spacer()
-                        Text(equipmentSelectionSummary)
+                        Text(profile.activeWorkoutProfile?.displayName ?? "Default")
                             .foregroundColor(.secondary)
-                            .font(.system(size: 14))
+                            .font(.system(size: 15))
                         Image(systemName: "chevron.right")
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.secondary.opacity(0.6))
@@ -112,118 +118,123 @@ struct WorkoutProfileSettingsView: View {
                 .listRowBackground(rowBackground)
             }
 
-            // MARK: - Workout Settings Section
-            Section(header: Text("Workout Settings")) {
+            // MARK: - Section 2: Active Plan
+            Section {
+                Button {
+                    showAllPlansSheet = true
+                } label: {
+                    HStack {
+                        Text("Active Plan")
+                            .font(.system(size: 15))
+                            .foregroundColor(iconColor)
+                        Spacer()
+                        Text(programService.activeProgram?.name ?? "None")
+                            .foregroundColor(.secondary)
+                            .font(.system(size: 15))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.secondary.opacity(0.6))
+                    }
+                }
+                .buttonStyle(.plain)
+                .listRowBackground(rowBackground)
+            }
+
+            // MARK: - Section 3: Fitness Goal
+            Section {
+                Button {
+                    showFitnessGoalSheet = true
+                } label: {
+                    HStack {
+                        Text("Fitness Goal")
+                            .font(.system(size: 15))
+                            .foregroundColor(iconColor)
+                        Spacer()
+                        Text(selectedGoal.displayName)
+                            .foregroundColor(.secondary)
+                            .font(.system(size: 15))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.secondary.opacity(0.6))
+                    }
+                }
+                .buttonStyle(.plain)
+                .listRowBackground(rowBackground)
+            }
+
+            // MARK: - Section 4: Experience
+            Section {
+                HStack {
+                    Text("Fitness Experience")
+                        .font(.system(size: 15))
+                        .foregroundColor(iconColor)
+                    Spacer()
+                    Menu {
+                        ForEach(ProgramExperienceLevel.allCases, id: \.self) { level in
+                            Button {
+                                selectedExperience = level
+                            } label: {
+                                HStack {
+                                    Text(level.displayName)
+                                    if selectedExperience == level {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(selectedExperience.displayName)
+                                .foregroundColor(.secondary)
+                                .font(.system(size: 15))
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                .listRowBackground(rowBackground)
+            }
+
+            // MARK: - Section 5: Schedule
+            Section(header: Text("Schedule")) {
+                // Days per Week (regenerating)
+                Stepper("\(daysPerWeek) days per week", value: $daysPerWeek, in: trainingSplit.daysPerWeekRange)
+                    .listRowBackground(rowBackground)
+
+                // Min per Session (regenerating)
+                Stepper("\(sessionDuration) min per session", value: $sessionDuration, in: 30...120, step: 15)
+                    .listRowBackground(rowBackground)
+
+                // # of Weeks (non-regenerating)
+                Stepper("\(totalWeeks) weeks", value: $totalWeeks, in: 1...16)
+                    .listRowBackground(rowBackground)
+            }
+
+            // MARK: - Section 6: Workout Setup
+            Section(header: Text("Workout Setup")) {
                 // Training Split
                 HStack {
-                    HStack(spacing: 12) {
-                        Image(systemName: "square.split.2x2")
-                            .font(.system(size: 16))
-                            .fontWeight(.semibold)
-                            .foregroundColor(iconColor)
-                        Text("Training Split")
-                            .font(.system(size: 15))
-                            .foregroundColor(iconColor)
-                    }
+                    Text("Training Split")
+                        .font(.system(size: 15))
+                        .foregroundColor(iconColor)
                     Spacer()
                     Menu {
-                        ForEach(Self.allowedSplits, id: \.self) { split in
-                            Button(action: {
-                                profile.trainingSplit = split
-                                sendPreferenceUpdate(["training_split": split.rawValue])
-
-                                Task {
-                                    await workoutManager.generateTodayWorkout(forceRegenerate: true)
-                                }
-                            }) {
+                        ForEach(ProgramType.allCases, id: \.self) { split in
+                            Button {
+                                trainingSplit = split
+                            } label: {
                                 HStack {
                                     Text(split.displayName)
-                                    if profile.trainingSplit == split { Image(systemName: "checkmark") }
+                                    if trainingSplit == split {
+                                        Image(systemName: "checkmark")
+                                    }
                                 }
                             }
                         }
                     } label: {
-                        HStack {
-                            Text(profile.trainingSplit.displayName)
-                                .font(.system(size: 15))
-                                .foregroundColor(.secondary)
-                            Image(systemName: "chevron.up.chevron.down")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                }
-                .listRowBackground(rowBackground)
-
-                // Workout Duration
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        HStack(spacing: 12) {
-                            Image(systemName: "clock")
-                                .font(.system(size: 16))
-                                .fontWeight(.semibold)
-                                .foregroundColor(iconColor)
-                            Text("Workout Duration")
-                                .font(.system(size: 15))
-                                .foregroundColor(iconColor)
-                        }
-                        Spacer()
-                        Button(action: { withAnimation { showDurationPicker.toggle() } }) {
-                            Text(formattedDuration)
-                                .font(.subheadline)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(RoundedRectangle(cornerRadius: 8).stroke(Color.secondary.opacity(0.3)))
-                        }
-                        .buttonStyle(.plain)
-                    }
-
-                    if showDurationPicker {
-                        HStack {
-                            Picker("Hours", selection: $durationHours.onChange { _ in updateDuration() }) {
-                                ForEach(0...2, id: \.self) { Text("\($0) h").tag($0) }
-                            }
-                            .pickerStyle(.wheel)
-                            .frame(maxWidth: .infinity)
-
-                            Picker("Minutes", selection: $durationMinutes.onChange { _ in updateDuration() }) {
-                                ForEach([0,15,30,45], id: \.self) { Text("\($0) m").tag($0) }
-                            }
-                            .pickerStyle(.wheel)
-                            .frame(maxWidth: .infinity)
-                        }
-                        .frame(height: 120)
-                    }
-                }
-                .listRowBackground(rowBackground)
-
-                // Experience Level
-                HStack {
-                    HStack(spacing: 12) {
-                        Image(systemName: "aqi.medium")
-                            .font(.system(size: 16))
-                            .fontWeight(.semibold)
-                            .foregroundColor(iconColor)
-                        Text("Experience Level")
-                            .font(.system(size: 15))
-                            .foregroundColor(iconColor)
-                    }
-                    Spacer()
-                    Menu {
-                        ForEach(ExperienceLevel.allCases, id: \.self) { lvl in
-                            Button(action: {
-                                profile.experienceLevel = lvl
-                                sendPreferenceUpdate(["experience_level": lvl.rawValue])
-                            }) {
-                                HStack {
-                                    Text(lvl.displayName)
-                                    if profile.experienceLevel == lvl { Image(systemName: "checkmark") }
-                                }
-                            }
-                        }
-                    } label: {
-                        HStack {
-                            Text(profile.experienceLevel.displayName)
+                        HStack(spacing: 4) {
+                            Text(trainingSplit.displayName)
                                 .foregroundColor(.secondary)
                                 .font(.system(size: 15))
                             Image(systemName: "chevron.up.chevron.down")
@@ -234,104 +245,323 @@ struct WorkoutProfileSettingsView: View {
                 }
                 .listRowBackground(rowBackground)
 
-                // Training Goal
-                HStack {
-                    HStack(spacing: 12) {
-                        Image(systemName: "target")
-                            .font(.system(size: 16))
-                            .fontWeight(.semibold)
-                            .foregroundColor(iconColor)
-                        Text("Training Goal")
-                            .font(.system(size: 15))
-                            .foregroundColor(iconColor)
-                    }
-                    Spacer()
-                    Menu {
-                        ForEach(FitnessGoalPickerView.pickerGoals, id: \.self) { goal in
-                            Button(action: {
-                                profile.fitnessGoal = goal
-                                sendPreferenceUpdate(["preferred_fitness_goal": goal.rawValue])
-                            }) {
-                                HStack {
-                                    Text(goal.displayName)
-                                    if profile.fitnessGoal.normalized == goal.normalized { Image(systemName: "checkmark") }
-                                }
-                            }
-                        }
-                    } label: {
-                        HStack {
-                            Text(profile.fitnessGoal.displayName)
-                                .foregroundColor(.secondary)
-                                .font(.system(size: 15))
-                            Image(systemName: "chevron.up.chevron.down")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                }
-                .listRowBackground(rowBackground)
+                // Warm-up Sets Toggle (regenerating)
+                Toggle("Warm-up Sets", isOn: $warmupSetsEnabled)
+                    .font(.system(size: 15))
+                    .foregroundColor(iconColor)
+                    .tint(.accentColor)
+                    .listRowBackground(rowBackground)
 
-                // Warm-up Sets
-                Toggle(isOn: Binding(
-                    get: { profile.warmupSetsEnabled },
-                    set: { newVal in
-                        profile.warmupSetsEnabled = newVal
-                        if !newVal {
-                            WorkoutManager.shared.clearWarmupSetsForCurrentWorkout()
-                        }
-                        sendPreferenceUpdate(["enable_warmup_sets": newVal])
-                    }
-                )) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "flame")
-                            .font(.system(size: 16))
-                            .fontWeight(.semibold)
-                            .foregroundColor(iconColor)
-                        Text("Warm-up Sets")
-                            .font(.system(size: 15))
-                            .foregroundColor(iconColor)
-                    }
-                }
-                .tint(.accentColor)
-                .listRowBackground(rowBackground)
+                // Circuits & Supersets Toggle (regenerating)
+                Toggle("Circuits & Supersets", isOn: $circuitsEnabled)
+                    .font(.system(size: 15))
+                    .foregroundColor(iconColor)
+                    .tint(.accentColor)
+                    .listRowBackground(rowBackground)
+            }
 
-                // Circuits and Supersets
-                Toggle(isOn: Binding(
-                    get: { profile.circuitsAndSupersetsEnabled },
-                    set: { newVal in
-                        profile.circuitsAndSupersetsEnabled = newVal
-                        sendPreferenceUpdate(["enable_circuits_and_supersets": newVal])
-                    }
-                )) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "square.grid.3x3")
-                            .font(.system(size: 16))
-                            .fontWeight(.semibold)
-                            .foregroundColor(iconColor)
-                        Text("Circuits and Supersets")
-                            .font(.system(size: 15))
-                            .foregroundColor(iconColor)
-                    }
-                }
-                .tint(.accentColor)
-                .listRowBackground(rowBackground)
+            // MARK: - Section 7: Preferences
+            Section {
+                // Deload (non-regenerating)
+                Toggle("Deload", isOn: $deloadEnabled)
+                    .font(.system(size: 15))
+                    .foregroundColor(iconColor)
+                    .tint(.accentColor)
+                    .listRowBackground(rowBackground)
+
+                // Cardio (placeholder for future)
+                Toggle("Cardio", isOn: $cardioEnabled)
+                    .font(.system(size: 15))
+                    .foregroundColor(iconColor)
+                    .tint(.accentColor)
+                    .listRowBackground(rowBackground)
+
+                // Warm-Up (non-regenerating)
+                Toggle("Warm-Up", isOn: $warmupEnabled)
+                    .font(.system(size: 15))
+                    .foregroundColor(iconColor)
+                    .tint(.accentColor)
+                    .listRowBackground(rowBackground)
+
+                // Cool-Down (non-regenerating)
+                Toggle("Cool-Down", isOn: $cooldownEnabled)
+                    .font(.system(size: 15))
+                    .foregroundColor(iconColor)
+                    .tint(.accentColor)
+                    .listRowBackground(rowBackground)
+
+                // Periodization (non-regenerating) - last with footer
+                Toggle("Periodization", isOn: $periodizationEnabled)
+                    .font(.system(size: 15))
+                    .foregroundColor(iconColor)
+                    .tint(.accentColor)
+                    .listRowBackground(rowBackground)
+            } header: {
+                Text("Preferences")
+            } footer: {
+                Text("Progressively increase intensity and volume over time")
             }
         }
         .environment(\.defaultMinListRowHeight, 52)
-        .navigationTitle("Workout Settings")
+        .navigationTitle("Plan Settings")
+        .scrollContentBackground(.hidden)
+        .background(Color("altbg").ignoresSafeArea())
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                if hasUnsavedChanges {
+                    Button {
+                        saveChanges()
+                    } label: {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 15, weight: .semibold))
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .buttonBorderShape(.circle)
+                    .tint(.accentColor.opacity(0.8))
+                }
+            }
+        }
         .sheet(isPresented: $showGymProfilesSheet) {
             GymProfilesSheet(userEmail: userEmail)
         }
-        .onAppear { syncInitialDuration() }
-        .scrollContentBackground(.hidden)
-        .background(Color("altbg").ignoresSafeArea())
-        .onChange(of: showDurationPicker) { newVal in
-            if newVal == false {
-                sendPreferenceUpdate(["preferred_workout_duration": profile.availableTime])
+        .sheet(isPresented: $showAllPlansSheet) {
+            AllPlansView()
+        }
+        .sheet(isPresented: $showFitnessGoalSheet) {
+            FitnessGoalSelectionSheet(
+                selectedGoal: $selectedGoal,
+                onSelect: { goal in
+                    selectedGoal = goal
+                }
+            )
+        }
+        .alert("Regenerate Plan?", isPresented: $showRegenerationAlert) {
+            Button("Cancel", role: .cancel) {
+                // Revert to original values
+                revertToOriginalValues()
+            }
+            Button("Regenerate", role: .destructive) {
+                Task { await applyAllChanges() }
+            }
+        } message: {
+            Text("Some changes require regenerating your training plan. Your completed workouts will be preserved, but upcoming workouts will change.")
+        }
+        .overlay {
+            if isRegenerating {
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+                VStack(spacing: 12) {
+                    ProgressView()
+                        .tint(.white)
+                    Text("Regenerating Plan...")
+                        .font(.subheadline)
+                        .foregroundColor(.white)
+                }
             }
         }
-        .onChange(of: profile.activeWorkoutProfileId) { _ in
-            syncInitialDuration()
+        .onAppear {
+            syncFromActiveProgram()
+        }
+        .onChange(of: programService.activeProgram?.id) { _, _ in
+            syncFromActiveProgram()
+        }
+    }
+
+    // MARK: - Save Logic
+
+    private func saveChanges() {
+        if hasRegeneratingChanges {
+            // Show confirmation alert before applying regenerating changes
+            showRegenerationAlert = true
+        } else {
+            // Apply non-regenerating changes directly
+            Task { await applyNonRegeneratingChanges() }
+        }
+    }
+
+    private func revertToOriginalValues() {
+        selectedGoal = originalGoal
+        selectedExperience = originalExperience
+        daysPerWeek = originalDaysPerWeek
+        sessionDuration = originalSessionDuration
+        totalWeeks = originalTotalWeeks
+        trainingSplit = originalTrainingSplit
+        warmupSetsEnabled = originalWarmupSetsEnabled
+        circuitsEnabled = originalCircuitsEnabled
+        deloadEnabled = originalDeloadEnabled
+        periodizationEnabled = originalPeriodizationEnabled
+        cardioEnabled = originalCardioEnabled
+        warmupEnabled = originalWarmupEnabled
+        cooldownEnabled = originalCooldownEnabled
+    }
+
+    // MARK: - Apply Changes Logic
+
+    /// Apply all changes including regeneration
+    private func applyAllChanges() async {
+        guard programService.activeProgram != nil else { return }
+
+        isRegenerating = true
+
+        do {
+            // Get equipment from profile and convert to string array
+            let equipment = profile.availableEquipment.map { $0.rawValue }
+
+            _ = try await programService.generateProgram(
+                userEmail: userEmail,
+                programType: trainingSplit,
+                fitnessGoal: selectedGoal,
+                experienceLevel: selectedExperience,
+                daysPerWeek: daysPerWeek,
+                sessionDurationMinutes: sessionDuration,
+                startDate: Date(),
+                totalWeeks: totalWeeks,
+                includeDeload: deloadEnabled,
+                availableEquipment: equipment,
+                excludedExercises: nil,
+                defaultWarmupEnabled: warmupEnabled,
+                defaultCooldownEnabled: cooldownEnabled
+            )
+
+            // Sync local state from new program (updates original values too)
+            syncFromActiveProgram()
+
+            // Also update the UserProfileService settings to stay in sync
+            profile.warmupSetsEnabled = warmupSetsEnabled
+            profile.circuitsAndSupersetsEnabled = circuitsEnabled
+
+        } catch {
+            print("❌ Failed to regenerate program: \(error)")
+        }
+
+        isRegenerating = false
+    }
+
+    /// Apply only non-regenerating changes (no plan regeneration needed)
+    private func applyNonRegeneratingChanges() async {
+        guard let program = programService.activeProgram else { return }
+
+        // Apply totalWeeks, deload, periodization changes
+        if totalWeeks != originalTotalWeeks ||
+           deloadEnabled != originalDeloadEnabled ||
+           periodizationEnabled != originalPeriodizationEnabled {
+            _ = try? await programService.updatePlanSettings(
+                programId: program.id,
+                userEmail: userEmail,
+                totalWeeks: totalWeeks != originalTotalWeeks ? totalWeeks : nil,
+                includeDeload: deloadEnabled != originalDeloadEnabled ? deloadEnabled : nil,
+                periodizationEnabled: periodizationEnabled != originalPeriodizationEnabled ? periodizationEnabled : nil
+            )
+        }
+
+        // Apply warmup/cooldown preference changes
+        if warmupEnabled != originalWarmupEnabled ||
+           cooldownEnabled != originalCooldownEnabled {
+            try? await programService.updatePlanPreference(
+                userEmail: userEmail,
+                warmupEnabled: warmupEnabled != originalWarmupEnabled ? warmupEnabled : nil,
+                cooldownEnabled: cooldownEnabled != originalCooldownEnabled ? cooldownEnabled : nil
+            )
+        }
+
+        // Update original values to match current (changes are now saved)
+        updateOriginalValues()
+    }
+
+    // MARK: - Sync Methods
+
+    private func syncFromActiveProgram() {
+        guard let program = programService.activeProgram else { return }
+
+        // Set current values
+        selectedGoal = program.fitnessGoalEnum ?? .hypertrophy
+        selectedExperience = program.experienceLevelEnum ?? .intermediate
+        daysPerWeek = program.daysPerWeek
+        sessionDuration = program.sessionDurationMinutes
+        totalWeeks = program.totalWeeks
+        trainingSplit = program.programTypeEnum ?? .fullBody
+        deloadEnabled = program.includeDeload
+        periodizationEnabled = program.periodizationEnabled ?? true
+        warmupEnabled = program.defaultWarmupEnabled ?? true
+        cooldownEnabled = program.defaultCooldownEnabled ?? true
+
+        // Sync from profile for settings not stored in program
+        warmupSetsEnabled = profile.warmupSetsEnabled
+        circuitsEnabled = profile.circuitsAndSupersetsEnabled
+
+        // Set original values (for change detection)
+        updateOriginalValues()
+    }
+
+    private func updateOriginalValues() {
+        originalGoal = selectedGoal
+        originalExperience = selectedExperience
+        originalDaysPerWeek = daysPerWeek
+        originalSessionDuration = sessionDuration
+        originalTotalWeeks = totalWeeks
+        originalTrainingSplit = trainingSplit
+        originalWarmupSetsEnabled = warmupSetsEnabled
+        originalCircuitsEnabled = circuitsEnabled
+        originalDeloadEnabled = deloadEnabled
+        originalPeriodizationEnabled = periodizationEnabled
+        originalCardioEnabled = cardioEnabled
+        originalWarmupEnabled = warmupEnabled
+        originalCooldownEnabled = cooldownEnabled
+    }
+}
+
+// MARK: - Fitness Goal Selection Sheet
+
+private struct FitnessGoalSelectionSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+    @Binding var selectedGoal: ProgramFitnessGoal
+    let onSelect: (ProgramFitnessGoal) -> Void
+
+    private var rowBackground: Color { Color("altcard") }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(ProgramFitnessGoal.allCases, id: \.self) { goal in
+                    Button {
+                        onSelect(goal)
+                        dismiss()
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(goal.displayName)
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.primary)
+                                Text(goal.description)
+                                    .font(.system(size: 13))
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            if selectedGoal == goal {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.accentColor)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .listRowBackground(rowBackground)
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Color("altbg").ignoresSafeArea())
+            .navigationTitle("Fitness Goal")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 15, weight: .semibold))
+                    }
+                }
+            }
         }
     }
 }
@@ -691,14 +921,14 @@ private struct GymProfileEquipmentSheet: View {
                         .background(Color("containerbg"))
                         .cornerRadius(100)
                         .submitLabel(.done)
-                        .onChange(of: editedName) { newValue in
+                        .onChange(of: editedName) { _, newValue in
                             saveProfileName(newValue)
                         }
                 }
 
                 // Equipment selection
                 EquipmentGridView(selectedEquipment: $selectedEquipment)
-                    .onChange(of: selectedEquipment) { newValue in
+                    .onChange(of: selectedEquipment) { _, newValue in
                         saveEquipment(newValue)
                     }
 

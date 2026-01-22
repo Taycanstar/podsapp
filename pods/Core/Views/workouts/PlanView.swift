@@ -1088,13 +1088,13 @@ struct CreateProgramView: View {
                         Text("Training Split")
                     }
 
-                    // Duration
+                    // Schedule
                     Section {
                         Stepper("\(daysPerWeek) days per week", value: $daysPerWeek, in: selectedType.daysPerWeekRange)
                         Stepper("\(sessionDuration) min per session", value: $sessionDuration, in: 30...120, step: 15)
                         Stepper("\(totalWeeks) weeks", value: $totalWeeks, in: 1...12)
                     } header: {
-                        Text("Duration")
+                        Text("Schedule")
                     }
                     .onChange(of: selectedType) { oldType, newType in
                         // Clamp daysPerWeek to the new type's valid range

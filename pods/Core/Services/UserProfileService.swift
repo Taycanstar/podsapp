@@ -589,7 +589,7 @@ class UserProfileService: ObservableObject {
     // Alias used by generation services
     var autoGroupingEnabled: Bool { circuitsAndSupersetsEnabled }
 
-    // Warm-up sets toggle (maps to server's enable_warmup_sets). Default ON if unset.
+    // Warm-up sets toggle (maps to server's enable_warmup_sets). Default OFF if unset.
     var warmupSetsEnabled: Bool {
         get {
             let scopedKey = scopedDefaultsKey("warmupSetsEnabled")
@@ -608,7 +608,7 @@ class UserProfileService: ObservableObject {
                 return workoutProfile.enableWarmupSets
             }
 
-            return true // align with server default
+            return false // default to disabled
         }
         set {
             UserDefaults.standard.set(newValue, forKey: scopedDefaultsKey("warmupSetsEnabled"))
