@@ -1019,6 +1019,7 @@ struct MultiFoodLogView: View {
 
         let baseId = Int(Date().timeIntervalSince1970 * 1000)
         var optimisticIdentifiers: [Int: String] = [:]
+        var totalMealCalories: Double = 0
 
         for (listIndex, item) in foodsToLog.enumerated() {
             let editableItem = editableItems[item.index]
@@ -1029,6 +1030,7 @@ struct MultiFoodLogView: View {
             let tempFoodLogId = -(baseId + listIndex + 1)
             let totalCalories = (loggingFood.calories ?? 0) * servings
             let servingText = loggingFood.householdServingFullText ?? "1 serving"
+            totalMealCalories += totalCalories
 
             let loggedFood = LoggedFoodItem(
                 foodLogId: tempFoodLogId,
@@ -1082,6 +1084,11 @@ struct MultiFoodLogView: View {
         NotificationCenter.default.post(name: NSNotification.Name("NavigateToTimeline"), object: nil)
         dismiss()
 
+        let mealCalories = totalMealCalories
+        var pendingResponses = foodsToLog.count
+        var successCount = 0
+        var didShowMealToast = false
+
         for (listIndex, item) in foodsToLog.enumerated() {
             let editableItem = editableItems[item.index]
             let loggingPayload = foodForLogging(item.food, editableItem: editableItem)
@@ -1101,11 +1108,13 @@ struct MultiFoodLogView: View {
                 date: logDate,
                 notes: nil,
                 skipCoach: skipCoach,
+                skipToast: true,
                 batchContext: context
             ) { result in
                 DispatchQueue.main.async {
                     switch result {
                     case .success(let logged):
+                        successCount += 1
                         let combined = CombinedLog(
                             type: .food,
                             status: logged.status,
@@ -1135,11 +1144,24 @@ struct MultiFoodLogView: View {
                             removeCombinedLog(identifier: placeholderId)
                         }
                     }
+                    pendingResponses -= 1
+                    if pendingResponses == 0, successCount > 0, !didShowMealToast {
+                        didShowMealToast = true
+                        showMealLoggedToast(totalCalories: mealCalories)
+                    }
                 }
             }
         }
 
         isLogging = false
+    }
+
+    private func showMealLoggedToast(totalCalories: Double) {
+        foodManager.lastLoggedItem = (name: "Meal", calories: totalCalories)
+        foodManager.showLogSuccess = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            foodManager.showLogSuccess = false
+        }
     }
 
     /// Build batch context for multi-food coach message

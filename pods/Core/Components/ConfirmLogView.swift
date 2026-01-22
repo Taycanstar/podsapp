@@ -3953,6 +3953,7 @@ struct PlateView: View {
 
         let mealLabel = selectedMealPeriod.title
         let logDate = mealTime
+        let totalMealCalories = entriesToLog.reduce(0) { $0 + $1.macroTotals.calories }
 
         // Add optimistic logs IMMEDIATELY so timeline shows items instantly
         // Use unique negative IDs to ensure each optimistic log has a distinct id
@@ -4035,6 +4036,7 @@ struct PlateView: View {
                 date: logDate,
                 notes: nil,
                 skipCoach: skipCoach,
+                skipToast: true,
                 batchContext: context
             ) { result in
                 // Dispatch to main queue to ensure thread-safe access to pendingLogs
@@ -4086,9 +4088,21 @@ struct PlateView: View {
                 return
             }
 
+            if !pendingLogs.isEmpty {
+                showMealLoggedToast(totalCalories: totalMealCalories)
+            }
+
             // View is already dismissed optimistically, just reset the flag
             // viewModel.clear() is called by onFinished callback in MainContentView
             isLoggingPlate = false
+        }
+    }
+
+    private func showMealLoggedToast(totalCalories: Double) {
+        foodManager.lastLoggedItem = (name: "Meal", calories: totalCalories)
+        foodManager.showLogSuccess = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            foodManager.showLogSuccess = false
         }
     }
 

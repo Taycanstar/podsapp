@@ -292,11 +292,8 @@ struct AgentChatView: View {
                         showPlateView = false
                         plateViewModel.clear()
                     },
-                    onPlateLogged: { foods in
-                        // Show toast with logged foods
-                        let foodNames = foods.prefix(2).map { $0.description }.joined(separator: ", ")
-                        let suffix = foods.count > 2 ? " +\(foods.count - 2) more" : ""
-                        showToast(with: "Logged \(foodNames)\(suffix)")
+                    onPlateLogged: { _ in
+                        showToast(with: "Meal logged")
                     }
                 )
             }
