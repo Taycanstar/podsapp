@@ -107,6 +107,12 @@ struct PlanView: View {
                 showSinglePlanView = false
             }
         }
+        .onChange(of: programService.activeProgram?.activeWeekNumber) { _, newWeek in
+            // Auto-advance to next week when current week is fully completed
+            if let week = newWeek {
+                selectedWeekNumber = week
+            }
+        }
     }
 
     // MARK: - Loading View
@@ -258,10 +264,9 @@ struct PlanView: View {
             await loadData()
         }
         .onAppear {
-            // Set selected week to current week
-            if let currentWeek = program.currentWeekNumber {
-                selectedWeekNumber = min(currentWeek, program.totalCalendarWeeks)
-            }
+            // Set selected week to the active week (first incomplete week, sequence-based)
+            let activeWeek = program.activeWeekNumber
+            selectedWeekNumber = min(activeWeek, program.totalCalendarWeeks)
         }
     }
 

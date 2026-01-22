@@ -141,46 +141,128 @@ struct FoodLogAgentView: View {
         }
     }
 
+    private enum CombinedChatMessage: Identifiable {
+        case text(FoodLogMessage)
+        case voice(RealtimeMessage)
+
+        var id: String {
+            switch self {
+            case .text(let message):
+                return "text-\(message.id.uuidString)"
+            case .voice(let message):
+                return "voice-\(message.id.uuidString)"
+            }
+        }
+
+        var timestamp: Date {
+            switch self {
+            case .text(let message):
+                return message.timestamp
+            case .voice(let message):
+                return message.timestamp
+            }
+        }
+    }
+
+    private var combinedMessages: [CombinedChatMessage] {
+        let textMessages = messages.map { CombinedChatMessage.text($0) }
+        let voiceMessages = realtimeSession.messages.map { CombinedChatMessage.voice($0) }
+        return (textMessages + voiceMessages).sorted { lhs, rhs in
+            if lhs.timestamp == rhs.timestamp {
+                return lhs.id < rhs.id
+            }
+            return lhs.timestamp < rhs.timestamp
+        }
+    }
+
     private var chatScroll: some View {
         ScrollViewReader { proxy in
             ZStack(alignment: .bottom) {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 12) {
-                        // Regular text-based messages
-                        ForEach(messages) { message in
-                            switch message.sender {
-                            case .user:
-                                HStack {
-                                    Spacer()
-                                    Text(message.text)
-                                        .padding(10)
-                                        .background(Color(.systemGray4))
-                                        .foregroundColor(.primary)
-                                        .cornerRadius(16)
-                                        .contextMenu {
-                                            Button {
-                                                handleCopy(text: message.text)
-                                            } label: {
-                                                Label("Copy", systemImage: "doc.on.doc")
+                        // Messages (text + voice)
+                        ForEach(combinedMessages) { combinedMessage in
+                            switch combinedMessage {
+                            case .text(let message):
+                                switch message.sender {
+                                case .user:
+                                    HStack {
+                                        Spacer()
+                                        Text(message.text)
+                                            .padding(10)
+                                            .background(Color(.systemGray5))
+                                            .foregroundColor(.primary)
+                                            .cornerRadius(16)
+                                            .contextMenu {
+                                                Button {
+                                                    handleCopy(text: message.text)
+                                                } label: {
+                                                    Label("Copy", systemImage: "doc.on.doc")
+                                                }
+                                                Button {
+                                                    presentUserMessageSheet(text: message.text, startEditing: true)
+                                                } label: {
+                                                    Label("Edit", systemImage: "pencil")
+                                                }
                                             }
-                                            Button {
-                                                presentUserMessageSheet(text: message.text, startEditing: true)
-                                            } label: {
-                                                Label("Edit", systemImage: "pencil")
+                                            .onTapGesture {
+                                                presentUserMessageSheet(text: message.text, startEditing: false)
                                             }
-                                        }
-                                        .onTapGesture {
-                                            presentUserMessageSheet(text: message.text, startEditing: false)
-                                        }
+                                    }
+                                    .id(combinedMessage.id)
+                                case .system:
+                                    // Hide action icons for streaming message
+                                    if message.id == streamingMessageId {
+                                        // Streaming message - show text without action icons
+                                        FormattedAssistantMessage(text: message.text)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .id(combinedMessage.id)
+                                    } else {
+                                        AssistantMessageWithActions(
+                                            text: message.text,
+                                            isLiked: likedMessageIDs.contains(message.id),
+                                            isDisliked: dislikedMessageIDs.contains(message.id),
+                                            onCopy: { handleCopy(text: message.text) },
+                                            onLike: { toggleLike(for: message.id) },
+                                            onDislike: { toggleDislike(for: message.id) },
+                                            onSpeak: { speak(message.text) },
+                                            onShare: { share(text: message.text) },
+                                            onLinkTapped: handleLinkTap
+                                        )
+                                        .id(combinedMessage.id)
+                                    }
+                                case .status:
+                                    if streamingMessageId == nil {
+                                        thinkingIndicator
+                                            .id(combinedMessage.id)
+                                    }
                                 }
-                                .id(message.id)
-                            case .system:
-                                // Hide action icons for streaming message
-                                if message.id == streamingMessageId {
-                                    // Streaming message - show text without action icons
-                                    FormattedAssistantMessage(text: message.text)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .id(message.id)
+                            case .voice(let message):
+                                if message.isUser {
+                                    HStack {
+                                        Spacer()
+                                        Text(message.text)
+                                            .padding(10)
+                                            .background(Color(.systemGray5))
+                                            .foregroundColor(.primary)
+                                            .cornerRadius(16)
+                                            .contextMenu {
+                                                Button {
+                                                    handleCopy(text: message.text)
+                                                } label: {
+                                                    Label("Copy", systemImage: "doc.on.doc")
+                                                }
+                                                Button {
+                                                    presentUserMessageSheet(text: message.text, startEditing: true)
+                                                } label: {
+                                                    Label("Edit", systemImage: "pencil")
+                                                }
+                                            }
+                                            .onTapGesture {
+                                                presentUserMessageSheet(text: message.text, startEditing: false)
+                                            }
+                                    }
+                                    .id(combinedMessage.id)
                                 } else {
                                     AssistantMessageWithActions(
                                         text: message.text,
@@ -193,56 +275,8 @@ struct FoodLogAgentView: View {
                                         onShare: { share(text: message.text) },
                                         onLinkTapped: handleLinkTap
                                     )
-                                    .id(message.id)
+                                    .id(combinedMessage.id)
                                 }
-                            case .status:
-                                if streamingMessageId == nil {
-                                    thinkingIndicator
-                                        .id(message.id)
-                                }
-                            }
-                        }
-
-                        // Realtime voice messages
-                        ForEach(realtimeSession.messages) { message in
-                            if message.isUser {
-                                HStack {
-                                    Spacer()
-                                    Text(message.text)
-                                        .padding(10)
-                                        .background(Color(.systemGray4))
-                                        .foregroundColor(.primary)
-                                        .cornerRadius(16)
-                                        .contextMenu {
-                                            Button {
-                                                handleCopy(text: message.text)
-                                            } label: {
-                                                Label("Copy", systemImage: "doc.on.doc")
-                                            }
-                                            Button {
-                                                presentUserMessageSheet(text: message.text, startEditing: true)
-                                            } label: {
-                                                Label("Edit", systemImage: "pencil")
-                                            }
-                                        }
-                                        .onTapGesture {
-                                            presentUserMessageSheet(text: message.text, startEditing: false)
-                                        }
-                                }
-                                .id(message.id)
-                            } else {
-                                AssistantMessageWithActions(
-                                    text: message.text,
-                                    isLiked: likedMessageIDs.contains(message.id),
-                                    isDisliked: dislikedMessageIDs.contains(message.id),
-                                    onCopy: { handleCopy(text: message.text) },
-                                    onLike: { toggleLike(for: message.id) },
-                                    onDislike: { toggleDislike(for: message.id) },
-                                    onSpeak: { speak(message.text) },
-                                    onShare: { share(text: message.text) },
-                                    onLinkTapped: handleLinkTap
-                                )
-                                .id(message.id)
                             }
                         }
 
@@ -899,11 +933,13 @@ private struct FoodLogMessage: Identifiable {
     let id: UUID
     let sender: Sender
     var text: String
+    let timestamp: Date
 
-    init(id: UUID = UUID(), sender: Sender, text: String) {
+    init(id: UUID = UUID(), sender: Sender, text: String, timestamp: Date = Date()) {
         self.id = id
         self.sender = sender
         self.text = text
+        self.timestamp = timestamp
     }
 }
 

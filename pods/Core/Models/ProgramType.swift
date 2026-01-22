@@ -267,6 +267,28 @@ struct TrainingProgram: Codable, Identifiable {
         return (daysSinceStart / 7) + 1
     }
 
+    /// Active week number based on completion status (sequence-based, Mode B).
+    /// Returns the first week that has incomplete days, or the last week if all complete.
+    /// Used by PlanView to auto-advance week display when all days in a week are done.
+    var activeWeekNumber: Int {
+        guard let programWeeks = weeks, !programWeeks.isEmpty else { return 1 }
+
+        // Sort weeks by week_number
+        let sortedWeeks = programWeeks.sorted { $0.weekNumber < $1.weekNumber }
+
+        // Find first week with at least one incomplete day
+        for week in sortedWeeks {
+            guard let days = week.days else { continue }
+            let hasIncomplete = days.contains { !$0.isCompleted }
+            if hasIncomplete {
+                return week.weekNumber
+            }
+        }
+
+        // All weeks complete - show the last week
+        return sortedWeeks.last?.weekNumber ?? 1
+    }
+
     /// Today's weekday in backend format (1=Monday, 7=Sunday)
     /// Swift's Calendar returns 1=Sunday, 2=Monday, ..., 7=Saturday
     /// Backend uses 1=Monday, 2=Tuesday, ..., 7=Sunday

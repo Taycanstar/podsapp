@@ -20,11 +20,13 @@ struct IngredientMessage: Identifiable {
     let id: UUID
     let sender: IngredientMessageSender
     var text: String
+    let timestamp: Date
 
-    init(id: UUID = UUID(), sender: IngredientMessageSender, text: String) {
+    init(id: UUID = UUID(), sender: IngredientMessageSender, text: String, timestamp: Date = Date()) {
         self.id = id
         self.sender = sender
         self.text = text
+        self.timestamp = timestamp
     }
 }
 
@@ -162,6 +164,40 @@ struct AddIngredientsDescribe: View {
         }
     }
 
+    private enum CombinedIngredientMessage: Identifiable {
+        case text(IngredientMessage)
+        case voice(RealtimeMessage)
+
+        var id: String {
+            switch self {
+            case .text(let message):
+                return "text-\(message.id.uuidString)"
+            case .voice(let message):
+                return "voice-\(message.id.uuidString)"
+            }
+        }
+
+        var timestamp: Date {
+            switch self {
+            case .text(let message):
+                return message.timestamp
+            case .voice(let message):
+                return message.timestamp
+            }
+        }
+    }
+
+    private var combinedMessages: [CombinedIngredientMessage] {
+        let textMessages = messages.map { CombinedIngredientMessage.text($0) }
+        let voiceMessages = realtimeSession.messages.map { CombinedIngredientMessage.voice($0) }
+        return (textMessages + voiceMessages).sorted { lhs, rhs in
+            if lhs.timestamp == rhs.timestamp {
+                return lhs.id < rhs.id
+            }
+            return lhs.timestamp < rhs.timestamp
+        }
+    }
+
     // MARK: - Chat Scroll
 
     private var chatScroll: some View {
@@ -169,33 +205,85 @@ struct AddIngredientsDescribe: View {
             ZStack(alignment: .bottom) {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 12) {
-                        // Regular text-based messages
-                        ForEach(messages) { message in
-                            switch message.sender {
-                            case .user:
-                                HStack {
-                                    Spacer()
-                                    Text(message.text)
-                                        .padding(10)
-                                        .background(Color(.systemGray5))
-                                        .foregroundColor(.primary)
-                                        .cornerRadius(16)
-                                        .contextMenu {
-                                            Button {
-                                                handleCopy(text: message.text)
-                                            } label: {
-                                                Label("Copy", systemImage: "doc.on.doc")
+                        // Messages (text + voice)
+                        ForEach(combinedMessages) { combinedMessage in
+                            switch combinedMessage {
+                            case .text(let message):
+                                switch message.sender {
+                                case .user:
+                                    HStack {
+                                        Spacer()
+                                        Text(message.text)
+                                            .padding(10)
+                                            .background(Color(.systemGray5))
+                                            .foregroundColor(.primary)
+                                            .cornerRadius(16)
+                                            .contextMenu {
+                                                Button {
+                                                    handleCopy(text: message.text)
+                                                } label: {
+                                                    Label("Copy", systemImage: "doc.on.doc")
+                                                }
+                                            }
+                                    }
+                                    .id(combinedMessage.id)
+
+                                case .system:
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Text(message.text)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                                        if message.id != streamingMessageId {
+                                            HStack(spacing: 16) {
+                                                Button {
+                                                    handleCopy(text: message.text)
+                                                } label: {
+                                                    Image(systemName: "doc.on.doc")
+                                                        .font(.system(size: 14))
+                                                        .foregroundColor(.secondary)
+                                                }
+
+                                                Button {
+                                                    speak(message.text)
+                                                } label: {
+                                                    Image(systemName: "speaker.wave.2")
+                                                        .font(.system(size: 14))
+                                                        .foregroundColor(.secondary)
+                                                }
                                             }
                                         }
+                                    }
+                                    .id(combinedMessage.id)
+
+                                case .status:
+                                    if streamingMessageId == nil {
+                                        thinkingIndicator
+                                            .id(combinedMessage.id)
+                                    }
                                 }
-                                .id(message.id)
+                            case .voice(let message):
+                                if message.isUser {
+                                    HStack {
+                                        Spacer()
+                                        Text(message.text)
+                                            .padding(10)
+                                            .background(Color(.systemGray5))
+                                            .foregroundColor(.primary)
+                                            .cornerRadius(16)
+                                            .contextMenu {
+                                                Button {
+                                                    handleCopy(text: message.text)
+                                                } label: {
+                                                    Label("Copy", systemImage: "doc.on.doc")
+                                                }
+                                            }
+                                    }
+                                    .id(combinedMessage.id)
+                                } else {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Text(message.text)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
 
-                            case .system:
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text(message.text)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                                    if message.id != streamingMessageId {
                                         HStack(spacing: 16) {
                                             Button {
                                                 handleCopy(text: message.text)
@@ -214,60 +302,8 @@ struct AddIngredientsDescribe: View {
                                             }
                                         }
                                     }
+                                    .id(combinedMessage.id)
                                 }
-                                .id(message.id)
-
-                            case .status:
-                                if streamingMessageId == nil {
-                                    thinkingIndicator
-                                        .id(message.id)
-                                }
-                            }
-                        }
-
-                        // Realtime voice messages
-                        ForEach(realtimeSession.messages) { message in
-                            if message.isUser {
-                                HStack {
-                                    Spacer()
-                                    Text(message.text)
-                                        .padding(10)
-                                        .background(Color(.systemGray4))
-                                        .foregroundColor(.primary)
-                                        .cornerRadius(16)
-                                        .contextMenu {
-                                            Button {
-                                                handleCopy(text: message.text)
-                                            } label: {
-                                                Label("Copy", systemImage: "doc.on.doc")
-                                            }
-                                        }
-                                }
-                                .id(message.id)
-                            } else {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text(message.text)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                                    HStack(spacing: 16) {
-                                        Button {
-                                            handleCopy(text: message.text)
-                                        } label: {
-                                            Image(systemName: "doc.on.doc")
-                                                .font(.system(size: 14))
-                                                .foregroundColor(.secondary)
-                                        }
-
-                                        Button {
-                                            speak(message.text)
-                                        } label: {
-                                            Image(systemName: "speaker.wave.2")
-                                                .font(.system(size: 14))
-                                                .foregroundColor(.secondary)
-                                        }
-                                    }
-                                }
-                                .id(message.id)
                             }
                         }
 

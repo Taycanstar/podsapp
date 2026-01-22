@@ -41,6 +41,7 @@ struct RealtimeMessage: Identifiable, Equatable {
     let id = UUID()
     let isUser: Bool
     let text: String
+    let timestamp: Date = Date()
 }
 
 @MainActor

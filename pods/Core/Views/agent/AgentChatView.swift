@@ -459,6 +459,40 @@ struct AgentChatView: View {
         }
     }
 
+    private enum CombinedChatMessage: Identifiable {
+        case text(HealthCoachMessage)
+        case voice(RealtimeMessage)
+
+        var id: String {
+            switch self {
+            case .text(let message):
+                return "text-\(message.id.uuidString)"
+            case .voice(let message):
+                return "voice-\(message.id.uuidString)"
+            }
+        }
+
+        var timestamp: Date {
+            switch self {
+            case .text(let message):
+                return message.timestamp
+            case .voice(let message):
+                return message.timestamp
+            }
+        }
+    }
+
+    private var combinedMessages: [CombinedChatMessage] {
+        let textMessages = viewModel.messages.map { CombinedChatMessage.text($0) }
+        let voiceMessages = realtimeSession.messages.map { CombinedChatMessage.voice($0) }
+        return (textMessages + voiceMessages).sorted { lhs, rhs in
+            if lhs.timestamp == rhs.timestamp {
+                return lhs.id < rhs.id
+            }
+            return lhs.timestamp < rhs.timestamp
+        }
+    }
+
     // MARK: - Chat Scroll View
 
     private var chatScrollView: some View {
@@ -466,16 +500,16 @@ struct AgentChatView: View {
             ZStack(alignment: .bottom) {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 12) {
-                        // Regular text-based messages
-                        ForEach(viewModel.messages) { message in
-                            messageRow(message)
-                                .id(message.id)
-                        }
-
-                        // Voice session messages (from realtime mode)
-                        ForEach(realtimeSession.messages) { voiceMessage in
-                            voiceMessageRow(voiceMessage, isLastAssistant: isLastAssistantMessage(voiceMessage))
-                                .id(voiceMessage.id)
+                        // Messages (text + voice)
+                        ForEach(combinedMessages) { combinedMessage in
+                            switch combinedMessage {
+                            case .text(let message):
+                                messageRow(message)
+                                    .id(combinedMessage.id)
+                            case .voice(let message):
+                                voiceMessageRow(message, isLastAssistant: isLastAssistantMessage(message))
+                                    .id(combinedMessage.id)
+                            }
                         }
 
                         // Streaming user text (what user is currently saying via voice)
@@ -811,7 +845,7 @@ struct AgentChatView: View {
                 Text(message.text)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
-                    .background(Color(.systemGray4))
+                    .background(Color(.systemGray5))
                     .foregroundColor(.primary)
                     .cornerRadius(16)
                     .contextMenu {
