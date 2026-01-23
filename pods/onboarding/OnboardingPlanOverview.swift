@@ -2,6 +2,7 @@ import SwiftUI
 
 struct OnboardingPlanOverview: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
+    @ObservedObject private var programService = ProgramService.shared
     @State private var nutritionGoals: NutritionGoals?
     @State private var weightDifferenceFormatted: String = ""
     @State private var weightUnit: String = ""
@@ -18,7 +19,115 @@ struct OnboardingPlanOverview: View {
         }
         return ""
     }
-    
+
+    // Training Plan Section
+    @ViewBuilder
+    private func trainingPlanSection(program: TrainingProgram) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Training Plan")
+                .font(.system(size: 20, weight: .bold))
+
+            VStack(spacing: 12) {
+                // Split type card
+                HStack(spacing: 16) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.orange.opacity(0.2))
+                            .frame(width: 40, height: 40)
+
+                        Image(systemName: "figure.strengthtraining.traditional")
+                            .foregroundColor(.orange)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Split")
+                            .font(.system(size: 16, weight: .medium))
+
+                        Text(programTypeDisplayName(program.programType))
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+                }
+                .padding(16)
+                .background(Color(UIColor.systemGray6))
+                .cornerRadius(10)
+
+                // Schedule card
+                HStack(spacing: 16) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.purple.opacity(0.2))
+                            .frame(width: 40, height: 40)
+
+                        Image(systemName: "calendar")
+                            .foregroundColor(.purple)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Schedule")
+                            .font(.system(size: 16, weight: .medium))
+
+                        Text("\(program.daysPerWeek) days/week • \(program.sessionDurationMinutes) min • \(program.totalWeeks) weeks")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+                }
+                .padding(16)
+                .background(Color(UIColor.systemGray6))
+                .cornerRadius(10)
+
+                // Goal card
+                HStack(spacing: 16) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.green.opacity(0.2))
+                            .frame(width: 40, height: 40)
+
+                        Image(systemName: "target")
+                            .foregroundColor(.green)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Goal")
+                            .font(.system(size: 16, weight: .medium))
+
+                        Text(fitnessGoalDisplayName(program.fitnessGoal))
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+                }
+                .padding(16)
+                .background(Color(UIColor.systemGray6))
+                .cornerRadius(10)
+            }
+        }
+    }
+
+    private func programTypeDisplayName(_ type: String) -> String {
+        switch type {
+        case "ppl", "push_pull_legs": return "Push/Pull/Legs"
+        case "upper_lower": return "Upper/Lower"
+        case "full_body": return "Full Body"
+        default: return type.replacingOccurrences(of: "_", with: " ").capitalized
+        }
+    }
+
+    private func fitnessGoalDisplayName(_ goal: String) -> String {
+        switch goal {
+        case "hypertrophy": return "Hypertrophy"
+        case "strength": return "Strength"
+        case "balanced": return "Improve Fitness"
+        case "endurance": return "Endurance"
+        default: return goal.capitalized
+        }
+    }
+
     // Weight Progress Card
     private var weightProgressCard: some View {
      WeightProgressCurve(
@@ -350,27 +459,32 @@ struct OnboardingPlanOverview: View {
                                 Circle()
                                     .fill(Color.blue.opacity(0.2))
                                     .frame(width: 40, height: 40)
-                                
+
                                 Image(systemName: "chart.line.uptrend.xyaxis")
                                     .foregroundColor(.blue)
                             }
-                            
+
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Track Trends")
                                     .font(.system(size: 16, weight: .medium))
-                                
+
                                 Text("Visualize your logging history to spot patterns and fine-tune your nutrition and fitness")
                                     .font(.system(size: 14))
                                     .foregroundColor(.secondary)
                             }
-                            
+
                             Spacer()
                         }
                         .padding(16)
                         .background(Color(UIColor.systemGray6))
                         .cornerRadius(10)
                     }
-                    
+
+                    // Training Plan section
+                    if let program = programService.activeProgram {
+                        trainingPlanSection(program: program)
+                    }
+
                     // Insights sections
                     if let insights = nutritionGoals?.metabolismInsights, !insights.isEmpty {
                         metabolismInsightsView

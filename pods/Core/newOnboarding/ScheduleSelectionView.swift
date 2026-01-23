@@ -4,40 +4,40 @@ struct ScheduleSelectionView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
     private let backgroundColor = Color.onboardingBackground
 
-    private enum Mode: String, CaseIterable, Identifiable {
-        case perWeek
-        case specific
-
-        var id: String { rawValue }
-
-        var title: String {
-            switch self {
-            case .perWeek: return "Days Per Week"
-            case .specific: return "Specific Days"
-            }
-        }
-    }
-
-    @State private var mode: Mode = .perWeek
-
-    private let frequencyOptions: [Int] = [1, 2, 3, 4, 5, 6, 7]
-    private let dayColumns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 4)
+    @State private var daysPerWeek: Int = 4
+    @State private var sessionDuration: Int = 60
+    @State private var totalWeeks: Int = 6
 
     var body: some View {
         NavigationStack {
             ZStack(alignment: .bottom) {
-                ScrollView {
-                    VStack(spacing: 32) {
-                        header
-                        modePicker
-                        if mode == .perWeek {
-                            frequencyPickerCard
-                        } else {
-                            specificDaysCard
+                VStack(spacing: 0) {
+                    header
+                        .padding(.top, 24)
+                        .padding(.bottom, 16)
+
+                    Form {
+                        Section {
+                            Stepper("\(daysPerWeek) days per week", value: $daysPerWeek, in: 2...7)
+                                .onChange(of: daysPerWeek) { _, newValue in
+                                    viewModel.setTrainingDaysPerWeek(newValue, autoSelectDays: true)
+                                }
+                            Stepper("\(sessionDuration) min per session", value: $sessionDuration, in: 30...120, step: 15)
+                                .onChange(of: sessionDuration) { _, newValue in
+                                    viewModel.sessionDurationMinutes = newValue
+                                }
+                            Stepper("\(totalWeeks) weeks", value: $totalWeeks, in: 4...12)
+                                .onChange(of: totalWeeks) { _, newValue in
+                                    viewModel.programTotalWeeks = newValue
+                                }
+                        } header: {
+                            Text("Schedule")
                         }
-                        Spacer(minLength: 140)
                     }
-                    .padding(.top, 48)
+                    .scrollContentBackground(.hidden)
+                    .background(backgroundColor)
+
+                    Spacer(minLength: 100)
                 }
                 .background(backgroundColor.ignoresSafeArea())
 
@@ -48,8 +48,15 @@ struct ScheduleSelectionView: View {
         }
         .background(backgroundColor.ignoresSafeArea())
         .onAppear {
-            viewModel.ensureDefaultSchedule()
-            mode = .perWeek
+            // Initialize from viewModel
+            daysPerWeek = max(2, viewModel.trainingDaysPerWeek > 0 ? viewModel.trainingDaysPerWeek : 4)
+            sessionDuration = viewModel.sessionDurationMinutes > 0 ? viewModel.sessionDurationMinutes : 60
+            totalWeeks = viewModel.programTotalWeeks > 0 ? viewModel.programTotalWeeks : 6
+
+            viewModel.setTrainingDaysPerWeek(daysPerWeek, autoSelectDays: true)
+            viewModel.sessionDurationMinutes = sessionDuration
+            viewModel.programTotalWeeks = totalWeeks
+
             viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 7)
             UserDefaults.standard.set("ScheduleSelectionView", forKey: "currentOnboardingStep")
             UserDefaults.standard.set(true, forKey: "onboardingInProgress")
@@ -66,109 +73,12 @@ struct ScheduleSelectionView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
 
-            Text("Pick how often you train and lock in the days that work best for you.")
+            Text("Choose how often you train and how long each session should be.")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
         }
-    }
-
-    private var modePicker: some View {
-        Picker("Schedule mode", selection: $mode) {
-            ForEach(Mode.allCases) { option in
-                Text(option.title).tag(option)
-            }
-        }
-        .pickerStyle(.segmented)
-        .padding(.horizontal, 24)
-    }
-
-    private var frequencyPickerCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Frequency")
-                    .font(.body)
-                    .foregroundColor(.primary)
-                Spacer()
-                Menu {
-                    Picker("Days per week", selection: Binding(
-                        get: { viewModel.trainingDaysPerWeek },
-                        set: { newValue in
-                            HapticFeedback.generate()
-                            viewModel.setTrainingDaysPerWeek(newValue, autoSelectDays: true)
-                        }
-                    )) {
-                        ForEach(frequencyOptions, id: \.self) { option in
-                            Text(label(for: option)).tag(option)
-                        }
-                    }
-                } label: {
-                    HStack(spacing: 6) {
-                        Text(label(for: viewModel.trainingDaysPerWeek))
-                            .font(.body)
-                            .foregroundColor(.primary)
-                        Image(systemName: "chevron.down")
-                            .font(.caption)
-                            .foregroundColor(.primary.opacity(0.7))
-                    }
-                }
-            }
-            .padding(.horizontal, 4)
-            .padding(.vertical, 4)
-        }
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.onboardingCardBackground)
-        .cornerRadius(24)
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
-        .padding(.horizontal, 24)
-    }
-
-    private var specificDaysCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Specific days")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    Text("Tap the days you plan to train")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                Spacer()
-            }
-
-            LazyVGrid(columns: dayColumns, spacing: 12) {
-                ForEach(OnboardingViewModel.Weekday.allCases, id: \.self) { day in
-                    dayButton(for: day)
-                }
-            }
-        }
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.onboardingCardBackground)
-        .cornerRadius(24)
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
-        .padding(.horizontal, 24)
-    }
-
-    private func dayButton(for day: OnboardingViewModel.Weekday) -> some View {
-        let isSelected = viewModel.selectedTrainingDays.contains(day)
-        return Button {
-            HapticFeedback.generate()
-            viewModel.toggleTrainingDay(day)
-        } label: {
-            Text(day.shortLabel)
-                .font(.headline)
-                .fontWeight(.semibold)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(isSelected ? Color.primary : Color(.secondarySystemBackground))
-                .foregroundColor(isSelected ? Color(.systemBackground) : .primary)
-                .cornerRadius(20)
-        }
-        .buttonStyle(.plain)
     }
 
     private var continueButton: some View {
@@ -189,8 +99,6 @@ struct ScheduleSelectionView: View {
         }
         .padding(.horizontal, 24)
         .padding(.bottom, 32)
-        .disabled(mode == .specific && viewModel.selectedTrainingDays.isEmpty)
-        .opacity(mode == .specific && viewModel.selectedTrainingDays.isEmpty ? 0.5 : 1.0)
     }
 
     private var progressView: some View {
@@ -232,12 +140,6 @@ struct ScheduleSelectionView: View {
             .foregroundColor(.primary)
         }
     }
-
-    private func label(for days: Int) -> String {
-        if days == 7 { return "Every day" }
-        return days == 1 ? "1 day a week" : "\(days) days a week"
-    }
-
 }
 
 struct ScheduleSelectionView_Previews: PreviewProvider {

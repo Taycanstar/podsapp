@@ -5,7 +5,7 @@ struct MainOnboardingView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @Binding var isAuthenticated: Bool
     @Binding var showTourView: Bool
-    
+
     var body: some View {
         ZStack {
             switch viewModel.currentStep {
@@ -39,17 +39,20 @@ struct MainOnboardingView: View {
                 AllowHealthView()
             case .aboutYou:
                 AboutYouView()
-        case .signup:
+            case .signup:
                 RegisterView(isAuthenticated: $isAuthenticated)
             case .emailVerification:
                 EmailVerificationView()
             case .info:
                 InfoView()
             case .gender:
-                onboardingFlowView
-             case .welcome:
-                
-                 WelcomeView(isAuthenticated: $isAuthenticated, showTourView: $showTourView)
+                // Legacy step - redirect to new onboarding
+                FitnessGoalSelectionView()
+                    .onAppear {
+                        viewModel.currentStep = .fitnessGoal
+                    }
+            case .welcome:
+                WelcomeView(isAuthenticated: $isAuthenticated, showTourView: $showTourView)
             case .login:
                 LoginView(isAuthenticated: $isAuthenticated)
             }
@@ -57,50 +60,6 @@ struct MainOnboardingView: View {
         .preferredColorScheme(themeManager.currentTheme == .system ? nil : (themeManager.currentTheme == .dark ? .dark : .light))
         .onAppear {
             viewModel.loadProgress()
-        }
-    }
-    
-    // Helper view to handle the detailed onboarding flow
-    private var onboardingFlowView: some View {
-        flowStepView()
-    }
-    
-    // Helper method to return the appropriate view based on the current flow step
-    @ViewBuilder
-    private func flowStepView() -> some View {
-        switch viewModel.currentFlowStep {
-        case .gender:
-            GenderView()
-        case .workoutDays:
-            WorkoutDaysView()
-        case .heightWeight:
-            HeightWeightView()
-        case .dob:
-            DobView()
-        case .desiredWeight:
-            DesiredWeightView()
-        case .goalInfo:
-            GoalInfoView()
-        case .goalTime:
-            GoalTimeView()
-        case .twoX:
-            TwoXView()
-        case .obstacles:
-            ObstaclesView()
-        case .specificDiet:
-            SpecificDietView()
-        case .accomplish:
-            AccomplishView()
-        case .fitnessLevel:
-            FitnessLevelView()
-        case .fitnessGoal:
-            FitnessGoalView()
-        case .sportSelection:
-            SportSelectionView()
-        case .connectHealth:
-            ConnectToAppleHealth()
-        case .complete:
-            CreatingPlanView()
         }
     }
 }

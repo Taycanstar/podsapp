@@ -95,7 +95,7 @@ enum ProgramFitnessGoal: String, Codable, CaseIterable {
         switch self {
         case .hypertrophy: return "Hypertrophy"
         case .strength: return "Strength"
-        case .balanced: return "Both"
+        case .balanced: return "Improve Fitness"
         case .endurance: return "Endurance"
         }
     }
@@ -104,7 +104,7 @@ enum ProgramFitnessGoal: String, Codable, CaseIterable {
         switch self {
         case .hypertrophy: return "Hypertrophy"
         case .strength: return "Strength"
-        case .balanced: return "Balanced"
+        case .balanced: return "Improve Fitness"
         case .endurance: return "Endurance"
         }
     }
@@ -113,7 +113,7 @@ enum ProgramFitnessGoal: String, Codable, CaseIterable {
         switch self {
         case .hypertrophy: return "Maximize muscle growth with moderate weights and higher volume"
         case .strength: return "Build maximal strength with heavier weights and lower reps"
-        case .balanced: return "Equal focus on strength and muscle size"
+        case .balanced: return "General fitness with balanced strength and conditioning"
         case .endurance: return "Build work capacity and stamina with higher reps and shorter rest"
         }
     }

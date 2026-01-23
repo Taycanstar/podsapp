@@ -62,6 +62,8 @@ struct LogWorkoutView: View {
     @State private var showingAddExerciseSheet = false
     @State private var showingSupersetCircuitSheet = false
     @State private var showingCreateProgramSheet = false
+    @State private var showNoPlanPrompt = false
+    @State private var hasCheckedForPlan = false
 
     // Keep only essential UI-only state (not data state)
     @State private var currentWorkout: TodayWorkout? = nil
@@ -261,6 +263,16 @@ struct LogWorkoutView: View {
                     // Initialize persisted units for workouts
                     UserDefaults.standard.set(currentUnits, forKey: "workoutUnitsSystem")
                 }
+
+                // Check if user has a plan, prompt to create one if not
+                if !hasCheckedForPlan {
+                    hasCheckedForPlan = true
+                    if ProgramService.shared.activeProgram == nil {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            showNoPlanPrompt = true
+                        }
+                    }
+                }
             }
             .onDisappear {
                 // Cleanup if needed - WorkoutManager handles persistence
@@ -318,6 +330,9 @@ struct LogWorkoutView: View {
             }
             .sheet(isPresented: $showingCreateProgramSheet) {
                 CreateProgramView(userEmail: userEmail)
+            }
+            .sheet(isPresented: $showNoPlanPrompt) {
+                NoPlanPromptSheet(userEmail: userEmail)
             }
             .sheet(item: workoutSummaryBinding) { summary in
                 WorkoutSummarySheet(summary: summary)
@@ -5661,6 +5676,69 @@ private struct TodayCreateGymProfileView: View {
         case .atHome: return "home"
         case .noEquipment: return "bodyweight"
         case .custom: return "custom"
+        }
+    }
+}
+
+// MARK: - No Plan Prompt Sheet
+
+struct NoPlanPromptSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let userEmail: String
+    @State private var showCreateProgram = false
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 24) {
+                Spacer()
+
+                Image(systemName: "calendar.badge.plus")
+                    .font(.system(size: 64))
+                    .foregroundStyle(.blue)
+
+                Text("Create Your First Plan")
+                    .font(.title2.bold())
+
+                Text("Get a personalized workout program with progressive overload, periodization, and smart exercise selection.")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+
+                Spacer()
+
+                Button {
+                    showCreateProgram = true
+                } label: {
+                    Text("Create Plan")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color.accentColor)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                }
+                .padding(.horizontal, 24)
+
+                Button("Maybe Later") {
+                    dismiss()
+                }
+                .foregroundColor(.secondary)
+                .padding(.bottom, 32)
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                }
+            }
+            .sheet(isPresented: $showCreateProgram) {
+                CreateProgramView(userEmail: userEmail)
+            }
         }
     }
 }

@@ -20,7 +20,7 @@ struct GymLocationView: View {
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 24)
                         
-                        VStack(spacing: 16) {
+                        VStack(spacing: 10) {
                             ForEach(options) { option in
                                 optionRow(option)
                             }

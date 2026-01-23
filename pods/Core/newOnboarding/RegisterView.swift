@@ -8,8 +8,11 @@ struct RegisterView: View {
 
     @Binding var isAuthenticated: Bool
     @EnvironmentObject private var viewModel: OnboardingViewModel
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @State private var currentNonce: String?
     @State private var showEmailSignup = false
+    @State private var showGeneratingProgram = false
+    @State private var isNewUserSignup = false
 
     var body: some View {
         NavigationStack {
@@ -101,6 +104,26 @@ struct RegisterView: View {
             .toolbar(.hidden, for: .navigationBar)
         }
         .ignoresSafeArea()
+        .fullScreenCover(isPresented: $showGeneratingProgram) {
+            GeneratingProgramView(isPresented: $showGeneratingProgram) {
+                // Program generation complete - show paywall for new users
+                showGeneratingProgram = false
+                if isNewUserSignup {
+                    viewModel.showProOnboarding = true
+                }
+                // Navigate to welcome/paywall
+                completeOnboarding()
+            }
+            .environmentObject(viewModel)
+        }
+    }
+
+    private func completeOnboarding() {
+        UserDefaults.standard.set(true, forKey: "isAuthenticated")
+        UserDefaults.standard.set(false, forKey: "onboardingInProgress")
+        UserDefaults.standard.synchronize()
+        isAuthenticated = true
+        NotificationCenter.default.post(name: Notification.Name("AuthenticationCompleted"), object: nil)
     }
 
     private func configureAppleSignIn(_ request: ASAuthorizationAppleIDRequest) {
@@ -137,8 +160,6 @@ struct RegisterView: View {
             ) { success, message, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, onboardingCompleted, isNewUser in
                 if success {
                     DispatchQueue.main.async {
-                        viewModel.showProOnboarding = isNewUser
-                        self.isAuthenticated = true
                         if let resolvedEmail = email, !resolvedEmail.isEmpty {
                             viewModel.email = resolvedEmail
                         }
@@ -155,14 +176,22 @@ struct RegisterView: View {
                         viewModel.profileInitial = resolvedInitial
 
                         viewModel.profileColor = profileColor ?? ""
-                        UserDefaults.standard.set(true, forKey: "isAuthenticated")
                         UserDefaults.standard.set(viewModel.email, forKey: "userEmail")
                         UserDefaults.standard.set(resolvedName, forKey: "userName")
                         UserDefaults.standard.set(resolvedInitial, forKey: "profileInitial")
                         UserDefaults.standard.synchronize()
 
-                        // Post notification to signal authentication completion
-                        NotificationCenter.default.post(name: Notification.Name("AuthenticationCompleted"), object: nil)
+                        if isNewUser {
+                            // New user: show loading screen while generating program
+                            self.isNewUserSignup = true
+                            self.showGeneratingProgram = true
+                        } else {
+                            // Existing user: complete authentication
+                            self.isAuthenticated = true
+                            UserDefaults.standard.set(true, forKey: "isAuthenticated")
+                            UserDefaults.standard.synchronize()
+                            NotificationCenter.default.post(name: Notification.Name("AuthenticationCompleted"), object: nil)
+                        }
                     }
                 } else {
                     print("⚠️ Apple Sign-In backend failure: \(message ?? "Unknown error")")
@@ -213,8 +242,6 @@ struct RegisterView: View {
             ) { success, message, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, onboardingCompleted, isNewUser in
                 if success {
                     DispatchQueue.main.async {
-                        viewModel.showProOnboarding = isNewUser
-                        self.isAuthenticated = true
                         if let resolvedEmail = email, !resolvedEmail.isEmpty {
                             viewModel.email = resolvedEmail
                         }
@@ -231,14 +258,22 @@ struct RegisterView: View {
                         viewModel.profileInitial = resolvedInitial
 
                         viewModel.profileColor = profileColor ?? ""
-                        UserDefaults.standard.set(true, forKey: "isAuthenticated")
                         UserDefaults.standard.set(viewModel.email, forKey: "userEmail")
                         UserDefaults.standard.set(resolvedName, forKey: "userName")
                         UserDefaults.standard.set(resolvedInitial, forKey: "profileInitial")
                         UserDefaults.standard.synchronize()
 
-                        // Post notification to signal authentication completion
-                        NotificationCenter.default.post(name: Notification.Name("AuthenticationCompleted"), object: nil)
+                        if isNewUser {
+                            // New user: show loading screen while generating program
+                            self.isNewUserSignup = true
+                            self.showGeneratingProgram = true
+                        } else {
+                            // Existing user: complete authentication
+                            self.isAuthenticated = true
+                            UserDefaults.standard.set(true, forKey: "isAuthenticated")
+                            UserDefaults.standard.synchronize()
+                            NotificationCenter.default.post(name: Notification.Name("AuthenticationCompleted"), object: nil)
+                        }
                     }
                 } else {
                     print("⚠️ Google Sign-In backend failure: \(message ?? "Unknown error")")

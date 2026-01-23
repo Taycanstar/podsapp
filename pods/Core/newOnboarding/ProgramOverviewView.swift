@@ -158,7 +158,7 @@ struct ProgramOverviewView: View {
         ToolbarItemGroup(placement: .topBarLeading) {
             Button {
                 viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 12)
-                viewModel.currentStep = .aboutYou
+                viewModel.currentStep = .desiredWeight
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.headline)

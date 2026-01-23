@@ -138,7 +138,7 @@ struct CreatingPlanView: View {
             addCaloriesBurned: UserDefaults.standard.bool(forKey: "addCaloriesBurned"),
             rolloverCalories: UserDefaults.standard.bool(forKey: "rolloverCalories"),
             fitnessLevel: UserDefaults.standard.string(forKey: "fitnessLevel"),
-            fitnessGoal: UserDefaults.standard.string(forKey: "fitnessGoalType") ?? UserDefaults.standard.string(forKey: "fitness_goal"),
+            fitnessGoal: UserDefaults.standard.string(forKey: "fitnessGoal"),
             sportType: UserDefaults.standard.string(forKey: "sportType")
         )
         
@@ -163,7 +163,7 @@ struct CreatingPlanView: View {
                     // Complete the loading animation
                     self.loadingProgress = 1.0
                     self.nutritionGoals = response
-                    
+
                     // Save nutrition goals via the shared store so every surface stays in sync
                     if let nutritionGoals = self.nutritionGoals {
                         NutritionGoalsStore.shared.cache(goals: nutritionGoals)
@@ -172,11 +172,16 @@ struct CreatingPlanView: View {
                     } else {
                         print("⚠️ ERROR: No nutritionGoals available to save to UserDefaults")
                     }
-                    
-                    // Wait a brief moment to show 100% completion
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        print("⏲️ Loading animation complete - navigating to OnboardingPlanOverview")
-                        self.navigateToOverview = true
+
+                    // Generate training program and THEN navigate
+                    Task {
+                        await self.generateInitialProgram()
+
+                        // Navigate after program generation completes
+                        await MainActor.run {
+                            print("⏲️ Program generation complete - navigating to OnboardingPlanOverview")
+                            self.navigateToOverview = true
+                        }
                     }
                 case .failure(let error):
                     print("⚠️ Failed to process onboarding data with server: \(error)")
@@ -193,6 +198,97 @@ struct CreatingPlanView: View {
                     self.currentTask = "Error processing your data. Please try again."
                     }
                 }
+        }
+    }
+
+    private func generateInitialProgram() async {
+        let userEmail = UserDefaults.standard.string(forKey: "userEmail") ?? ""
+        let fitnessGoal = UserDefaults.standard.string(forKey: "fitnessGoal") ?? "balanced"
+        let fitnessLevel = UserDefaults.standard.string(forKey: "fitnessLevel") ?? "intermediate"
+        let daysPerWeek = UserDefaults.standard.integer(forKey: "workout_days_per_week")
+        let trainingSplit = UserDefaults.standard.string(forKey: "trainingSplit") ?? "full_body"
+        let sessionDuration = UserDefaults.standard.integer(forKey: "sessionDurationMinutes")
+        let totalWeeks = UserDefaults.standard.integer(forKey: "programTotalWeeks")
+        let isEndurance = fitnessGoal == "endurance"
+
+        print("📋 Raw UserDefaults values for program generation:")
+        print("   - userEmail: \(userEmail)")
+        print("   - fitnessGoal (raw): '\(UserDefaults.standard.string(forKey: "fitnessGoal") ?? "nil")'")
+        print("   - fitnessLevel (raw): '\(UserDefaults.standard.string(forKey: "fitnessLevel") ?? "nil")'")
+        print("   - workout_days_per_week (raw): \(daysPerWeek)")
+        print("   - trainingSplit (raw): '\(UserDefaults.standard.string(forKey: "trainingSplit") ?? "nil")'")
+        print("   - sessionDurationMinutes (raw): \(sessionDuration)")
+        print("   - programTotalWeeks (raw): \(totalWeeks)")
+
+        guard !userEmail.isEmpty else {
+            print("⚠️ Cannot generate program: user email is missing")
+            return
+        }
+
+        // Map split to ProgramType
+        let programType: ProgramType
+        switch trainingSplit {
+        case "push_pull_lower":
+            programType = .ppl
+        case "upper_lower":
+            programType = .upperLower
+        default:
+            programType = .fullBody
+        }
+
+        // Map fitness goal
+        let goal: ProgramFitnessGoal
+        switch fitnessGoal {
+        case "strength":
+            goal = .strength
+        case "hypertrophy":
+            goal = .hypertrophy
+        case "endurance":
+            goal = .balanced  // Use balanced with cardio flag for endurance
+        default:
+            goal = .balanced
+        }
+
+        // Map experience level
+        let experience: ProgramExperienceLevel
+        switch fitnessLevel {
+        case "beginner":
+            experience = .beginner
+        case "advanced":
+            experience = .advanced
+        default:
+            experience = .intermediate
+        }
+
+        let effectiveDays = max(2, daysPerWeek > 0 ? daysPerWeek : 4)
+        let effectiveDuration = sessionDuration > 0 ? sessionDuration : 60
+        let effectiveWeeks = totalWeeks > 0 ? totalWeeks : 6
+
+        print("🏋️ Generating initial training program:")
+        print("   - Program Type: \(programType.rawValue)")
+        print("   - Fitness Goal: \(goal.rawValue)")
+        print("   - Experience: \(experience.rawValue)")
+        print("   - Days/Week: \(effectiveDays)")
+        print("   - Duration: \(effectiveDuration) min")
+        print("   - Total Weeks: \(effectiveWeeks)")
+        print("   - Include Cardio: \(isEndurance)")
+
+        do {
+            _ = try await ProgramService.shared.generateProgram(
+                userEmail: userEmail,
+                programType: programType,
+                fitnessGoal: goal,
+                experienceLevel: experience,
+                daysPerWeek: effectiveDays,
+                sessionDurationMinutes: effectiveDuration,
+                totalWeeks: effectiveWeeks,
+                includeDeload: true,
+                includeCardio: isEndurance
+            )
+            print("✅ Auto-generated training program after onboarding")
+        } catch {
+            print("⚠️ Failed to generate program: \(error.localizedDescription)")
+            // Non-fatal - user can create program manually later
         }
     }
 }

@@ -53,9 +53,8 @@ class OnboardingViewModel: ObservableObject {
     enum FitnessGoalOption: String, CaseIterable, Identifiable {
         case liftMoreWeight = "Lift more weight"
         case gainMuscle = "Gain muscle"
-        case leanAndToned = "Get lean and toned"
-        case loseWeight = "Lose weight"
         case buildEndurance = "Build endurance"
+        case improveFitness = "Improve fitness"
 
         var id: String { rawValue }
 
@@ -65,24 +64,22 @@ class OnboardingViewModel: ObservableObject {
                 return "figure.strengthtraining.traditional"
             case .gainMuscle:
                 return "bolt.heart"
-            case .leanAndToned:
-                return "figure.cooldown"
-            case .loseWeight:
-                return "scalemass"
             case .buildEndurance:
                 return "figure.run"
+            case .improveFitness:
+                return "figure.mixed.cardio"
             }
         }
 
         /// Normalized backend goal value used during onboarding completion
         var mappedOnboardingValue: String {
             switch self {
-            case .liftMoreWeight, .gainMuscle:
+            case .liftMoreWeight:
                 return "strength"
-            case .leanAndToned:
+            case .gainMuscle:
                 return "hypertrophy"
-            case .loseWeight:
-                return "hypertrophy"
+            case .improveFitness:
+                return "balanced"
             case .buildEndurance:
                 return "endurance"
             }
@@ -91,15 +88,13 @@ class OnboardingViewModel: ObservableObject {
         /// Map fitness goal to ICP (Ideal Customer Profile) for body composition phase
         var icp: String {
             switch self {
-            case .loseWeight:
-                return "cut"
-            case .leanAndToned:
-                return "cut"
             case .gainMuscle:
                 return "lean_bulk"
             case .liftMoreWeight:
                 return "recomp"
             case .buildEndurance:
+                return "recomp"
+            case .improveFitness:
                 return "recomp"
             }
         }
@@ -110,11 +105,11 @@ class OnboardingViewModel: ObservableObject {
             case "strength":
                 return .liftMoreWeight
             case "hypertrophy":
-                return .leanAndToned
+                return .gainMuscle
             case "endurance":
                 return .buildEndurance
             case "circuit_training", "general":
-                return .leanAndToned
+                return .improveFitness
             default:
                 return nil
             }
@@ -549,18 +544,25 @@ class OnboardingViewModel: ObservableObject {
     }
 
     private func updateTrainingSplit(for workoutDays: Int) {
+        let goal = fitnessGoal
         let split: String
-        switch workoutDays {
-        case ...2:
+
+        // For endurance, always use full_body (cardio flag handled separately)
+        if goal == "endurance" {
             split = "full_body"
-        case 3:
-            split = "push_pull_lower"
-        case 4...5:
-            split = "upper_lower"
-        case 6...:
-            split = "push_pull_lower"
-        default:
-            split = "full_body"
+        } else {
+            // For hypertrophy, strength, and balanced - use the same split logic
+            // Based on exercise science optimal frequency tables
+            switch workoutDays {
+            case ...3:
+                split = "full_body"
+            case 4...5:
+                split = "upper_lower"
+            case 6...:
+                split = "push_pull_lower"
+            default:
+                split = "full_body"
+            }
         }
 
         if trainingSplit != split {
@@ -1023,6 +1025,16 @@ class OnboardingViewModel: ObservableObject {
             } else {
                 UserDefaults.standard.set(trainingSplit, forKey: "trainingSplit")
             }
+        }
+    }
+    @Published var sessionDurationMinutes: Int = 60 {
+        didSet {
+            UserDefaults.standard.set(sessionDurationMinutes, forKey: "sessionDurationMinutes")
+        }
+    }
+    @Published var programTotalWeeks: Int = 6 {
+        didSet {
+            UserDefaults.standard.set(programTotalWeeks, forKey: "programTotalWeeks")
         }
     }
     @Published var isLoading: Bool = false
