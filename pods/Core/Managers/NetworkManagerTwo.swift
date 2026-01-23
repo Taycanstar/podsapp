@@ -5900,7 +5900,8 @@ class NetworkManagerTwo {
             "total_weeks": request.totalWeeks,
             "include_deload": request.includeDeload,
             "default_warmup_enabled": request.defaultWarmupEnabled,
-            "default_cooldown_enabled": request.defaultCooldownEnabled
+            "default_cooldown_enabled": request.defaultCooldownEnabled,
+            "include_cardio": request.includeCardio
         ]
 
         if let startDate = request.startDate {

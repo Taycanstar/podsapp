@@ -5,8 +5,10 @@ import UIKit
 
 struct WorkoutProfileSettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dismiss) private var dismiss
     @ObservedObject private var profile = UserProfileService.shared
     @ObservedObject private var programService = ProgramService.shared
+    @EnvironmentObject private var workoutManager: WorkoutManager
     @AppStorage("userEmail") private var userEmail: String = ""
 
     // Sheet states
@@ -414,8 +416,13 @@ struct WorkoutProfileSettingsView: View {
                 availableEquipment: equipment,
                 excludedExercises: nil,
                 defaultWarmupEnabled: warmupEnabled,
-                defaultCooldownEnabled: cooldownEnabled
+                defaultCooldownEnabled: cooldownEnabled,
+                includeCardio: cardioEnabled
             )
+
+            // CRITICAL: Re-fetch the active program to get full weeks/exercises data
+            // The generate endpoint may not return all nested data needed for todayProgramWorkout
+            _ = try await programService.fetchActiveProgram(userEmail: userEmail)
 
             // Sync local state from new program (updates original values too)
             syncFromActiveProgram()
@@ -423,6 +430,16 @@ struct WorkoutProfileSettingsView: View {
             // Also update the UserProfileService settings to stay in sync
             profile.warmupSetsEnabled = warmupSetsEnabled
             profile.circuitsAndSupersetsEnabled = circuitsEnabled
+
+            // Trigger WorkoutManager to sync today's workout with the new program
+            workoutManager.syncTodayWorkoutWithProgram()
+
+            // Dismiss and go back to workout view
+            await MainActor.run {
+                isRegenerating = false
+                dismiss()
+            }
+            return
 
         } catch {
             print("❌ Failed to regenerate program: \(error)")
@@ -460,8 +477,16 @@ struct WorkoutProfileSettingsView: View {
             )
         }
 
+        // Trigger WorkoutManager to sync today's workout with updated preferences
+        await workoutManager.syncTodayWorkoutWithProgram()
+
         // Update original values to match current (changes are now saved)
         updateOriginalValues()
+
+        // Dismiss and go back to workout view
+        await MainActor.run {
+            dismiss()
+        }
     }
 
     // MARK: - Sync Methods

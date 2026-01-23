@@ -418,4 +418,5 @@ struct GenerateProgramRequest: Codable {
     let excludedExercises: [Int]?
     let defaultWarmupEnabled: Bool
     let defaultCooldownEnabled: Bool
+    let includeCardio: Bool
 }

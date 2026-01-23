@@ -417,7 +417,7 @@ class WorkoutManager: ObservableObject {
     /// Sync todayWorkout with the active program's today workout
     /// This is the SINGLE SOURCE OF TRUTH mechanism - program workout ALWAYS takes priority
     /// Called whenever activeProgram changes or trainingProgramCreated notification fires
-    private func syncTodayWorkoutWithProgram() {
+     func syncTodayWorkoutWithProgram() {
         print("📋 [syncTodayWorkoutWithProgram] CALLED - current todayWorkout.title='\(todayWorkout?.title ?? "nil")'")
         let programWorkout = ProgramService.shared.todayProgramWorkout
         print("📋 [syncTodayWorkoutWithProgram] programWorkout from ProgramService: '\(programWorkout?.title ?? "nil")'")
@@ -2001,8 +2001,17 @@ class WorkoutManager: ObservableObject {
     func handleProfileChange() {
         loadDefaultMusclePreferences()
         loadSessionData()
-        // Force regenerate when profile changes (user preference change)
-        Task { await generateTodayWorkout(forceRegenerate: true) }
+
+        // If there's an active program workout, sync from it instead of regenerating
+        // This prevents profile changes from overwriting program workouts
+        if ProgramService.shared.todayProgramWorkout != nil {
+            print("🔄 handleProfileChange: Active program workout exists, syncing instead of regenerating")
+            syncTodayWorkoutWithProgram()
+        } else {
+            // No program workout - regenerate fallback workout with new profile settings
+            print("🔄 handleProfileChange: No program workout, regenerating fallback workout")
+            Task { await generateTodayWorkout(forceRegenerate: true) }
+        }
     }
     
     /// Clear all session overrides
