@@ -71,9 +71,8 @@ struct OnboardingFlowContainer: View {
                         .environmentObject(viewModel)
                         .onAppear { updateCurrentStep() }
                 case .complete:
-                    CreatingPlanView()
+                    CraftingExperienceView(onComplete: { completeOnboarding() })
                         .environmentObject(viewModel)
-                        .onAppear { completeOnboarding() }
                 }
             }
             .navigationBarHidden(true)

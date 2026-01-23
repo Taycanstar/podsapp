@@ -3,22 +3,24 @@ import Foundation
 
 struct SignupView: View {
     @Binding var isAuthenticated: Bool
+    /// Callback to notify parent (RegisterView) to show program generation
+    var onNewUserSignup: (() -> Void)?
+
     @State private var password: String = ""
     @State private var email: String = ""
     @State private var showPassword: Bool = false
     @State private var errorMessage: String? = nil
     @EnvironmentObject var viewModel: OnboardingViewModel
     @State private var isLoading = false
-    @State private var showGeneratingProgram = false
-    @State private var isNewUserSignup = false
     @Environment(\.dismiss) private var dismiss
 
     // Debouncer for email and password input
     private var emailDebouncer = Debouncer(delay: 0.5)
     private var passwordDebouncer = Debouncer(delay: 0.5)
 
-    init(isAuthenticated: Binding<Bool>) {
+    init(isAuthenticated: Binding<Bool>, onNewUserSignup: (() -> Void)? = nil) {
         self._isAuthenticated = isAuthenticated
+        self.onNewUserSignup = onNewUserSignup
     }
 
     var body: some View {
@@ -43,25 +45,6 @@ struct SignupView: View {
         .onAppear {
             AnalyticsManager.shared.trackSignupUIOpened()
         }
-        .fullScreenCover(isPresented: $showGeneratingProgram) {
-            GeneratingProgramView(isPresented: $showGeneratingProgram) {
-                showGeneratingProgram = false
-                if isNewUserSignup {
-                    viewModel.showProOnboarding = true
-                }
-                completeOnboarding()
-            }
-            .environmentObject(viewModel)
-        }
-    }
-
-    private func completeOnboarding() {
-        UserDefaults.standard.set(true, forKey: "isAuthenticated")
-        UserDefaults.standard.set(false, forKey: "onboardingInProgress")
-        UserDefaults.standard.synchronize()
-        isAuthenticated = true
-        dismiss()
-        NotificationCenter.default.post(name: Notification.Name("AuthenticationCompleted"), object: nil)
     }
 
     private var topBar: some View {
@@ -242,9 +225,10 @@ struct SignupView: View {
                     UserDefaults.standard.synchronize()
 
                     if isNewUser {
-                        // New user: show loading screen while generating program
-                        self.isNewUserSignup = true
-                        self.showGeneratingProgram = true
+                        // New user: dismiss SignupView and let RegisterView show program generation
+                        dismiss()
+                        // Notify parent to show GeneratingProgramView
+                        onNewUserSignup?()
                     } else {
                         // Existing user: complete authentication
                         UserDefaults.standard.set(true, forKey: "isAuthenticated")

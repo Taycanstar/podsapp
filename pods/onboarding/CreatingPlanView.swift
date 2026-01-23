@@ -102,11 +102,11 @@ struct CreatingPlanView: View {
     private func startLoadingSequence() {
         print("⏲️ Starting loading animation sequence in CreatingPlanView")
         
-        // Start the loading animation immediately
+        // Start the loading animation immediately - reach 95% in ~5s to match backend generation time
         loadingProgress = 0.0
         let timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { timer in
             if self.loadingProgress < 0.95 { // Only go up to 95% until we get the response
-                self.loadingProgress += 0.01
+                self.loadingProgress += 0.02  // 0.02 per 0.1s = 95% in ~4.75s
             }
         }
         

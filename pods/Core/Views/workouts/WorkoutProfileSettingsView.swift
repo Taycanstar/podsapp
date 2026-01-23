@@ -19,6 +19,7 @@ struct WorkoutProfileSettingsView: View {
     // Regeneration states
     @State private var showRegenerationAlert = false
     @State private var isRegenerating = false
+    @State private var regenerationComplete = false
 
     // Local state (current values being edited)
     @State private var selectedGoal: ProgramFitnessGoal = .hypertrophy
@@ -352,7 +353,13 @@ struct WorkoutProfileSettingsView: View {
             PlanRegenerationView(
                 experienceLevel: selectedExperience.displayName,
                 splitName: trainingSplit.displayName,
-                weeks: totalWeeks
+                weeks: totalWeeks,
+                isComplete: $regenerationComplete,
+                onDismiss: {
+                    isRegenerating = false
+                    regenerationComplete = false
+                    dismiss()
+                }
             )
         }
         .onAppear {
@@ -434,18 +441,19 @@ struct WorkoutProfileSettingsView: View {
             // Trigger WorkoutManager to sync today's workout with the new program
             workoutManager.syncTodayWorkoutWithProgram()
 
-            // Dismiss and go back to workout view
+            // Signal completion - the PlanRegenerationView will show final checkmark and dismiss
             await MainActor.run {
-                isRegenerating = false
-                dismiss()
+                regenerationComplete = true
             }
             return
 
         } catch {
             print("❌ Failed to regenerate program: \(error)")
+            await MainActor.run {
+                isRegenerating = false
+                regenerationComplete = false
+            }
         }
-
-        isRegenerating = false
     }
 
     /// Apply only non-regenerating changes (no plan regeneration needed)

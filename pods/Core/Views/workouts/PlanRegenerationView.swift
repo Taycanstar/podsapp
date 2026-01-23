@@ -14,6 +14,8 @@ struct PlanRegenerationView: View {
     let experienceLevel: String
     let splitName: String
     let weeks: Int
+    @Binding var isComplete: Bool
+    let onDismiss: () -> Void
 
     @State private var currentStep = 0
     @State private var completedSteps: Set<Int> = []
@@ -86,15 +88,15 @@ struct PlanRegenerationView: View {
     }
 
     private func startAnimation() {
-        // Animate through steps - faster than generation since we're rebuilding, not creating
-        // Total animation: ~8s before finalizing step starts
+        // Fixed 5-second animation for consistent UX (backend finishes in ~2s, well before animation ends)
+        // 6 steps = ~0.83s each
         let stepDurations: [(start: Double, complete: Double)] = [
-            (0.2, 1.8),    // Step 1: Preserving Progress (1.6s)
-            (2.0, 3.6),    // Step 2: Updating Exercises (1.6s)
-            (3.8, 5.2),    // Step 3: Rebuilding Structure (1.4s)
-            (5.4, 6.8),    // Step 4: Recalculating Progression (1.4s)
-            (7.0, 8.2),    // Step 5: Rescheduling Workouts (1.2s)
-            (8.4, -1)      // Step 6: Finalizing (stays in progress until API returns)
+     (0.0, 0.7),   
+            (0.7, 1.3),    
+            (1.3, 2.0),    
+            (2.0, 3.0),    
+            (3.0, 3.5),
+            (3.5, 4.0)  
         ]
 
         for (index, timing) in stepDurations.enumerated() {
@@ -105,11 +107,18 @@ struct PlanRegenerationView: View {
                 }
             }
 
-            // Complete step (except the last one which stays in progress)
-            if timing.complete > 0 {
-                DispatchQueue.main.asyncAfter(deadline: .now() + timing.complete) {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                        _ = completedSteps.insert(index)
+            // Complete step
+            DispatchQueue.main.asyncAfter(deadline: .now() + timing.complete) {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                    _ = completedSteps.insert(index)
+                }
+
+                // After last step completes, call onDismiss if regeneration is done
+                if index == steps.count - 1 {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        if isComplete {
+                            onDismiss()
+                        }
                     }
                 }
             }
@@ -192,6 +201,8 @@ private struct RegenerationStepRow: View {
     PlanRegenerationView(
         experienceLevel: "Intermediate",
         splitName: "Full Body",
-        weeks: 8
+        weeks: 8,
+        isComplete: .constant(false),
+        onDismiss: {}
     )
 }

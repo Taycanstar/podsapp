@@ -93,8 +93,12 @@ struct RegisterView: View {
                 .edgesIgnoringSafeArea(.bottom)
 
                 NavigationLink(isActive: $showEmailSignup) {
-                    SignupView(isAuthenticated: $isAuthenticated)
-                        .environmentObject(viewModel)
+                    SignupView(isAuthenticated: $isAuthenticated) {
+                        // Email signup completed for new user - show program generation
+                        self.isNewUserSignup = true
+                        self.showGeneratingProgram = true
+                    }
+                    .environmentObject(viewModel)
                 } label: {
                     EmptyView()
                 }

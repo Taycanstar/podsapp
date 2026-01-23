@@ -110,9 +110,9 @@ struct CoachCardView: View {
         CoachCardView(
             card: NetworkManager.CoachHomeCard(
                 interventionId: "test-123",
-                content: "{\"headline\": \"This isn't failure\", \"body\": \"One meal doesn't undo your progress. Tap and I'll help you choose a low-stress next move.\"}",
+                content: "{\"body\": \"3+ days without logs. Want to backfill or start fresh today?\"}",
                 action: "HOME_CARD_SUPPORT",
-                userState: "POST_SLIPUP",
+                userState: "DATA_GAP",
                 createdAt: "2025-01-15T10:00:00Z"
             ),
             onTap: { print("Tapped") }
@@ -122,9 +122,9 @@ struct CoachCardView: View {
         CoachCardView(
             card: NetworkManager.CoachHomeCard(
                 interventionId: "test-456",
-                content: "You've been away for a few days. No pressure—just tap if you want to ease back in.",
+                content: "Logging gap detected. Your data streak needs attention.",
                 action: "HOME_CARD_MINIMAL",
-                userState: "AT_RISK",
+                userState: "DATA_GAP",
                 createdAt: "2025-01-15T10:00:00Z"
             ),
             onTap: { print("Tapped") }

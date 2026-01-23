@@ -483,6 +483,7 @@
 		C5815F6130304BA3D7590704 /* BodyFatLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89423DE3210EFC3F0A14CEE2 /* BodyFatLogView.swift */; };
 		C883DC9A9122407453C28742 /* Pods_Metryc.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FB3DF34AD6BD6C86FFC91F25 /* Pods_Metryc.framework */; };
 		CBF7233285884A05852E6AC2 /* MixpanelSessionReplay in Frameworks */ = {isa = PBXBuildFile; productRef = 495BD8D493254E64BCB8C542 /* MixpanelSessionReplay */; };
+		F1B2433AB57FEB24561F67D3 /* CraftingExperienceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80C1BC9E835DF288AA166008 /* CraftingExperienceView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -977,6 +978,7 @@
 		72915B93F931472588ADFD26 /* WaterUnit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterUnit.swift; sourceTree = "<group>"; };
 		7391444D455656A22B95182A /* Pods-Metryc.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Metryc.debug.xcconfig"; path = "../Pods/Target Support Files/Pods-Metryc/Pods-Metryc.debug.xcconfig"; sourceTree = "<group>"; };
 		78B0866B57EB40A6AD20953C /* ProFoodSearchLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProFoodSearchLoader.swift; sourceTree = "<group>"; };
+		80C1BC9E835DF288AA166008 /* CraftingExperienceView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CraftingExperienceView.swift; path = ../Pods/onboarding/CraftingExperienceView.swift; sourceTree = "<group>"; };
 		828AD9036235BA1CC3FDB722 /* Pods-Metryc-podsUITests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Metryc-podsUITests.release.xcconfig"; path = "Target Support Files/Pods-Metryc-podsUITests/Pods-Metryc-podsUITests.release.xcconfig"; sourceTree = "<group>"; };
 		83EDB7BB4B1CA39393C90454 /* Pods-podsTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-podsTests.debug.xcconfig"; path = "Target Support Files/Pods-podsTests/Pods-podsTests.debug.xcconfig"; sourceTree = "<group>"; };
 		89423DE3210EFC3F0A14CEE2 /* BodyFatLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyFatLogView.swift; sourceTree = "<group>"; };
@@ -1825,6 +1827,14 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		A91C9B1D6467DC402A4CBB71 /* onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				80C1BC9E835DF288AA166008 /* CraftingExperienceView.swift */,
+			);
+			name = onboarding;
+			sourceTree = "<group>";
+		};
 		AA0A7B8E382EA3744C865BCE /* workouts */ = {
 			isa = PBXGroup;
 			children = (
@@ -1851,6 +1861,7 @@
 				AC7022D9817A3540745A1392 /* Pods-Metryc-podsUITests.debug.xcconfig */,
 				A54170CEADE02CDFB879CDB5 /* Pods-Metryc-podsUITests.release.xcconfig */,
 				7CEC159802F9A0B0CD4874CA /* Core */,
+				A91C9B1D6467DC402A4CBB71 /* onboarding */,
 			);
 			name = Pods;
 			path = pods;
@@ -2562,6 +2573,7 @@
 				364A83CC2DACA02F009D2620 /* NetworkManagerTwo.swift in Sources */,
 				45F7F2FFBBB24BEFB5DEC5B7 /* PlanRegenerationView.swift in Sources */,
 				368B1129AA3F5424DA958843 /* GeneratingProgramView.swift in Sources */,
+				F1B2433AB57FEB24561F67D3 /* CraftingExperienceView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

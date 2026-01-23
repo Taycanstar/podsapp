@@ -1302,15 +1302,15 @@ private struct ProgramGenerationView: View {
     }
 
     private func startAnimation() {
-        // Animate through steps with timing that matches typical program generation
-        // Total animation: ~10.5s before finalizing step starts
+        // Fixed 5-second animation for consistent UX (backend finishes in ~2s, well before animation ends)
+        // 6 steps = ~0.83s each
         let stepDurations: [(start: Double, complete: Double)] = [
-            (0.3, 2.8),    // Step 1: Analyzing Profile (2.5s duration)
-            (3.0, 5.2),    // Step 2: Selecting Exercises (2.2s duration)
-            (5.4, 7.4),    // Step 3: Building Structure (2s duration)
-            (7.6, 9.6),    // Step 4: Smart Progression (2s duration)
-            (9.8, 11.6),   // Step 5: Scheduling Workouts (1.8s duration)
-            (11.8, -1)     // Step 6: Finalizing (stays in progress until API returns)
+            (0.0, 0.7),   
+            (0.7, 1.3),    
+            (1.3, 2.0),    
+            (2.0, 3.0),    
+            (3.0, 3.5),
+            (3.5, 4.0)   
         ]
 
         for (index, timing) in stepDurations.enumerated() {
@@ -1321,12 +1321,10 @@ private struct ProgramGenerationView: View {
                 }
             }
 
-            // Complete step (except the last one which stays in progress)
-            if timing.complete > 0 {
-                DispatchQueue.main.asyncAfter(deadline: .now() + timing.complete) {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                        _ = completedSteps.insert(index)
-                    }
+            // Complete step
+            DispatchQueue.main.asyncAfter(deadline: .now() + timing.complete) {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                    _ = completedSteps.insert(index)
                 }
             }
         }

@@ -1,21 +1,28 @@
+//
+//  CraftingExperienceView.swift
+//  pods
+//
+//  Created by Dimi Nunez on 1/23/26.
+//
+
 import SwiftUI
 
-struct GeneratingProgramView: View {
+/// Full-screen loading view shown during onboarding while setting up the user's experience
+struct CraftingExperienceView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
-    @Binding var isPresented: Bool
     let onComplete: () -> Void
 
     @State private var currentStep = 0
     @State private var completedSteps: Set<Int> = []
     @State private var showError = false
     @State private var errorMessage = ""
-    @State private var generationComplete = false
+    @State private var setupComplete = false
 
     private let steps: [(icon: String, title: String, subtitle: String)] = [
-        ("person.fill.viewfinder", "Analyzing Profile", "Understanding your goals"),
-        ("dumbbell.fill", "Selecting Exercises", "Matching your equipment"),
-        ("chart.line.uptrend.xyaxis", "Building Progression", "Optimizing your gains"),
-        ("calendar", "Scheduling Workouts", "Creating your calendar"),
+        ("person.fill.viewfinder", "Learning About You", "Analyzing your profile"),
+        ("target", "Setting Your Goals", "Personalizing targets"),
+        ("fork.knife", "Configuring Nutrition", "Calculating macros"),
+        ("figure.run", "Building Your Plan", "Creating workouts"),
         ("sparkles", "Finalizing Experience", "Almost ready...")
     ]
 
@@ -30,7 +37,7 @@ struct GeneratingProgramView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(UIColor.systemGroupedBackground))
         .onAppear {
-            startGeneration()
+            startSetup()
         }
     }
 
@@ -40,10 +47,10 @@ struct GeneratingProgramView: View {
 
             // Header
             VStack(spacing: 12) {
-                Image(systemName: "figure.strengthtraining.traditional")
+                Image(systemName: "wand.and.stars")
                     .font(.system(size: 44))
                     .foregroundStyle(.linearGradient(
-                        colors: [.blue, .purple],
+                        colors: [.purple, .blue],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ))
@@ -52,7 +59,7 @@ struct GeneratingProgramView: View {
                 Text("Crafting Your Experience")
                     .font(.system(size: 28, weight: .bold))
 
-                Text("Setting everything up for you")
+                Text("Personalizing everything for you")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
@@ -61,7 +68,7 @@ struct GeneratingProgramView: View {
             // Steps
             VStack(spacing: 0) {
                 ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
-                    GenerationStepRow(
+                    CraftingStepRow(
                         icon: step.icon,
                         title: step.title,
                         subtitle: step.subtitle,
@@ -99,8 +106,8 @@ struct GeneratingProgramView: View {
                 errorMessage = ""
                 currentStep = 0
                 completedSteps.removeAll()
-                generationComplete = false
-                startGeneration()
+                setupComplete = false
+                startSetup()
             }) {
                 Text("Try Again")
                     .font(.headline)
@@ -116,7 +123,7 @@ struct GeneratingProgramView: View {
         }
     }
 
-    private func stepState(for index: Int) -> GenerationStepState {
+    private func stepState(for index: Int) -> CraftingStepState {
         if completedSteps.contains(index) {
             return .completed
         } else if index == currentStep {
@@ -126,24 +133,24 @@ struct GeneratingProgramView: View {
         }
     }
 
-    private func startGeneration() {
+    private func startSetup() {
         // Start the step animation
         startStepAnimation()
 
-        // Generate the program in parallel
+        // Run onboarding setup and program generation in parallel
         Task {
-            await generateProgram()
+            await processOnboardingAndGenerateProgram()
         }
     }
 
     private func startStepAnimation() {
-        // Fixed 4-second animation for consistent UX (backend finishes in ~2s, well before animation ends)
+        // Fixed 4-second animation for consistent UX (backend finishes in ~3.4s, animation covers that)
         // 5 steps matching the steps array
         let stepDurations: [(start: Double, complete: Double)] = [
-            (0.0, 0.8),    // Step 1: Analyzing Profile
-            (0.8, 1.6),    // Step 2: Selecting Exercises
-            (1.6, 2.4),    // Step 3: Building Progression
-            (2.4, 3.2),    // Step 4: Scheduling Workouts
+            (0.0, 0.8),    // Step 1: Learning About You
+            (0.8, 1.6),    // Step 2: Setting Your Goals
+            (1.6, 2.4),    // Step 3: Configuring Nutrition
+            (2.4, 3.2),    // Step 4: Building Your Plan
             (3.2, 4.0)     // Step 5: Finalizing Experience
         ]
 
@@ -169,12 +176,80 @@ struct GeneratingProgramView: View {
         }
     }
 
-    /// Try to dismiss - called when animation finishes or when generation completes
+    /// Try to dismiss - called when animation finishes or when setup completes
     private func tryDismiss() {
         // Small delay for visual feedback
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            if generationComplete && completedSteps.count == steps.count {
+            if setupComplete && completedSteps.count == steps.count {
                 onComplete()
+            }
+        }
+    }
+
+    private func processOnboardingAndGenerateProgram() async {
+        let networkManager = NetworkManagerTwo()
+
+        // Get values from UserDefaults
+        let userEmail = UserDefaults.standard.string(forKey: "userEmail") ?? viewModel.email
+
+        guard !userEmail.isEmpty else {
+            await MainActor.run {
+                showError = true
+                errorMessage = "User email is missing. Please try again."
+            }
+            return
+        }
+
+        let onboardingData = OnboardingData(
+            email: userEmail,
+            gender: UserDefaults.standard.string(forKey: "gender") ?? "",
+            dateOfBirth: UserDefaults.standard.string(forKey: "dateOfBirth") ?? "",
+            heightCm: UserDefaults.standard.double(forKey: "heightCentimeters"),
+            weightKg: UserDefaults.standard.double(forKey: "weightKilograms"),
+            desiredWeightKg: UserDefaults.standard.double(forKey: "desiredWeightKilograms"),
+            dietGoal: UserDefaults.standard.string(forKey: "serverDietGoal") ?? "maintain",
+            workoutFrequency: UserDefaults.standard.string(forKey: "workoutFrequency") ?? "",
+            dietPreference: UserDefaults.standard.string(forKey: "dietPreference") ?? "",
+            primaryWellnessGoal: UserDefaults.standard.string(forKey: "primaryWellnessGoal") ?? "",
+            goalTimeframeWeeks: UserDefaults.standard.integer(forKey: "goalTimeframeWeeks"),
+            weeklyWeightChange: UserDefaults.standard.double(forKey: "weeklyWeightChange"),
+            obstacles: UserDefaults.standard.stringArray(forKey: "selectedObstacles"),
+            addCaloriesBurned: UserDefaults.standard.bool(forKey: "addCaloriesBurned"),
+            rolloverCalories: UserDefaults.standard.bool(forKey: "rolloverCalories"),
+            fitnessLevel: UserDefaults.standard.string(forKey: "fitnessLevel"),
+            fitnessGoal: UserDefaults.standard.string(forKey: "fitnessGoal"),
+            sportType: UserDefaults.standard.string(forKey: "sportType")
+        )
+
+        print("📋 [CraftingExperienceView] Processing onboarding data...")
+
+        // Process onboarding data first
+        do {
+            let nutritionGoals = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<NutritionGoals, Error>) in
+                networkManager.processOnboardingData(userData: onboardingData) { result in
+                    switch result {
+                    case .success(let goals):
+                        continuation.resume(returning: goals)
+                    case .failure(let error):
+                        continuation.resume(throwing: error)
+                    }
+                }
+            }
+
+            print("✅ [CraftingExperienceView] Onboarding data processed successfully")
+
+            // Cache nutrition goals
+            NutritionGoalsStore.shared.cache(goals: nutritionGoals)
+            UserDefaults.standard.synchronize()
+
+            // Now generate the training program
+            await generateProgram()
+
+        } catch {
+            print("⚠️ [CraftingExperienceView] Failed to process onboarding: \(error.localizedDescription)")
+            await MainActor.run {
+                showError = true
+                errorMessage = "Failed to set up your experience. Please try again."
             }
         }
     }
@@ -189,22 +264,11 @@ struct GeneratingProgramView: View {
         let totalWeeks = UserDefaults.standard.integer(forKey: "programTotalWeeks")
         let isEndurance = fitnessGoal == "endurance"
 
-        print("📋 [GeneratingProgramView] Generating program with:")
-        print("   - userEmail: \(userEmail)")
+        print("📋 [CraftingExperienceView] Generating program with:")
         print("   - fitnessGoal: '\(fitnessGoal)'")
         print("   - fitnessLevel: '\(fitnessLevel)'")
         print("   - workout_days_per_week: \(daysPerWeek)")
         print("   - trainingSplit: '\(trainingSplit)'")
-        print("   - sessionDurationMinutes: \(sessionDuration)")
-        print("   - programTotalWeeks: \(totalWeeks)")
-
-        guard !userEmail.isEmpty else {
-            await MainActor.run {
-                showError = true
-                errorMessage = "User email is missing. Please try again."
-            }
-            return
-        }
 
         let programType: ProgramType
         switch trainingSplit {
@@ -231,8 +295,6 @@ struct GeneratingProgramView: View {
         let effectiveDuration = sessionDuration > 0 ? sessionDuration : 60
         let effectiveWeeks = totalWeeks > 0 ? totalWeeks : 6
 
-        print("🏋️ [GeneratingProgramView] Calling ProgramService.generateProgram")
-
         do {
             _ = try await ProgramService.shared.generateProgram(
                 userEmail: userEmail,
@@ -245,15 +307,15 @@ struct GeneratingProgramView: View {
                 includeDeload: true,
                 includeCardio: isEndurance
             )
-            print("✅ [GeneratingProgramView] Successfully generated training program")
+            print("✅ [CraftingExperienceView] Successfully generated training program")
 
             await MainActor.run {
-                generationComplete = true
+                setupComplete = true
                 // Try to dismiss - if animation already finished, this will call onComplete
                 tryDismiss()
             }
         } catch {
-            print("⚠️ [GeneratingProgramView] Failed to generate program: \(error.localizedDescription)")
+            print("⚠️ [CraftingExperienceView] Failed to generate program: \(error.localizedDescription)")
             await MainActor.run {
                 showError = true
                 errorMessage = "Failed to create your plan. Please try again."
@@ -262,21 +324,21 @@ struct GeneratingProgramView: View {
     }
 }
 
-// MARK: - Generation Step State
+// MARK: - Crafting Step State
 
-private enum GenerationStepState {
+private enum CraftingStepState {
     case pending
     case inProgress
     case completed
 }
 
-// MARK: - Generation Step Row
+// MARK: - Crafting Step Row
 
-private struct GenerationStepRow: View {
+private struct CraftingStepRow: View {
     let icon: String
     let title: String
     let subtitle: String
-    let state: GenerationStepState
+    let state: CraftingStepState
     let isLast: Bool
 
     var body: some View {
@@ -324,11 +386,15 @@ private struct GenerationStepRow: View {
     private var backgroundColor: Color {
         switch state {
         case .completed:
-            return .blue
+            return .purple
         case .inProgress:
-            return .blue
+            return .purple
         case .pending:
             return Color(UIColor.systemGray5)
         }
     }
+}
+
+#Preview {
+    CraftingExperienceView(onComplete: {})
 }

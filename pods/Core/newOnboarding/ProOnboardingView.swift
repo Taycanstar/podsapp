@@ -46,12 +46,12 @@ struct ProOnboardingView: View {
     }
 
     private let proFeatures: [String] = [
-        "Unlimited Food Scans",
-        "Unlimited Workout Sessions",
-        "Pro Food Search",
-        "Advanced Analytics",
-        "Scheduled Meal Logging",
-        "Bulk Photo Logging"
+        "Nutrition & Fitness AI Coach",
+        "Instant, Effortless Logging",
+        "Industry-Leading Food Accuracy",
+        "Workout Plans Made For You",
+        "Unlimited Tracking, Zero Limits",
+        "Wearable-Aware Coaching"
     ]
 
     private var isSubscribed: Bool {
@@ -115,7 +115,9 @@ struct ProOnboardingView: View {
                 .publisher(for: .subscriptionUpdated)
                 .receive(on: RunLoop.main)
         ) { _ in
-            if isSubscribed {
+            // Only dismiss via notification if not already being processed
+            // (purchase flow handles its own dismissal)
+            if isSubscribed && !isProcessing {
                 isPresented = false
             }
         }
@@ -293,9 +295,15 @@ struct ProOnboardingView: View {
                 userEmail: email,
                 onboardingViewModel: viewModel
             )
-            await subscriptionManager.fetchSubscriptionInfoIfNeeded(for: email, force: true)
+            // Dismiss immediately after successful purchase
+            // The fetchSubscriptionInfoIfNeeded will update state but we don't need to wait
+            // Dismissal is handled here, not by the notification handler
             await MainActor.run {
                 isPresented = false
+            }
+            // Fetch subscription info in background (don't block dismissal)
+            Task {
+                await subscriptionManager.fetchSubscriptionInfoIfNeeded(for: email, force: true)
             }
         } catch let error as SubscriptionError {
             // Track purchase failed
