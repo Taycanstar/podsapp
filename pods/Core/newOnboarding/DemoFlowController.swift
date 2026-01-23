@@ -21,14 +21,13 @@ import SwiftUI
 // MARK: - Demo Step Enum
 
 enum DemoStep: Equatable {
-    case chatSlipUp         // User message appears with typing animation
-    case coachResponse1     // First coach bubble
-    case coachResponse2     // Second coach bubble
-    case coachPromptFood    // Third coach bubble asking for food
-    case foodTyping         // "chipotle chicken bowl" types into search
-    case presentConfirmSheet
-    case logging            // Simulate the log button tap
-    case showTimeline       // Navigate to timeline with logged entry
+    case userFoodMessage      // User says what they ate (typed)
+    case autoLogFood          // Food auto-detected and logged
+    case coachDataSummary     // Coach responds with data
+    case coachPatternAlert    // Coach notices pattern
+    case userFollowUp         // User responds positively (typed)
+    case coachSuggestion      // Coach gives specific suggestion
+    case showTimeline         // Navigate to timeline
     case done
 }
 
@@ -38,7 +37,7 @@ enum DemoStep: Equatable {
 final class DemoFlowController: ObservableObject {
     // MARK: - Published State
 
-    @Published var step: DemoStep = .chatSlipUp
+    @Published var step: DemoStep = .userFoodMessage
     @Published var demoChatMessages: [HealthCoachMessage] = []
     @Published var currentTypingText: String = ""
     @Published var isTyping: Bool = false
@@ -84,7 +83,7 @@ final class DemoFlowController: ObservableObject {
     // MARK: - Private Methods
 
     private func resetState() {
-        step = .chatSlipUp
+        step = .userFoodMessage
         demoChatMessages = []
         currentTypingText = ""
         isTyping = false
@@ -103,16 +102,16 @@ final class DemoFlowController: ObservableObject {
 
         guard !Task.isCancelled else { return }
 
-        // Step 1: Type user slip-up message
-        step = .chatSlipUp
-        await typeUserMessage(DemoScript.userSlipUpMessage)
+        // Step 1: Type user food message
+        step = .userFoodMessage
+        await typeUserMessage(DemoScript.userFoodMessage)
 
         guard !Task.isCancelled else { return }
 
         // Add the completed user message to chat
         let userMessage = HealthCoachMessage(
             sender: .user,
-            text: DemoScript.userSlipUpMessage
+            text: DemoScript.userFoodMessage
         )
         demoChatMessages.append(userMessage)
         currentTypingText = ""
@@ -122,87 +121,88 @@ final class DemoFlowController: ObservableObject {
 
         guard !Task.isCancelled else { return }
 
-        // Step 2: Show coach response 1
-        step = .coachResponse1
+        // Step 2: Auto-log food (brief animation)
+        step = .autoLogFood
+        demoLoggedFood = DemoFoodData.createChipotleBowl()
+
+        await delay(seconds: 0.5)
+
+        guard !Task.isCancelled else { return }
+
+        // Step 3: Coach data summary
+        step = .coachDataSummary
         showTypingIndicator = true
         await delay(seconds: 0.8)
         showTypingIndicator = false
 
         guard !Task.isCancelled else { return }
 
-        let coach1 = HealthCoachMessage(
+        let coachData = HealthCoachMessage(
             sender: .coach,
             text: DemoScript.coachResponses[0]
         )
-        demoChatMessages.append(coach1)
+        demoChatMessages.append(coachData)
 
         await delay(seconds: DemoTiming.afterCoachResponseDelay)
 
         guard !Task.isCancelled else { return }
 
-        // Step 3: Show coach response 2
-        step = .coachResponse2
+        // Step 4: Coach pattern alert
+        step = .coachPatternAlert
         showTypingIndicator = true
         await delay(seconds: 0.6)
         showTypingIndicator = false
 
         guard !Task.isCancelled else { return }
 
-        let coach2 = HealthCoachMessage(
+        let coachPattern = HealthCoachMessage(
             sender: .coach,
             text: DemoScript.coachResponses[1]
         )
-        demoChatMessages.append(coach2)
+        demoChatMessages.append(coachPattern)
 
         await delay(seconds: DemoTiming.afterCoachResponseDelay)
 
         guard !Task.isCancelled else { return }
 
-        // Step 4: Show coach response 3 (prompts for food)
-        step = .coachPromptFood
+        // Step 5: Type user follow-up response
+        step = .userFollowUp
+        await typeUserMessage(DemoScript.userFollowUpMessage)
+
+        guard !Task.isCancelled else { return }
+
+        // Add the completed user follow-up message to chat
+        let userFollowUp = HealthCoachMessage(
+            sender: .user,
+            text: DemoScript.userFollowUpMessage
+        )
+        demoChatMessages.append(userFollowUp)
+        currentTypingText = ""
+        isTyping = false
+
+        await delay(seconds: DemoTiming.afterUserMessageDelay)
+
+        guard !Task.isCancelled else { return }
+
+        // Step 6: Coach suggestion
+        step = .coachSuggestion
         showTypingIndicator = true
-        await delay(seconds: 0.6)
+        await delay(seconds: 0.8)
         showTypingIndicator = false
 
         guard !Task.isCancelled else { return }
 
-        let coach3 = HealthCoachMessage(
+        let coachSuggestion = HealthCoachMessage(
             sender: .coach,
-            text: DemoScript.coachResponses[2]
+            text: DemoScript.coachFinalResponse
         )
-        demoChatMessages.append(coach3)
+        demoChatMessages.append(coachSuggestion)
 
         await delay(seconds: DemoTiming.afterCoachResponseDelay)
 
         guard !Task.isCancelled else { return }
 
-        // Step 5: Type food search query
-        step = .foodTyping
-        await typeFoodQuery(DemoScript.foodSearchQuery)
-
-        await delay(seconds: DemoTiming.afterFoodTypingDelay)
-
-        guard !Task.isCancelled else { return }
-
-        // Step 6: Present confirm sheet
-        step = .presentConfirmSheet
-        demoPendingFood = DemoFoodData.createChipotleBowl()
-        isConfirmSheetPresented = true
-
-        await delay(seconds: DemoTiming.confirmSheetDisplayDuration)
-
-        guard !Task.isCancelled else { return }
-
-        // Step 7: Auto-log (dismiss sheet)
-        step = .logging
-        isConfirmSheetPresented = false
-        demoLoggedFood = demoPendingFood
-
-        await delay(seconds: DemoTiming.afterLoggingDelay)
-
-        guard !Task.isCancelled else { return }
-
-        // Step 8: Show timeline with logged item and coach follow-up
+        // Step 7: Show timeline with logged item and coach summary
         step = .showTimeline
         demoCoachFollowUpMessage = DemoScript.postLogCoachMessage
 
@@ -210,7 +210,7 @@ final class DemoFlowController: ObservableObject {
 
         guard !Task.isCancelled else { return }
 
-        // Step 9: Demo complete
+        // Step 8: Demo complete
         step = .done
         showReplayButton = true
     }

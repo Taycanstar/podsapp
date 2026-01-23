@@ -155,22 +155,8 @@ struct DemoChatView: View {
             // Text input area with typing animation
             ZStack(alignment: .topLeading) {
                 // Placeholder or typing text
-                if flow.step == .foodTyping && !flow.demoSearchQuery.isEmpty {
-                    // Typing animation in the input field
-                    HStack(spacing: 0) {
-                        Text(flow.demoSearchQuery)
-                            .font(.system(size: 15))
-                            .foregroundColor(.primary)
-                        // Blinking cursor
-                        Rectangle()
-                            .fill(Color.primary)
-                            .frame(width: 2, height: 16)
-                            .opacity(cursorVisible ? 1.0 : 0.0)
-                    }
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 8)
-                } else if flow.isTyping && !flow.currentTypingText.isEmpty {
-                    // Typing the initial slip-up message
+                if flow.isTyping && !flow.currentTypingText.isEmpty {
+                    // Typing animation for user messages
                     HStack(spacing: 0) {
                         Text(flow.currentTypingText)
                             .font(.system(size: 15))
@@ -207,7 +193,7 @@ struct DemoChatView: View {
                 Spacer()
 
                 // Mic/Send button
-                if flow.isTyping || (flow.step == .foodTyping && !flow.demoSearchQuery.isEmpty) {
+                if flow.isTyping {
                     // Show send button when typing
                     demoActionCircle(systemName: "arrow.up", isPrimary: true)
                 } else {

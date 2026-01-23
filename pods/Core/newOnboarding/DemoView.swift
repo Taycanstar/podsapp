@@ -20,7 +20,7 @@ struct DemoView: View {
     /// Whether the demo is actively playing (not yet at timeline/done)
     private var isDemoPlaying: Bool {
         switch flow.step {
-        case .chatSlipUp, .coachResponse1, .coachResponse2, .coachPromptFood, .foodTyping, .presentConfirmSheet, .logging:
+        case .userFoodMessage, .autoLogFood, .coachDataSummary, .coachPatternAlert, .userFollowUp, .coachSuggestion:
             return true
         default:
             return false
@@ -35,7 +35,7 @@ struct DemoView: View {
                 // Show appropriate view based on demo step
                 Group {
                     switch flow.step {
-                    case .chatSlipUp, .coachResponse1, .coachResponse2, .coachPromptFood, .foodTyping, .presentConfirmSheet, .logging:
+                    case .userFoodMessage, .autoLogFood, .coachDataSummary, .coachPatternAlert, .userFollowUp, .coachSuggestion:
                         DemoChatView(flow: flow)
 
                     case .showTimeline, .done:

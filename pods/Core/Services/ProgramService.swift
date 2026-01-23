@@ -354,30 +354,30 @@ class ProgramService: ObservableObject {
 
     /// Find next incomplete using cycle_position order across all weeks
     private func findNextIncompleteByCyclePosition(program: TrainingProgram, weeks: [ProgramWeek]) -> TodayWorkout? {
-        // Collect ALL workout days across all weeks
-        var allWorkoutDays: [ProgramDay] = []
+        // Collect ALL workout days across all weeks, tracking their week number
+        var allWorkoutDays: [(day: ProgramDay, weekNumber: Int)] = []
         for week in weeks {
             guard let days = week.days else { continue }
-            allWorkoutDays.append(contentsOf: days.filter {
-                $0.dayType == .workout && $0.cyclePosition != nil
-            })
+            for day in days where day.dayType == .workout && day.cyclePosition != nil {
+                allWorkoutDays.append((day: day, weekNumber: week.weekNumber))
+            }
         }
 
         // Sort by cycle_position
-        allWorkoutDays.sort { ($0.cyclePosition ?? 0) < ($1.cyclePosition ?? 0) }
+        allWorkoutDays.sort { ($0.day.cyclePosition ?? 0) < ($1.day.cyclePosition ?? 0) }
 
         print("🔍 [todayProgramWorkout] Fallback: Found \(allWorkoutDays.count) workout days with cycle positions")
 
         // Find NEXT INCOMPLETE workout
-        if let nextIncomplete = allWorkoutDays.first(where: { !$0.isCompleted }) {
-            print("🔍 [todayProgramWorkout] Fallback: Next incomplete by cycle_position: '\(nextIncomplete.workoutLabel)'")
-            return convertProgramDayToTodayWorkout(nextIncomplete, program: program)
+        if let nextIncomplete = allWorkoutDays.first(where: { !$0.day.isCompleted }) {
+            print("🔍 [todayProgramWorkout] Fallback: Next incomplete by cycle_position: '\(nextIncomplete.day.workoutLabel)'")
+            return convertProgramDayToTodayWorkout(nextIncomplete.day, weekNumber: nextIncomplete.weekNumber, program: program)
         }
 
         // All complete - cycle restarts from position 1
         if let firstWorkout = allWorkoutDays.first {
-            print("🔍 [todayProgramWorkout] All workouts complete, cycling back to: '\(firstWorkout.workoutLabel)'")
-            return convertProgramDayToTodayWorkout(firstWorkout, program: program)
+            print("🔍 [todayProgramWorkout] All workouts complete, cycling back to: '\(firstWorkout.day.workoutLabel)'")
+            return convertProgramDayToTodayWorkout(firstWorkout.day, weekNumber: firstWorkout.weekNumber, program: program)
         }
 
         print("❌ [todayProgramWorkout] No workout days found in program")
@@ -385,7 +385,7 @@ class ProgramService: ObservableObject {
     }
 
     /// Convert a ProgramDay to TodayWorkout format
-    private func convertProgramDayToTodayWorkout(_ day: ProgramDay, program: TrainingProgram) -> TodayWorkout? {
+    private func convertProgramDayToTodayWorkout(_ day: ProgramDay, weekNumber: Int, program: TrainingProgram) -> TodayWorkout? {
         guard let workoutSession = day.workout,
               let exercises = workoutSession.exercises else {
             print("🔍 [todayProgramWorkout] Day '\(day.workoutLabel)' has no workout session or exercises")
@@ -478,11 +478,13 @@ class ProgramService: ObservableObject {
             print("🏋️ [todayProgramWorkout] Generated \(coolDownExercises?.count ?? 0) cooldown exercises")
         }
 
-        print("✅ [todayProgramWorkout] FOUND WORKOUT: '\(day.workoutLabel)' with \(todayExercises.count) exercises, dayId=\(day.id), cyclePosition=\(day.cyclePosition ?? -1)")
+        // Build title to match backend format: "Workout A - Week 1"
+        let workoutTitle = "\(day.workoutLabel) - Week \(weekNumber)"
+        print("✅ [todayProgramWorkout] FOUND WORKOUT: '\(workoutTitle)' with \(todayExercises.count) exercises, dayId=\(day.id), cyclePosition=\(day.cyclePosition ?? -1)")
         return TodayWorkout(
             id: UUID(),
             date: Date(),
-            title: day.workoutLabel,
+            title: workoutTitle,
             exercises: todayExercises,
             blocks: nil,
             estimatedDuration: workoutSession.estimatedDurationMinutes,

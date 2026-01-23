@@ -20,25 +20,30 @@ import Foundation
 
 enum DemoScript {
     // User message (typed character by character)
-    static let userSlipUpMessage = "i messed up and ate out. i feel guilty."
+    static let userFoodMessage = "just had a chicken bowl from chipotle"
 
-    // Coach responses (appear sequentially as separate bubbles)
+    // Coach responses (appear sequentially)
     static let coachResponses: [String] = [
-        "You're still okay. Logging this is a win — not a verdict.",
-        "This kind of moment usually follows stress or exhaustion. That's biology, not failure.",
-        "Let's keep it simple. What did you eat? Type it in and I'll find the closest match."
+        "Logged. 680 cal, 48g protein. You're at 1,850 cal today (target: 2,400).",
+        "Noticed something: protein's been under 100g for 3 days. Want a high-protein dinner idea to close the gap?"
     ]
 
-    // Food search query (typed character by character)
+    // User follow-up response (typed character by character)
+    static let userFollowUpMessage = "yeah that would help"
+
+    // Coach final suggestion
+    static let coachFinalResponse = "Grilled salmon + veggies would add 45g protein and keep you at target. Want me to log it as a plan?"
+
+    // Food search query (kept for compatibility)
     static let foodSearchQuery = "chipotle chicken bowl"
 
     // Post-log coach message (shown on timeline)
     static let postLogCoachMessage = """
-Logged. Thank you for facing it.
+Today: 1,850 / 2,400 cal · 48g / 150g protein
 
-You don't need to fix anything right now.
+Pattern: Protein under target for 3 consecutive days.
 
-One next step: drink some water and keep your next meal normal. I'll check in later.
+Suggestion: High-protein dinner (salmon + veggies) to close the gap.
 """
 }
 
