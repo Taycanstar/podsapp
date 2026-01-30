@@ -539,6 +539,126 @@ class SubscriptionManager: ObservableObject {
         ])
     }
 
+    // MARK: - Promotional Offer Methods
+
+    /// Purchase a subscription with a promotional offer
+    /// - Parameters:
+    ///   - productId: The product identifier (e.g., "humuli_pro_yearly")
+    ///   - offerId: The promotional offer ID (e.g., "exit_offer_yearly_90off")
+    ///   - userEmail: The user's email address
+    ///   - onboardingViewModel: The onboarding view model for state updates
+    @MainActor
+    func purchaseWithPromotionalOffer(
+        productId: String,
+        offerId: String,
+        userEmail: String,
+        onboardingViewModel: OnboardingViewModel
+    ) async throws {
+        print("Attempting promotional offer purchase for product: \(productId), offer: \(offerId)")
+
+        guard let product = products.first(where: { $0.id == productId }) else {
+            print("Product not found for ID: \(productId)")
+            throw SubscriptionError.productNotFound
+        }
+
+        // Get the promotional offer signature from backend
+        let networkManager = NetworkManager()
+        let signatureResponse = try await networkManager.getPromotionalOfferSignature(
+            productId: productId,
+            offerId: offerId,
+            userEmail: userEmail
+        )
+
+        guard let signature = signatureResponse["signature"] as? String,
+              let nonceString = signatureResponse["nonce"] as? String,
+              let timestamp = signatureResponse["timestamp"] as? Int,
+              let keyId = signatureResponse["key_id"] as? String,
+              let nonce = UUID(uuidString: nonceString) else {
+            print("Invalid signature response from backend")
+            throw SubscriptionError.unknown
+        }
+
+        print("Got promotional offer signature from backend")
+
+        // Find the promotional offer on the product
+        guard let subscription = product.subscription,
+              let offer = subscription.promotionalOffers.first(where: { $0.id == offerId }) else {
+            print("Promotional offer not found on product: \(offerId)")
+            throw SubscriptionError.productNotFound
+        }
+
+        // Create the purchase options with the promotional offer
+        let purchaseOption = Product.PurchaseOption.promotionalOffer(
+            offerID: offerId,
+            keyID: keyId,
+            nonce: nonce,
+            signature: Data(base64Encoded: signature) ?? Data(),
+            timestamp: timestamp
+        )
+
+        do {
+            let result = try await product.purchase(options: [purchaseOption])
+
+            switch result {
+            case .success(let verificationResult):
+                switch verificationResult {
+                case .verified(let transaction):
+                    print("Promotional offer purchase verified")
+
+                    // Sync with backend
+                    if let latestVerification = await Transaction.latest(for: transaction.productID) {
+                        switch latestVerification {
+                        case .verified(let latestTransaction):
+                            try await syncPurchaseWithBackend(
+                                productId: latestTransaction.productID,
+                                transactionId: String(latestTransaction.id),
+                                userEmail: userEmail,
+                                onboardingViewModel: onboardingViewModel
+                            )
+
+                            // Track the promotional offer purchase
+                            AnalyticsManager.shared.trackPaidConverted(
+                                productId: latestTransaction.productID,
+                                price: 7.99,  // Promotional offer price
+                                currency: "USD",
+                                billingPeriod: "year",
+                                isTrial: false,
+                                trialDays: 0,
+                                transactionId: String(latestTransaction.id),
+                                revenueUsd: 7.99,
+                                paywallVersion: "exit_offer_1.0"
+                            )
+
+                        case .unverified:
+                            print("Latest transaction unverified")
+                        }
+                    }
+
+                    await transaction.finish()
+                    await updateSubscriptionStatus()
+
+                case .unverified:
+                    print("Promotional offer transaction unverified")
+                    throw SubscriptionError.purchaseUnverified
+                }
+
+            case .userCancelled:
+                print("User cancelled promotional offer purchase")
+                throw SubscriptionError.userCancelled
+
+            case .pending:
+                print("Promotional offer purchase pending")
+                throw SubscriptionError.purchasePending
+
+            @unknown default:
+                throw SubscriptionError.unknown
+            }
+        } catch {
+            print("Promotional offer purchase failed: \(error)")
+            throw error
+        }
+    }
+
     // MARK: - Introductory Offer Methods
 
     @MainActor

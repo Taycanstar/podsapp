@@ -3,10 +3,12 @@ import Combine
 
 struct ProOnboardingView: View {
     @Binding var isPresented: Bool
+    var onDismissWithoutPurchase: (() -> Void)? = nil
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @EnvironmentObject private var viewModel: OnboardingViewModel
     @State private var selectedPlan: PlanOption = .yearly
     @State private var isProcessing = false
+    @State private var isRestoring = false
     @State private var showError = false
     @State private var errorMessage = ""
 
@@ -46,13 +48,15 @@ struct ProOnboardingView: View {
     }
 
     private let proFeatures: [String] = [
-        "Nutrition & Fitness AI Coach",
-        "Instant, Effortless Logging",
+        "24/7 AI Nutritionist & Trainer",
+        "Easiest Way to Log Food",
         "Industry-Leading Food Accuracy",
         "Workout Plans Made For You",
-        "Unlimited Tracking, Zero Limits",
-        "Wearable-Aware Coaching"
+        "Wearable-Aware Coaching",
+        "Real-Time Recalibration"
     ]
+
+ 
 
     private var isSubscribed: Bool {
         subscriptionManager.hasActiveSubscription() || viewModel.subscriptionStatus == "active"
@@ -62,11 +66,15 @@ struct ProOnboardingView: View {
         if isSubscribed {
             return "Continue to Metryc"
         }
+        return "Start my free trial"
+    }
+
+    private var subtitleText: String {
         switch selectedPlan {
         case .monthly:
-            return "Subscribe for \(subscriptionManager.monthlyPrice(for: .humuliProMonthly))"
+            return "First 7 days free, then $9.99/month"
         case .yearly:
-            return "Subscribe for \(subscriptionManager.annualPrice(for: .humuliProYearly))"
+            return "First 7 days free, then $79.99/year ($6.67/month)"
         }
     }
 
@@ -127,6 +135,11 @@ struct ProOnboardingView: View {
             }
         }
         .onAppear {
+            // DEBUG: Reset and log one-time offer state for testing
+            print("🎁 [ProOnboarding] onAppear - resetting offer state for testing")
+            OneTimeOfferHelper.resetOfferState()
+            print("🎁 [ProOnboarding] shouldShowOffer after reset: \(OneTimeOfferHelper.shouldShowOffer)")
+
             // Track paywall view
             AnalyticsManager.shared.trackPaywallViewed(
                 paywallVersion: "1.0",
@@ -141,8 +154,9 @@ struct ProOnboardingView: View {
         HStack {
             Spacer()
             // X button removed - subscription required to continue
+            // One-time offer is triggered when user cancels Apple purchase dialog
         }
-        .frame(height: 58) // Maintain consistent header height
+        .frame(height: 58)
     }
 
     private var titleSection: some View {
@@ -152,14 +166,14 @@ struct ProOnboardingView: View {
                 .foregroundColor(.blue)
 
             VStack(spacing: 8) {
-                Text("Welcome to Metryc Pro")
+                Text("Unlock Metryc")
                     .font(.system(size: 22, weight: .bold))
                     .foregroundColor(.black)
                     .multilineTextAlignment(.center)
 
-                Text("Unlock everything you just previewed with your personalized plan.")
-                    .font(.caption)
-                    .foregroundColor(.gray)
+                Text(subtitleText)
+                    .font(.system(size: 14))
+                    .foregroundColor(.primary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 12)
             }
@@ -244,8 +258,23 @@ struct ProOnboardingView: View {
                         .cornerRadius(36)
                 }
             }
-            .disabled(isProcessing)
+            .disabled(isProcessing || isRestoring)
             .padding(.horizontal, 24)
+
+            Button {
+                Task { await restorePurchases() }
+            } label: {
+                if isRestoring {
+                    ProgressView()
+                        .padding(.top, 8)
+                } else {
+                    Text("Restore Purchases")
+                        .font(.system(size: 15))
+                        .foregroundColor(.primary)
+                }
+            }
+            .disabled(isProcessing || isRestoring)
+            .padding(.top, 4)
 
             Text(selectedPlan.renewalText)
                 .font(.system(size: 13))
@@ -326,9 +355,20 @@ struct ProOnboardingView: View {
                 paywallVersion: "1.0"
             )
 
-            await MainActor.run {
-                showError = true
-                errorMessage = error.localizedDescription
+            // If user cancelled the Apple purchase dialog, trigger one-time offer
+            if case .userCancelled = error {
+                print("🎁 [ProOnboarding] User cancelled - triggering one-time offer callback")
+                await MainActor.run {
+                    print("🎁 [ProOnboarding] Calling onDismissWithoutPurchase callback")
+                    onDismissWithoutPurchase?()
+                    print("🎁 [ProOnboarding] Setting isPresented = false")
+                    isPresented = false
+                }
+            } else {
+                await MainActor.run {
+                    showError = true
+                    errorMessage = error.localizedDescription
+                }
             }
         } catch {
             // Track purchase failed for unknown errors
@@ -343,6 +383,44 @@ struct ProOnboardingView: View {
                 showError = true
                 errorMessage = error.localizedDescription
             }
+        }
+    }
+
+    private func restorePurchases() async {
+        guard isRestoring == false else { return }
+        guard let email = await currentEmail() else {
+            await MainActor.run {
+                showError = true
+                errorMessage = "Please sign in before restoring purchases."
+            }
+            return
+        }
+
+        await MainActor.run {
+            isRestoring = true
+        }
+
+        do {
+            try await subscriptionManager.restorePurchases(userEmail: email)
+            await subscriptionManager.fetchSubscriptionInfoIfNeeded(for: email, force: true)
+            await MainActor.run {
+                // If user now has an active subscription, dismiss the sheet
+                if subscriptionManager.hasActiveSubscription() {
+                    isPresented = false
+                } else {
+                    showError = true
+                    errorMessage = "No active subscription found."
+                }
+            }
+        } catch {
+            await MainActor.run {
+                showError = true
+                errorMessage = error.localizedDescription
+            }
+        }
+
+        await MainActor.run {
+            isRestoring = false
         }
     }
 

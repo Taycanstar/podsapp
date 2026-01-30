@@ -575,14 +575,29 @@ struct FoodLogAgentView: View {
 
     /// Convert simplified FoodChatMealItem to MealItem
     private func convertChatMealItemToMealItem(_ chatItem: FoodChatMealItem) -> MealItem {
+        let unitLabel = chatItem.servingUnit ?? "serving"
+        let servingAmount = chatItem.serving ?? 1.0
+
+        // Create a measure from the serving unit so confirmation views can display it
+        let measure = MealItemMeasure(
+            unit: unitLabel,
+            description: unitLabel,
+            gramWeight: servingAmount
+        )
+
         return MealItem(
             name: chatItem.name ?? "Unknown",
-            serving: 1.0,
-            servingUnit: "serving",
+            serving: servingAmount,
+            servingUnit: unitLabel,
             calories: chatItem.calories ?? 0,
             protein: chatItem.protein ?? 0,
             carbs: chatItem.carbs ?? 0,
-            fat: chatItem.fat ?? 0
+            fat: chatItem.fat ?? 0,
+            subitems: nil,
+            baselineServing: nil,
+            measures: [measure],
+            originalServing: nil,
+            foodNutrients: chatItem.foodNutrients
         )
     }
 

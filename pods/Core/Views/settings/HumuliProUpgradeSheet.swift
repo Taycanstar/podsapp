@@ -24,6 +24,7 @@ struct HumuliProUpgradeSheet: View {
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var infoMessage: String?
+    @State private var isEligibleForIntroOffer = false
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @EnvironmentObject private var viewModel: OnboardingViewModel
 
@@ -549,7 +550,7 @@ extension HumuliProUpgradeSheet {
                         .font(.system(size: 35))
                         .foregroundColor(.blue)
 
-                    Text(titleOverride ?? "Metryc Pro")
+                    Text(titleOverride ?? "Unlock Metryc")
                         .font(.system(size: 24, weight: .bold))
                         .foregroundColor(.black)
 
@@ -565,9 +566,9 @@ extension HumuliProUpgradeSheet {
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
                         } else {
-                            Text("Unlock the complete Metryc experience.")
-                                .font(.caption)
-                                .foregroundColor(.gray)
+                            Text(subtitleText)
+                                .font(.system(size: 14))
+                                .foregroundColor(.primary)
                         }
                     }
                     .font(.caption)
@@ -655,6 +656,17 @@ extension HumuliProUpgradeSheet {
         } message: {
             Text(errorMessage)
         }
+        .task {
+            // DEBUG: Reset and log one-time offer state for testing
+            print("🎁 [HumuliProUpgrade] task - resetting offer state for testing")
+            OneTimeOfferHelper.resetOfferState()
+            print("🎁 [HumuliProUpgrade] shouldShowOffer after reset: \(OneTimeOfferHelper.shouldShowOffer)")
+
+            // Check intro offer eligibility for the yearly product
+            if let product = subscriptionManager.storeProduct(for: .humuliProYearly, duration: .yearly) {
+                isEligibleForIntroOffer = await subscriptionManager.checkIntroductoryOfferEligibility(for: product)
+            }
+        }
     }
 
     private var planSummary: some View {
@@ -673,7 +685,23 @@ extension HumuliProUpgradeSheet {
         .padding(.top, 16)
     }
 
+    private var subtitleText: String {
+        if isEligibleForIntroOffer {
+            switch selectedPlan {
+            case .monthly:
+                return "First 7 days free, then $9.99/month"
+            case .yearly:
+                return "First 7 days free, then $79.99/year ($6.67/month)"
+            }
+        } else {
+            return "Unlock the complete Metryc experience."
+        }
+    }
+
     private var upgradeButtonTitle: String {
+        if isEligibleForIntroOffer {
+            return "Start my free trial"
+        }
         switch selectedPlan {
         case .monthly:
             return "Upgrade for \(subscriptionManager.monthlyPrice(for: .humuliProMonthly))"
@@ -762,9 +790,18 @@ extension HumuliProUpgradeSheet {
                 dismiss()
             }
         } catch let error as SubscriptionError {
-            await MainActor.run {
-                showError = true
-                errorMessage = error.localizedDescription
+            // If user cancelled the Apple purchase dialog, trigger one-time offer via onDismiss
+            if case .userCancelled = error {
+                print("🎁 [HumuliProUpgrade] User cancelled - calling onDismiss to trigger one-time offer")
+                await MainActor.run {
+                    onDismiss()
+                    dismiss()
+                }
+            } else {
+                await MainActor.run {
+                    showError = true
+                    errorMessage = error.localizedDescription
+                }
             }
         } catch {
             await MainActor.run {
@@ -793,7 +830,13 @@ extension HumuliProUpgradeSheet {
             try await subscriptionManager.restorePurchases(userEmail: email)
             await subscriptionManager.fetchSubscriptionInfoIfNeeded(for: email, force: true)
             await MainActor.run {
-                infoMessage = "Purchases restored successfully."
+                // If user now has an active subscription, dismiss the sheet
+                if subscriptionManager.hasActiveSubscription() {
+                    onDismiss()
+                    dismiss()
+                } else {
+                    infoMessage = "No active subscription found."
+                }
             }
         } catch {
             await MainActor.run {
@@ -821,14 +864,12 @@ extension HumuliProUpgradeSheet {
     var featureComparisonView: some View {
         VStack(spacing: 0) {
             // Feature rows - all included in Pro
-            FeatureRow(name: "Slip-Up Recovery Mode", pro: true)
-            FeatureRow(name: "24/7 Hands-Free Voice Coach", pro: true)
-            FeatureRow(name: "1M+ Foods & Barcode Database", pro: true)
-            FeatureRow(name: "Autopilot Plan Repair", pro: true)
-             FeatureRow(name: "Log with Voice, Text, Photo", pro: true)
-            FeatureRow(name: "Context-Aware Check-Ins", pro: true)
-             FeatureRow(name: "Shame-Safe Tracking", pro: true)
-             FeatureRow(name: "Personalized Workout Program", pro: true)
+            FeatureRow(name: "24/7 AI Nutritionist & Trainer", pro: true)
+            FeatureRow(name: "Easiest Way to Log Food", pro: true)
+            FeatureRow(name: "Industry-Leading Food Accuracy", pro: true)
+            FeatureRow(name: "Workout Plans Made For You", pro: true)
+            FeatureRow(name: "Wearable-Aware Coaching", pro: true )
+            FeatureRow(name: "Real-Time Recalibration", pro: true)
         }
         .padding(16)
         .background(

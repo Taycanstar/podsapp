@@ -79,6 +79,9 @@ struct MainContentView: View {
 
     @State private var isTabBarVisible: Bool = true
 
+    // One-time offer state (shown when user dismisses upgrade sheet without purchasing)
+    @State private var showOneTimeOffer = false
+
     @ObservedObject private var versionManager = VersionManager.shared
     @Environment(\.scenePhase) var scenePhase
 
@@ -437,21 +440,71 @@ struct MainContentView: View {
             TeamInvitationView(invitation: invitation)
         }
         .fullScreenCover(isPresented: proOnboardingBinding) {
-            ProOnboardingView(isPresented: proOnboardingBinding)
-                .interactiveDismissDisabled(true)
+            ProOnboardingView(
+                isPresented: proOnboardingBinding,
+                onDismissWithoutPurchase: {
+                    // Check if we should show the one-time offer
+                    // Use longer delay for fullScreenCover (slower dismiss animation)
+                    let hasActive = subscriptionManager.hasActiveSubscription()
+                    let shouldShow = OneTimeOfferHelper.shouldShowOffer
+                    print("🎁 [OneTimeOffer] onDismissWithoutPurchase called")
+                    print("🎁 [OneTimeOffer] hasActiveSubscription: \(hasActive)")
+                    print("🎁 [OneTimeOffer] shouldShowOffer: \(shouldShow)")
+                    if !hasActive && shouldShow {
+                        print("🎁 [OneTimeOffer] Scheduling one-time offer sheet...")
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            print("🎁 [OneTimeOffer] Setting showOneTimeOffer = true")
+                            showOneTimeOffer = true
+                        }
+                    } else {
+                        print("🎁 [OneTimeOffer] NOT showing offer - conditions not met")
+                    }
+                }
+            )
         }
         // Upgrade sheet for non-subscribers trying to use pro features
         .sheet(isPresented: Binding(
             get: { proFeatureGate.showUpgradeSheet },
-            set: { if !$0 { proFeatureGate.dismissUpgradeSheet() } }
+            set: { if !$0 {
+                proFeatureGate.dismissUpgradeSheet()
+                // Check if we should show the one-time offer
+                if !subscriptionManager.hasActiveSubscription() && OneTimeOfferHelper.shouldShowOffer {
+                    // Small delay to let the first sheet dismiss
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showOneTimeOffer = true
+                    }
+                }
+            }}
         )) {
             HumuliProUpgradeSheet(
                 feature: proFeatureGate.blockedFeature,
                 usageSummary: proFeatureGate.usageSummary,
-                onDismiss: { proFeatureGate.dismissUpgradeSheet() },
-                allowDismiss: false
+                onDismiss: {
+                    proFeatureGate.dismissUpgradeSheet()
+                    // Check if we should show the one-time offer
+                    let hasActive = subscriptionManager.hasActiveSubscription()
+                    let shouldShow = OneTimeOfferHelper.shouldShowOffer
+                    print("🎁 [OneTimeOffer] HumuliProUpgradeSheet onDismiss called")
+                    print("🎁 [OneTimeOffer] hasActiveSubscription: \(hasActive)")
+                    print("🎁 [OneTimeOffer] shouldShowOffer: \(shouldShow)")
+                    if !hasActive && shouldShow {
+                        print("🎁 [OneTimeOffer] Scheduling one-time offer sheet...")
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            print("🎁 [OneTimeOffer] Setting showOneTimeOffer = true")
+                            showOneTimeOffer = true
+                        }
+                    } else {
+                        print("🎁 [OneTimeOffer] NOT showing offer - conditions not met")
+                    }
+                },
+                allowDismiss: true  // Allow dismissal to enable one-time offer flow
             )
-            .interactiveDismissDisabled(true)
+        }
+        // One-time exit offer sheet
+        .sheet(isPresented: $showOneTimeOffer) {
+            OneTimeOfferSheet(onDismiss: { showOneTimeOffer = false })
+                .environmentObject(subscriptionManager)
+                .environmentObject(viewModel)
         }
         .sheet(isPresented: $showConfirmFoodView, onDismiss: {
             scannedFood = nil
