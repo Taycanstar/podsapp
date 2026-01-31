@@ -671,7 +671,7 @@ struct AddIngredientsDescribe: View {
             brandOwner: nil,
             brandName: nil,
             servingSize: 1.0,
-            numberOfServings: 1.0,
+            numberOfServings: chatFood.numberOfServings ?? 1.0,
             servingSizeUnit: "serving",
             householdServingFullText: chatFood.servingSizeText,
             foodNutrients: nutrients,

@@ -226,11 +226,12 @@ struct FoodChatFood: Codable {
     let carbs: Double?
     let fat: Double?
     let servingSizeText: String?
+    let numberOfServings: Double?
     let foodNutrients: [Nutrient]?
 
     enum CodingKeys: String, CodingKey {
         case id, name, calories, protein, carbs, fat
-        case foodNutrients, servingSizeText  // .convertFromSnakeCase handles snake_case
+        case foodNutrients, servingSizeText, numberOfServings  // .convertFromSnakeCase handles snake_case
     }
 }
 

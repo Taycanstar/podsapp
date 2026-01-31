@@ -265,7 +265,8 @@ struct LogWorkoutView: View {
                 }
 
                 // Check if user has a plan, prompt to create one if not
-                if !hasCheckedForPlan {
+                // Only check if loading is complete to avoid race condition with startup fetch
+                if !hasCheckedForPlan && !ProgramService.shared.isLoading {
                     hasCheckedForPlan = true
                     if ProgramService.shared.activeProgram == nil {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -280,6 +281,17 @@ struct LogWorkoutView: View {
             }
             .onChange(of: userProfile.bodyweightOnlyWorkouts) { _, newValue in
                 shouldRegenerateWorkout = true
+            }
+            .onChange(of: ProgramService.shared.isLoading) { _, isLoading in
+                // Check for plan once loading completes (handles race condition with startup)
+                if !isLoading && !hasCheckedForPlan {
+                    hasCheckedForPlan = true
+                    if ProgramService.shared.activeProgram == nil {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            showNoPlanPrompt = true
+                        }
+                    }
+                }
             }
             .onChange(of: workoutManager.syncErrorMessage) { _, message in
                 if let message, !message.isEmpty {

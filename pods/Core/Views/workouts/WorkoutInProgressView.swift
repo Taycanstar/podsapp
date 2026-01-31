@@ -208,7 +208,72 @@ struct WorkoutInProgressView: View {
                             }
                             return nil
                         }(),
-                    onExerciseReplaced: nil,
+                    onExerciseReplaced: { newExerciseData in
+                        // Create replacement exercise preserving sets/reps from the original
+                        let replacementExercise = TodayWorkoutExercise(
+                            exercise: newExerciseData,
+                            sets: ctx.exercise.sets,
+                            reps: ctx.exercise.reps,
+                            weight: ctx.exercise.weight,
+                            restTime: ctx.exercise.restTime,
+                            notes: ctx.exercise.notes,
+                            warmupSets: ctx.exercise.warmupSets,
+                            flexibleSets: ctx.exercise.flexibleSets,
+                            trackingType: ctx.exercise.trackingType
+                        )
+
+                        // Update the workout (check all sections like onExerciseUpdated)
+                        var updatedMain = workout.exercises
+                        var updatedWarmup = workout.warmUpExercises
+                        var updatedCooldown = workout.coolDownExercises
+                        var found = false
+                        let originalId = ctx.exercise.exercise.id
+
+                        // Check main exercises
+                        if let idx = updatedMain.firstIndex(where: { $0.exercise.id == originalId }) {
+                            updatedMain[idx] = replacementExercise
+                            found = true
+                        }
+                        // Check warmup exercises
+                        if let warmups = updatedWarmup,
+                           let idx = warmups.firstIndex(where: { $0.exercise.id == originalId }) {
+                            var mutableWarmups = warmups
+                            mutableWarmups[idx] = replacementExercise
+                            updatedWarmup = mutableWarmups
+                            found = true
+                        }
+                        // Check cooldown exercises
+                        if let cooldowns = updatedCooldown,
+                           let idx = cooldowns.firstIndex(where: { $0.exercise.id == originalId }) {
+                            var mutableCooldowns = cooldowns
+                            mutableCooldowns[idx] = replacementExercise
+                            updatedCooldown = mutableCooldowns
+                            found = true
+                        }
+
+                        if found {
+                            workout = TodayWorkout(
+                                id: workout.id,
+                                date: workout.date,
+                                title: workout.title,
+                                exercises: updatedMain,
+                                blocks: workout.blocks,
+                                estimatedDuration: workout.estimatedDuration,
+                                fitnessGoal: workout.fitnessGoal,
+                                difficulty: workout.difficulty,
+                                warmUpExercises: updatedWarmup,
+                                coolDownExercises: updatedCooldown
+                            )
+                            workoutManager.applyActiveExerciseUpdate(replacementExercise)
+
+                            // Update the logging context with the new exercise
+                            loggingContext = LogExerciseSheetContext(
+                                exercise: replacementExercise,
+                                allExercises: allCombinedExercises,
+                                index: ctx.index
+                            )
+                        }
+                    },
                     onWarmupSetsChanged: { warmupSets in
                             // TODO: Handle warm-up sets persistence during workout
                             // This should update the exercise in the workout data structure

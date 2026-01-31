@@ -839,7 +839,15 @@ struct ProgramWorkoutDetailView: View {
                 isFromWorkoutInProgress: false,
                 initialCompletedSetsCount: nil,
                 initialRIRValue: nil,
-                onExerciseReplaced: { _ in },
+                onExerciseReplaced: { newExercise in
+                    // Find the corresponding ProgramExercise and replace it
+                    if let workout = day.workout,
+                       let exercises = workout.exercises,
+                       ctx.index < exercises.count {
+                        let programExercise = exercises[ctx.index]
+                        replaceProgramExercise(programExercise, with: newExercise)
+                    }
+                },
                 onWarmupSetsChanged: { _ in },
                 onExerciseUpdated: { _ in }
             )

@@ -81,6 +81,7 @@ struct NewHomeView: View {
     @State private var workoutCarouselSelection: Int = 0
     @State private var muscleRecoverySnapshot: [MuscleRecoveryService.MuscleRecoveryData] = []
     @State private var strengthBalanceSnapshot: MuscleRecoveryService.StrengthBalanceMetrics?
+    @State private var isMuscleRecoveryFlipped = false
     @State private var showHealthSyncFlash = false
     @State private var healthSyncFlashProgress: Double = 0
 
@@ -1582,7 +1583,8 @@ private extension NewHomeView {
                 VStack(spacing: 0) {
                     MuscleRecoveryDashboardCard(
                         recoveryData: Array(muscleRecoverySnapshot.prefix(10)),
-                        height: workoutHighlightsCardHeight
+                        height: workoutHighlightsCardHeight,
+                        isFlipped: $isMuscleRecoveryFlipped
                     )
                     .frame(maxWidth: .infinity)
 
@@ -2158,14 +2160,49 @@ private extension NewHomeView {
     private struct MuscleRecoveryDashboardCard: View {
         let recoveryData: [MuscleRecoveryService.MuscleRecoveryData]
         let height: CGFloat
+        @Binding var isFlipped: Bool
 
         private let columns = Array(repeating: GridItem(.flexible(), spacing: 6), count: 5)
 
         var body: some View {
+            ZStack {
+                // Front side - Recovery Data
+                frontCard
+                    .opacity(isFlipped ? 0 : 1)
+                    .rotation3DEffect(
+                        .degrees(isFlipped ? 180 : 0),
+                        axis: (x: 0, y: 1, z: 0),
+                        perspective: 0.5
+                    )
+
+                // Back side - Info Card
+                backCard
+                    .opacity(isFlipped ? 1 : 0)
+                    .rotation3DEffect(
+                        .degrees(isFlipped ? 0 : -180),
+                        axis: (x: 0, y: 1, z: 0),
+                        perspective: 0.5
+                    )
+            }
+            .frame(height: height)
+            .onTapGesture {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                    isFlipped.toggle()
+                }
+            }
+        }
+
+        private var frontCard: some View {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Muscle Recovery")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(.primary)
+                HStack {
+                    Text("Muscle Recovery")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 16))
+                        .foregroundColor(.secondary)
+                }
 
                 if recoveryData.isEmpty {
                     Text("Complete workouts to see recovery insights.")
@@ -2191,6 +2228,60 @@ private extension NewHomeView {
             .frame(maxWidth: .infinity, alignment: .top)
             .frame(height: height, alignment: .top)
             .modifier(IntakeCardStyle())
+        }
+
+        private var backCard: some View {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("What is Muscle Recovery?")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Image(systemName: "xmark.circle")
+                        .font(.system(size: 16))
+                        .foregroundColor(.secondary)
+                }
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Muscle recovery tracks how rested each muscle group is based on your recent workouts.")
+                        .font(.system(size: 14))
+                        .foregroundColor(.primary)
+
+                    HStack(spacing: 16) {
+                        recoveryLegendItem(color: Color(red: 0.19, green: 0.82, blue: 0.34), label: "75%+", description: "Fully recovered")
+                        recoveryLegendItem(color: Color(red: 1.0, green: 0.84, blue: 0.04), label: "50-74%", description: "Recovering")
+                        recoveryLegendItem(color: Color(red: 1.0, green: 0.27, blue: 0.23), label: "<50%", description: "Fatigued")
+                    }
+                    .padding(.top, 4)
+
+                    Text("Tap to flip back")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, 8)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 14)
+            .frame(maxWidth: .infinity, alignment: .top)
+            .frame(height: height, alignment: .top)
+            .modifier(IntakeCardStyle())
+        }
+
+        private func recoveryLegendItem(color: Color, label: String, description: String) -> some View {
+            VStack(spacing: 4) {
+                Circle()
+                    .fill(color)
+                    .frame(width: 12, height: 12)
+                Text(label)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.primary)
+                Text(description)
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
         }
     }
 

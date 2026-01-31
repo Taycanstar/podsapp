@@ -357,9 +357,10 @@ struct ConfirmLogView: View {
         let initialAmount = food.servingSize ?? 1
         self._servingAmount = State(initialValue: initialAmount)
         self._servingAmountInput = State(initialValue: ConfirmLogView.formattedServings(initialAmount))
-        // Number of servings is a multiplier (default 1)
-        self._numberOfServings = State(initialValue: 1)
-        self._servingsInput = State(initialValue: "1")
+        // Number of servings - use the value from food (e.g., 0.5 for "1/2 serving")
+        let initialServings = food.numberOfServings ?? 1.0
+        self._numberOfServings = State(initialValue: initialServings)
+        self._servingsInput = State(initialValue: ConfirmLogView.formattedServings(initialServings))
 
         // Calculate nutrition value variables without modifying state directly
         var tmpCalories: Double = 0

@@ -177,7 +177,7 @@ final class HealthCoachService {
             brandOwner: nil,
             brandName: nil,
             servingSize: 1,
-            numberOfServings: 1,
+            numberOfServings: healthCoachFood.numberOfServings ?? 1.0,
             servingSizeUnit: "serving",
             householdServingFullText: healthCoachFood.servingSizeText,
             foodNutrients: nutrients,
