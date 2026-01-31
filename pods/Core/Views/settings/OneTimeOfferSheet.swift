@@ -219,6 +219,9 @@ struct OneTimeOfferSheet: View {
             return
         }
 
+        print("🎁 [OneTimeOffer] Starting promotional offer purchase")
+        print("🎁 [OneTimeOffer] Product: \(productId), Offer: \(offerId), Email: \(email)")
+
         isProcessing = true
         defer { isProcessing = false }
 
@@ -231,6 +234,8 @@ struct OneTimeOfferSheet: View {
                 onboardingViewModel: viewModel
             )
 
+            print("🎁 [OneTimeOffer] Purchase successful!")
+
             // Mark offer as seen and dismiss
             markOfferSeen()
             await subscriptionManager.fetchSubscriptionInfoIfNeeded(for: email, force: true)
@@ -239,18 +244,24 @@ struct OneTimeOfferSheet: View {
                 dismiss()
             }
         } catch let error as SubscriptionError {
+            print("🎁 [OneTimeOffer] SubscriptionError: \(error)")
+            print("🎁 [OneTimeOffer] SubscriptionError description: \(error.localizedDescription)")
             // If user cancelled the Apple purchase dialog, just stay on the sheet (don't show error)
             if case .userCancelled = error {
+                print("🎁 [OneTimeOffer] User cancelled - staying on sheet")
                 return
             }
             await MainActor.run {
                 showError = true
-                errorMessage = error.localizedDescription
+                errorMessage = "Purchase failed: \(error.localizedDescription)"
             }
         } catch {
+            print("🎁 [OneTimeOffer] Generic error: \(error)")
+            print("🎁 [OneTimeOffer] Error type: \(type(of: error))")
+            print("🎁 [OneTimeOffer] Error description: \(error.localizedDescription)")
             await MainActor.run {
                 showError = true
-                errorMessage = error.localizedDescription
+                errorMessage = "Purchase failed: \(error.localizedDescription)"
             }
         }
     }

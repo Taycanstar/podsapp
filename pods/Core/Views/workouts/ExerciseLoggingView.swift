@@ -3115,9 +3115,11 @@ struct ExerciseOptionsSheet: View {
             Text("Are you sure you want to remove \(exercise.exercise.name) from this workout?")
         }
         .sheet(isPresented: $showingReplaceExercise, onDismiss: { replacementSnapshot = nil }) {
-            ReplaceExerciseSheet(
-                currentExercise: replacementSnapshot ?? exercise,
-                onExerciseReplaced: onExerciseReplaced
+            UnifiedReplaceExerciseSheet(
+                context: .todayWorkout(replacementSnapshot ?? exercise),
+                onExerciseReplaced: { newExercise in
+                    onExerciseReplaced?(newExercise)
+                }
             )
         }
     }

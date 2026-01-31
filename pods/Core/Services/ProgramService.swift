@@ -197,6 +197,152 @@ class ProgramService: ObservableObject {
         _ = try? await fetchActiveProgram(userEmail: userEmail)
     }
 
+    // MARK: - Replace Program Exercise
+
+    /// Replace an exercise across all weeks in the training program
+    /// - Parameters:
+    ///   - exerciseInstanceId: The ID of the exercise instance to replace
+    ///   - newExerciseId: The ID of the new exercise
+    ///   - newExerciseName: The name of the new exercise
+    ///   - userEmail: The user's email
+    func replaceExercise(
+        exerciseInstanceId: Int,
+        newExerciseId: Int,
+        newExerciseName: String,
+        userEmail: String
+    ) async throws {
+        print("[ProgramService] Replacing exercise \(exerciseInstanceId) with \(newExerciseName) (ID: \(newExerciseId))")
+
+        let updatedProgram = try await networkManager.replaceProgramExercise(
+            exerciseInstanceId: exerciseInstanceId,
+            newExerciseId: newExerciseId,
+            newExerciseName: newExerciseName,
+            userEmail: userEmail
+        )
+
+        // Update local activeProgram with the response
+        self.activeProgram = updatedProgram
+        print("[ProgramService] Exercise replaced successfully across all weeks")
+    }
+
+    /// Optimistically replace an exercise across all weeks (local only)
+    /// Returns the previous program state for rollback if needed
+    /// - Parameters:
+    ///   - exerciseInstanceId: The ID of the exercise instance to replace
+    ///   - newExerciseId: The ID of the new exercise
+    ///   - newExerciseName: The name of the new exercise
+    func optimisticReplaceExercise(
+        exerciseInstanceId: Int,
+        newExerciseId: Int,
+        newExerciseName: String
+    ) -> TrainingProgram? {
+        guard let program = activeProgram else { return nil }
+        let previousState = program
+
+        // Find the exercise to get its dayNumber and order position
+        var targetDayNumber: Int?
+        var targetOrder: Int?
+
+        for week in program.weeks ?? [] {
+            for day in week.days ?? [] {
+                if let exercise = day.workout?.exercises?.first(where: { $0.id == exerciseInstanceId }) {
+                    targetDayNumber = day.dayNumber
+                    targetOrder = exercise.order
+                    break
+                }
+            }
+            if targetDayNumber != nil { break }
+        }
+
+        guard let dayNumber = targetDayNumber, let order = targetOrder else {
+            print("[ProgramService] Could not find exercise instance \(exerciseInstanceId)")
+            return nil
+        }
+
+        // Create updated program with replaced exercises across all weeks
+        let updatedWeeks = program.weeks?.map { week -> ProgramWeek in
+            let updatedDays = week.days?.map { day -> ProgramDay in
+                guard day.dayNumber == dayNumber, var workout = day.workout else {
+                    return day
+                }
+
+                // Update the matching exercise
+                let updatedExercises = workout.exercises?.map { exercise -> ProgramExercise in
+                    if exercise.order == order {
+                        return ProgramExercise(
+                            id: exercise.id,
+                            exerciseId: newExerciseId,
+                            exerciseName: newExerciseName,
+                            order: exercise.order,
+                            targetSets: exercise.targetSets,
+                            targetReps: exercise.targetReps,
+                            isCompleted: exercise.isCompleted
+                        )
+                    }
+                    return exercise
+                }
+
+                let updatedWorkout = ProgramWorkoutSession(
+                    id: workout.id,
+                    title: workout.title,
+                    status: workout.status,
+                    scheduledDate: workout.scheduledDate,
+                    estimatedDurationMinutes: workout.estimatedDurationMinutes,
+                    actualDurationMinutes: workout.actualDurationMinutes,
+                    completedExerciseCount: workout.completedExerciseCount,
+                    exercises: updatedExercises
+                )
+
+                return ProgramDay(
+                    id: day.id,
+                    dayNumber: day.dayNumber,
+                    dayType: day.dayType,
+                    workoutLabel: day.workoutLabel,
+                    targetMuscles: day.targetMuscles,
+                    date: day.date,
+                    isCompleted: day.isCompleted,
+                    completedAt: day.completedAt,
+                    workoutSessionId: day.workoutSessionId,
+                    workout: updatedWorkout,
+                    cyclePosition: day.cyclePosition
+                )
+            }
+            return ProgramWeek(
+                id: week.id,
+                weekNumber: week.weekNumber,
+                isDeload: week.isDeload,
+                volumeModifier: week.volumeModifier,
+                days: updatedDays
+            )
+        }
+
+        let updatedProgram = TrainingProgram(
+            id: program.id,
+            name: program.name,
+            programType: program.programType,
+            fitnessGoal: program.fitnessGoal,
+            experienceLevel: program.experienceLevel,
+            daysPerWeek: program.daysPerWeek,
+            sessionDurationMinutes: program.sessionDurationMinutes,
+            startDate: program.startDate,
+            endDate: program.endDate,
+            totalWeeks: program.totalWeeks,
+            includeDeload: program.includeDeload,
+            periodizationEnabled: program.periodizationEnabled,
+            defaultWarmupEnabled: program.defaultWarmupEnabled,
+            defaultCooldownEnabled: program.defaultCooldownEnabled,
+            includeFoamRolling: program.includeFoamRolling,
+            includeCardio: program.includeCardio,
+            isActive: program.isActive,
+            createdAt: program.createdAt,
+            syncVersion: program.syncVersion,
+            weeks: updatedWeeks
+        )
+
+        self.activeProgram = updatedProgram
+        return previousState
+    }
+
     // MARK: - Update Plan Preferences (MacroFactor-style)
 
     /// Update plan-level preferences. Future workouts inherit changes.

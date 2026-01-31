@@ -340,6 +340,12 @@ struct LogWorkoutView: View {
             .onReceive(NotificationCenter.default.publisher(for: .openCreateWorkout)) { _ in
                 navigationPath.append(WorkoutNavigationDestination.createWorkout)
             }
+            .onReceive(NotificationCenter.default.publisher(for: .trainingProgramCreated)) { _ in
+                // Dismiss the no plan prompt sheet when a plan is created
+                if showNoPlanPrompt {
+                    showNoPlanPrompt = false
+                }
+            }
             .fullScreenCover(item: $currentWorkout) { workout in
                 WorkoutInProgressView(
                     isPresented: Binding(

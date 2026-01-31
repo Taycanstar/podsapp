@@ -6187,6 +6187,45 @@ class NetworkManagerTwo {
         return responsePayload.day
     }
 
+    /// Replace an exercise in a training program across all weeks
+    /// - Parameters:
+    ///   - exerciseInstanceId: The ID of the exercise instance to replace
+    ///   - newExerciseId: The ID of the new exercise
+    ///   - newExerciseName: The name of the new exercise
+    ///   - userEmail: The user's email
+    /// - Returns: The updated TrainingProgram
+    func replaceProgramExercise(
+        exerciseInstanceId: Int,
+        newExerciseId: Int,
+        newExerciseName: String,
+        userEmail: String
+    ) async throws -> TrainingProgram {
+        guard let url = URL(string: "\(baseUrl)/api/programs/exercise/\(exerciseInstanceId)/replace/") else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = [
+            "user_email": userEmail,
+            "new_exercise_id": newExerciseId,
+            "new_exercise_name": newExerciseName
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validate(response: response, data: data)
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let responsePayload = try decoder.decode(ProgramResponse.self, from: data)
+        guard let program = responsePayload.program else {
+            throw NetworkError.invalidResponse
+        }
+        return program
+    }
+
     func activateProgram(programId: Int, userEmail: String) async throws -> TrainingProgram {
         guard let url = URL(string: "\(baseUrl)/api/programs/\(programId)/activate/") else { throw NetworkError.invalidURL }
 

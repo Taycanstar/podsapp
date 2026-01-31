@@ -581,20 +581,48 @@ class SubscriptionManager: ObservableObject {
         print("Got promotional offer signature from backend")
 
         // Find the promotional offer on the product
-        guard let subscription = product.subscription,
-              let offer = subscription.promotionalOffers.first(where: { $0.id == offerId }) else {
-            print("Promotional offer not found on product: \(offerId)")
+        guard let subscription = product.subscription else {
+            print("🎁 [PromotionalOffer] Product has no subscription info")
             throw SubscriptionError.productNotFound
         }
+
+        print("🎁 [PromotionalOffer] Available promotional offers on product:")
+        for availableOffer in subscription.promotionalOffers {
+            print("🎁 [PromotionalOffer]   - ID: \(availableOffer.id), Type: \(availableOffer.type), Period: \(availableOffer.period)")
+        }
+
+        guard let offer = subscription.promotionalOffers.first(where: { $0.id == offerId }) else {
+            print("🎁 [PromotionalOffer] ERROR: Offer '\(offerId)' not found! Available offers: \(subscription.promotionalOffers.map { $0.id })")
+            throw SubscriptionError.productNotFound
+        }
+
+        print("🎁 [PromotionalOffer] Found matching offer: \(offer.id)")
+
+        // Decode signature from base64
+        print("🎁 [PromotionalOffer] Signature string length: \(signature.count)")
+        print("🎁 [PromotionalOffer] Signature (first 50 chars): \(String(signature.prefix(50)))...")
+
+        guard let signatureData = Data(base64Encoded: signature) else {
+            print("🎁 [PromotionalOffer] ERROR: Failed to decode signature from base64!")
+            print("🎁 [PromotionalOffer] Raw signature: \(signature)")
+            throw SubscriptionError.unknown
+        }
+
+        print("🎁 [PromotionalOffer] Decoded signature data length: \(signatureData.count) bytes")
+        print("🎁 [PromotionalOffer] Nonce: \(nonce)")
+        print("🎁 [PromotionalOffer] Timestamp: \(timestamp)")
+        print("🎁 [PromotionalOffer] Key ID: \(keyId)")
 
         // Create the purchase options with the promotional offer
         let purchaseOption = Product.PurchaseOption.promotionalOffer(
             offerID: offerId,
             keyID: keyId,
             nonce: nonce,
-            signature: Data(base64Encoded: signature) ?? Data(),
+            signature: signatureData,
             timestamp: timestamp
         )
+
+        print("🎁 [PromotionalOffer] Starting purchase with promotional offer...")
 
         do {
             let result = try await product.purchase(options: [purchaseOption])

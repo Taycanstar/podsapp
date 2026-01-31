@@ -484,6 +484,7 @@
 		C5815F6130304BA3D7590704 /* BodyFatLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89423DE3210EFC3F0A14CEE2 /* BodyFatLogView.swift */; };
 		C883DC9A9122407453C28742 /* Pods_Metryc.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FB3DF34AD6BD6C86FFC91F25 /* Pods_Metryc.framework */; };
 		CBF7233285884A05852E6AC2 /* MixpanelSessionReplay in Frameworks */ = {isa = PBXBuildFile; productRef = 495BD8D493254E64BCB8C542 /* MixpanelSessionReplay */; };
+		CF91109B9F90C54CCB147258 /* UnifiedReplaceExerciseSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98C44EA12A040C21E3313A61 /* UnifiedReplaceExerciseSheet.swift */; };
 		F1B2433AB57FEB24561F67D3 /* CraftingExperienceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80C1BC9E835DF288AA166008 /* CraftingExperienceView.swift */; };
 /* End PBXBuildFile section */
 
@@ -984,6 +985,7 @@
 		828AD9036235BA1CC3FDB722 /* Pods-Metryc-podsUITests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Metryc-podsUITests.release.xcconfig"; path = "Target Support Files/Pods-Metryc-podsUITests/Pods-Metryc-podsUITests.release.xcconfig"; sourceTree = "<group>"; };
 		83EDB7BB4B1CA39393C90454 /* Pods-podsTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-podsTests.debug.xcconfig"; path = "Target Support Files/Pods-podsTests/Pods-podsTests.debug.xcconfig"; sourceTree = "<group>"; };
 		89423DE3210EFC3F0A14CEE2 /* BodyFatLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyFatLogView.swift; sourceTree = "<group>"; };
+		98C44EA12A040C21E3313A61 /* UnifiedReplaceExerciseSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = UnifiedReplaceExerciseSheet.swift; path = ../Pods/Core/Views/workouts/UnifiedReplaceExerciseSheet.swift; sourceTree = "<group>"; };
 		9D174B3487294C0999CCBCD6 /* ProFeatureModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProFeatureModels.swift; path = Pods/Core/Models/ProFeatureModels.swift; sourceTree = SOURCE_ROOT; };
 		A54170CEADE02CDFB879CDB5 /* Pods-Metryc-podsUITests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Metryc-podsUITests.release.xcconfig"; path = "../Pods/Target Support Files/Pods-Metryc-podsUITests/Pods-Metryc-podsUITests.release.xcconfig"; sourceTree = "<group>"; };
 		A8FF55E88400FA719CC858C9 /* Pods-pods.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-pods.debug.xcconfig"; path = "Target Support Files/Pods-pods/Pods-pods.debug.xcconfig"; sourceTree = "<group>"; };
@@ -1850,6 +1852,7 @@
 			isa = PBXGroup;
 			children = (
 				DB099CD03D5E0BB8ADABE066 /* PlanRegenerationView.swift */,
+				98C44EA12A040C21E3313A61 /* UnifiedReplaceExerciseSheet.swift */,
 			);
 			name = workouts;
 			sourceTree = "<group>";
@@ -2586,6 +2589,7 @@
 				45F7F2FFBBB24BEFB5DEC5B7 /* PlanRegenerationView.swift in Sources */,
 				368B1129AA3F5424DA958843 /* GeneratingProgramView.swift in Sources */,
 				F1B2433AB57FEB24561F67D3 /* CraftingExperienceView.swift in Sources */,
+				CF91109B9F90C54CCB147258 /* UnifiedReplaceExerciseSheet.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

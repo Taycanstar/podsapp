@@ -877,6 +877,9 @@ private struct SinglePlanExerciseRow: View {
 
     @State private var showExerciseLogging = false
     @State private var selectedWeekData: WeeklyExerciseData?
+    @State private var showReplaceSheet = false
+    @State private var isReplacingExercise = false
+    @ObservedObject private var programService = ProgramService.shared
 
     private var thumbnailImageName: String {
         String(format: "%04d", exercise.exerciseId)
@@ -956,7 +959,7 @@ private struct SinglePlanExerciseRow: View {
                                     // TODO: Navigate to exercise history
                                 }
                                 Button("Replace") {
-                                    // TODO: Implement replace
+                                    showReplaceSheet = true
                                 }
                             } label: {
                                 Image(systemName: "ellipsis")
@@ -1067,6 +1070,46 @@ private struct SinglePlanExerciseRow: View {
                     onTargetsSaved?()
                 }
             )
+        }
+        .sheet(isPresented: $showReplaceSheet) {
+            UnifiedReplaceExerciseSheet(
+                context: .programExercise(exercise: exercise, exerciseInstanceId: exercise.id),
+                onExerciseReplaced: { newExercise in
+                    replaceProgramExercise(with: newExercise)
+                }
+            )
+        }
+    }
+
+    private func replaceProgramExercise(with newExercise: ExerciseData) {
+        guard !userEmail.isEmpty else { return }
+        isReplacingExercise = true
+
+        // Optimistic update
+        let previousState = programService.optimisticReplaceExercise(
+            exerciseInstanceId: exercise.id,
+            newExerciseId: newExercise.id,
+            newExerciseName: newExercise.name
+        )
+
+        Task {
+            do {
+                try await programService.replaceExercise(
+                    exerciseInstanceId: exercise.id,
+                    newExerciseId: newExercise.id,
+                    newExerciseName: newExercise.name,
+                    userEmail: userEmail
+                )
+                print("[SinglePlanExerciseRow] Exercise replaced successfully")
+                onTargetsSaved?()  // Refresh the view
+            } catch {
+                print("[SinglePlanExerciseRow] Failed to replace exercise: \(error)")
+                // Rollback on error
+                if let previousState = previousState {
+                    programService.rollback(to: previousState)
+                }
+            }
+            isReplacingExercise = false
         }
     }
 }

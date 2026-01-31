@@ -579,6 +579,8 @@ struct ProgramWorkoutDetailView: View {
     @State private var isSkipping = false
     @State private var isSavingName = false
     @State private var loggingContext: LogExerciseSheetContext?
+    @State private var exerciseToReplace: ProgramExercise? = nil
+    @State private var isReplacingExercise = false
 
     private var userEmail: String {
         UserDefaults.standard.string(forKey: "userEmail") ?? ""
@@ -683,7 +685,7 @@ struct ProgramWorkoutDetailView: View {
                                             }
                                         },
                                         onReplace: {
-                                            // TODO: Implement replace exercise
+                                            exerciseToReplace = exercise
                                         },
                                         onHistory: {
                                             // TODO: Navigate to exercise history
@@ -841,6 +843,45 @@ struct ProgramWorkoutDetailView: View {
                 onWarmupSetsChanged: { _ in },
                 onExerciseUpdated: { _ in }
             )
+        }
+        .sheet(item: $exerciseToReplace) { exercise in
+            UnifiedReplaceExerciseSheet(
+                context: .programExercise(exercise: exercise, exerciseInstanceId: exercise.id),
+                onExerciseReplaced: { newExercise in
+                    replaceProgramExercise(exercise, with: newExercise)
+                }
+            )
+        }
+    }
+
+    private func replaceProgramExercise(_ oldExercise: ProgramExercise, with newExercise: ExerciseData) {
+        guard !userEmail.isEmpty else { return }
+        isReplacingExercise = true
+
+        // Optimistic update
+        let previousState = programService.optimisticReplaceExercise(
+            exerciseInstanceId: oldExercise.id,
+            newExerciseId: newExercise.id,
+            newExerciseName: newExercise.name
+        )
+
+        Task {
+            do {
+                try await programService.replaceExercise(
+                    exerciseInstanceId: oldExercise.id,
+                    newExerciseId: newExercise.id,
+                    newExerciseName: newExercise.name,
+                    userEmail: userEmail
+                )
+                print("[ProgramWorkoutDetailView] Exercise replaced successfully")
+            } catch {
+                print("[ProgramWorkoutDetailView] Failed to replace exercise: \(error)")
+                // Rollback on error
+                if let previousState = previousState {
+                    programService.rollback(to: previousState)
+                }
+            }
+            isReplacingExercise = false
         }
     }
 
