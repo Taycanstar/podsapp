@@ -581,6 +581,7 @@ struct ProgramWorkoutDetailView: View {
     @State private var loggingContext: LogExerciseSheetContext?
     @State private var exerciseToReplace: ProgramExercise? = nil
     @State private var isReplacingExercise = false
+    @State private var showAddExercise = false
 
     private var userEmail: String {
         UserDefaults.standard.string(forKey: "userEmail") ?? ""
@@ -698,6 +699,10 @@ struct ProgramWorkoutDetailView: View {
                                     }
                                 }
                             }
+
+                            // Add Exercise button
+                            addExerciseButton
+                                .padding(.horizontal, 20)
                         }
                         .padding(.top, 20)
                         .padding(.bottom, 120)
@@ -859,6 +864,61 @@ struct ProgramWorkoutDetailView: View {
                     replaceProgramExercise(exercise, with: newExercise)
                 }
             )
+        }
+        .sheet(isPresented: $showAddExercise) {
+            AddExerciseView { selectedExercises in
+                Task {
+                    await addExercisesToDay(selectedExercises)
+                }
+            }
+        }
+    }
+
+    // MARK: - Add Exercise Button
+
+    private var addExerciseButton: some View {
+        Button {
+            showAddExercise = true
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "plus")
+                    .font(.system(size: 16, weight: .semibold))
+                Text("Add Exercise")
+                    .font(.system(size: 16, weight: .semibold))
+            }
+            .foregroundColor(.primary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+
+    // MARK: - Add Exercises to Day
+
+    private func addExercisesToDay(_ exercises: [ExerciseData]) async {
+        guard !userEmail.isEmpty else {
+            print("[ProgramWorkoutDetailView] No user email for adding exercises")
+            return
+        }
+
+        print("[ProgramWorkoutDetailView] Adding \(exercises.count) exercises to day \(day.id)")
+
+        do {
+            let exerciseTuples = exercises.map { exercise in
+                (exerciseId: exercise.id, exerciseName: exercise.name, targetSets: 3, targetReps: 10)
+            }
+
+            _ = try await NetworkManagerTwo.shared.addExercisesToDay(
+                dayId: day.id,
+                exercises: exerciseTuples,
+                userEmail: userEmail
+            )
+
+            // Refresh program data to show the updated day
+            _ = try await programService.fetchActiveProgram(userEmail: userEmail)
+            print("[ProgramWorkoutDetailView] Successfully added \(exercises.count) exercises")
+        } catch {
+            print("[ProgramWorkoutDetailView] Failed to add exercises: \(error)")
         }
     }
 

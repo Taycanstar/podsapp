@@ -332,10 +332,24 @@ class OnboardingViewModel: ObservableObject {
     @Published var desiredWeight: Double?
     @Published var selectedGymLocation: GymLocationOption? {
         didSet {
+            guard !isRestoringState else { return }
             equipmentInventory = equipmentForGymLocation(selectedGymLocation)
+            // Persist the gym location selection
+            if let location = selectedGymLocation {
+                UserDefaults.standard.set(location.rawValue, forKey: "selectedGymLocation")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "selectedGymLocation")
+            }
         }
     }
-    @Published var equipmentInventory: Set<Equipment> = []
+    @Published var equipmentInventory: Set<Equipment> = [] {
+        didSet {
+            guard !isRestoringState else { return }
+            // Persist equipment inventory as array of raw values
+            let equipmentArray = equipmentInventory.map { $0.rawValue }
+            UserDefaults.standard.set(equipmentArray, forKey: "equipmentInventory")
+        }
+    }
     @Published var trainingDaysPerWeek: Int = 3
     @Published var selectedTrainingDays: Set<Weekday> = []
     @Published var preferredWorkoutDays: [String] = []
@@ -1050,6 +1064,7 @@ class OnboardingViewModel: ObservableObject {
     private var repositoryEmail: String?
     private var cancellables: Set<AnyCancellable> = []
     private let initialWeightLogKeyPrefix = "initialWeightLogCreated_"
+    private var isRestoringState = false
 
     init() {
         loadOnboardingState()
@@ -1102,6 +1117,20 @@ class OnboardingViewModel: ObservableObject {
                 selectedFitnessGoal = inferredOption
             }
         }
+
+        // Restore gym location and equipment from UserDefaults
+        isRestoringState = true
+        if let storedGymLocation = UserDefaults.standard.string(forKey: "selectedGymLocation"),
+           let gymLocation = GymLocationOption(rawValue: storedGymLocation) {
+            selectedGymLocation = gymLocation
+        }
+        if let storedEquipment = UserDefaults.standard.stringArray(forKey: "equipmentInventory") {
+            equipmentInventory = Set(storedEquipment.compactMap { Equipment(rawValue: $0) })
+        } else if let gymLocation = selectedGymLocation {
+            // Fallback: derive equipment from gym location if equipment not stored
+            equipmentInventory = equipmentForGymLocation(gymLocation)
+        }
+        isRestoringState = false
 
         if let storedSplit = UserDefaults.standard.string(forKey: "trainingSplit"), !storedSplit.isEmpty {
             trainingSplit = storedSplit
