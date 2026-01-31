@@ -624,8 +624,8 @@ class ProgramService: ObservableObject {
             print("🏋️ [todayProgramWorkout] Generated \(coolDownExercises?.count ?? 0) cooldown exercises")
         }
 
-        // Build title to match backend format: "Workout A - Week 1"
-        let workoutTitle = "\(day.workoutLabel) - Week \(weekNumber)"
+        // Use just the workout label (e.g., "Workout A")
+        let workoutTitle = day.workoutLabel
         print("✅ [todayProgramWorkout] FOUND WORKOUT: '\(workoutTitle)' with \(todayExercises.count) exercises, dayId=\(day.id), cyclePosition=\(day.cyclePosition ?? -1)")
         return TodayWorkout(
             id: UUID(),

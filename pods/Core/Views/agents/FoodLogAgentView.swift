@@ -10,6 +10,7 @@ import SwiftUI
 import AVFoundation
 import UIKit
 import SafariServices
+import Combine
 
 // Chat-style food logger reused for Text -> Add More flow
 struct FoodLogAgentView: View {
@@ -33,6 +34,8 @@ struct FoodLogAgentView: View {
     @State private var streamingMessageId: UUID?
     @State private var streamingToken: UUID?
     @State private var currentStreamTask: URLSessionDataTask?
+
+    // UI update coalescing is handled by SwiftUI's @State batching
 @State private var shimmerActive = false
 @FocusState private var isInputFocused: Bool
 @FocusState private var isUserMessageEditorFocused: Bool
@@ -213,8 +216,8 @@ struct FoodLogAgentView: View {
                                 case .system:
                                     // Hide action icons for streaming message
                                     if message.id == streamingMessageId {
-                                        // Streaming message - show text without action icons
-                                        FormattedAssistantMessage(text: message.text)
+                                        // Streaming message - use streamingText directly to avoid array lookup overhead
+                                        FormattedAssistantMessage(text: streamingText)
                                             .frame(maxWidth: .infinity, alignment: .leading)
                                             .id(combinedMessage.id)
                                     } else {
@@ -425,7 +428,7 @@ struct FoodLogAgentView: View {
             message: prompt,
             history: conversationHistory,
             onDelta: { delta in
-                // On first delta, create the streaming message and hide status
+                // On first delta, create the streaming message placeholder
                 if streamingMessageId == nil {
                     let newId = UUID()
                     streamingMessageId = newId
@@ -433,14 +436,21 @@ struct FoodLogAgentView: View {
                     if activeStatusMessageId == statusMessageId {
                         activeStatusMessageId = nil
                     }
-                    messages.append(FoodLogMessage(id: newId, sender: .system, text: delta))
-                } else if let currentId = streamingMessageId,
-                          let index = messages.firstIndex(where: { $0.id == currentId }) {
-                    messages[index].text += delta
+                    // Add placeholder with empty text - we display streamingText directly
+                    messages.append(FoodLogMessage(id: newId, sender: .system, text: ""))
+                    streamingText = delta
+                } else {
+                    // Subsequent deltas: just update streamingText (no array mutation)
+                    streamingText += delta
                 }
-                streamingText += delta
             },
             onComplete: { result in
+                // Copy final streamingText to the message
+                if let currentId = streamingMessageId,
+                   let index = messages.firstIndex(where: { $0.id == currentId }) {
+                    messages[index].text = streamingText
+                }
+
                 isLoading = false
                 currentStreamTask = nil
                 // Remove status message if still present
@@ -908,7 +918,7 @@ struct FoodLogAgentView: View {
     }
 
     private func stopStreamingResponse() {
-        // Cancel the network task first
+        // Cancel the network task
         currentStreamTask?.cancel()
         currentStreamTask = nil
 

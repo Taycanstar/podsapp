@@ -231,7 +231,13 @@ struct GeneratingProgramView: View {
         let effectiveDuration = sessionDuration > 0 ? sessionDuration : 60
         let effectiveWeeks = totalWeeks > 0 ? totalWeeks : 6
 
+        // Get equipment from onboarding - empty means bodyweight only
+        let equipment: [String] = viewModel.equipmentInventory.isEmpty
+            ? ["Body weight"]
+            : viewModel.equipmentInventory.map { $0.rawValue }
+
         print("🏋️ [GeneratingProgramView] Calling ProgramService.generateProgram")
+        print("   - availableEquipment: \(equipment)")
 
         do {
             _ = try await ProgramService.shared.generateProgram(
@@ -243,6 +249,7 @@ struct GeneratingProgramView: View {
                 sessionDurationMinutes: effectiveDuration,
                 totalWeeks: effectiveWeeks,
                 includeDeload: true,
+                availableEquipment: equipment,
                 includeCardio: isEndurance
             )
             print("✅ [GeneratingProgramView] Successfully generated training program")

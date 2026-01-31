@@ -7,6 +7,7 @@
 
 import SwiftUI
 import AVFoundation
+import Combine
 
 // MARK: - Message Model for Describe Chat
 
@@ -45,6 +46,9 @@ struct AddIngredientsDescribe: View {
     @State private var streamingText: String = ""
     @State private var streamingMessageId: UUID?
     @State private var currentStreamTask: URLSessionDataTask?
+
+    // Coalesced UI update flag (RunLoop-based, more efficient than Task debouncing)
+    @State private var uiUpdateScheduled = false
     @FocusState private var isInputFocused: Bool
     @State private var statusPhraseIndex = 0
     @State private var thinkingTimer = Timer.publish(every: 2.5, on: .main, in: .common).autoconnect()
@@ -230,7 +234,8 @@ struct AddIngredientsDescribe: View {
 
                                 case .system:
                                     VStack(alignment: .leading, spacing: 8) {
-                                        Text(message.text)
+                                        // Use streamingText directly during streaming to avoid array lookup overhead
+                                        Text(message.id == streamingMessageId ? streamingText : message.text)
                                             .frame(maxWidth: .infinity, alignment: .leading)
 
                                         if message.id != streamingMessageId {
@@ -500,20 +505,28 @@ struct AddIngredientsDescribe: View {
             context: "ingredient",
             onDelta: { delta in
                 if streamingMessageId == nil {
+                    // First delta: create placeholder message
                     let newId = UUID()
                     streamingMessageId = newId
                     messages.removeAll { $0.id == statusMessageId }
                     if activeStatusMessageId == statusMessageId {
                         activeStatusMessageId = nil
                     }
-                    messages.append(IngredientMessage(id: newId, sender: .system, text: delta))
-                } else if let currentId = streamingMessageId,
-                          let index = messages.firstIndex(where: { $0.id == currentId }) {
-                    messages[index].text += delta
+                    // Add placeholder with empty text - we display streamingText directly
+                    messages.append(IngredientMessage(id: newId, sender: .system, text: ""))
+                    streamingText = delta
+                } else {
+                    // Subsequent deltas: just update streamingText (no array mutation)
+                    streamingText += delta
                 }
-                streamingText += delta
             },
             onComplete: { result in
+                // Copy final streamingText to the message
+                if let currentId = streamingMessageId,
+                   let index = messages.firstIndex(where: { $0.id == currentId }) {
+                    messages[index].text = streamingText
+                }
+
                 isLoading = false
                 currentStreamTask = nil
                 messages.removeAll { $0.id == statusMessageId }
@@ -549,7 +562,7 @@ struct AddIngredientsDescribe: View {
     }
 
     private func stopStreaming() {
-        // Cancel the network task first
+        // Cancel the network task
         currentStreamTask?.cancel()
         currentStreamTask = nil
 

@@ -2234,9 +2234,6 @@ private extension NewHomeView {
                     .font(.system(size: 15))
                     .foregroundColor(.primary)
 
-                Text("Green means recovered and ready to train. Yellow indicates still recovering. Red means fatigued and may need rest.")
-                    .font(.system(size: 15))
-                    .foregroundColor(.primary)
             }
             .padding(.horizontal, 20)
             .padding(.top, 20)

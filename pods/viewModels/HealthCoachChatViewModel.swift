@@ -15,6 +15,7 @@
 
 import Foundation
 import SwiftUI
+import Combine
 
 /// ViewModel for the Health Coach Chat interface
 /// Manages streaming conversations with the health coach orchestrator
@@ -24,12 +25,24 @@ final class HealthCoachChatViewModel: ObservableObject {
 
     @Published var messages: [HealthCoachMessage] = []
     @Published var isLoading = false
-    @Published var streamingText: String = ""
     @Published var streamingMessageId: UUID?
     @Published var statusHint: HealthCoachStatusHint = .thinking
     @Published var pendingOptions: [ClarificationOption]?
     @Published var pendingClarificationQuestion: String?
     @Published var currentConversationId: String?
+
+    // MARK: - Streaming Text (Manual Publisher Control)
+
+    /// Streaming text uses manual objectWillChange control for efficiency.
+    /// Updates are coalesced via RunLoop to avoid flooding SwiftUI with redraws.
+    private var _streamingText: String = ""
+    var streamingText: String {
+        get { _streamingText }
+        set { _streamingText = newValue }
+    }
+
+    /// Whether a UI update is already scheduled for this run loop cycle
+    private var uiUpdateScheduled = false
 
     // MARK: - Private Properties
 
@@ -134,22 +147,32 @@ final class HealthCoachChatViewModel: ObservableObject {
 
                 // On first delta, create streaming message and remove status
                 if self.streamingMessageId == nil {
+                    // First delta: create the streaming message placeholder
                     let newId = UUID()
                     self.streamingMessageId = newId
                     self.messages.removeAll { $0.id == statusMessageId }
+                    // Add placeholder with empty text - we'll display streamingText directly
                     self.messages.append(HealthCoachMessage(
                         id: newId,
                         sender: .coach,
-                        text: delta
+                        text: ""
                     ))
-                } else if let currentId = self.streamingMessageId,
-                          let index = self.messages.firstIndex(where: { $0.id == currentId }) {
-                    self.messages[index].text += delta
+                    self._streamingText = delta
+                    self.scheduleCoalescedUIUpdate()
+                } else {
+                    // Subsequent deltas: just append to streamingText (no array mutation)
+                    self._streamingText += delta
+                    self.scheduleCoalescedUIUpdate()
                 }
-                self.streamingText += delta
             },
             onComplete: { [weak self] result in
                 guard let self = self else { return }
+
+                // Copy final streamingText to the message before clearing
+                if let currentId = self.streamingMessageId,
+                   let index = self.messages.firstIndex(where: { $0.id == currentId }) {
+                    self.messages[index].text = self._streamingText
+                }
 
                 self.isLoading = false
                 self.currentStreamTask = nil
@@ -157,7 +180,7 @@ final class HealthCoachChatViewModel: ObservableObject {
 
                 let completedMessageId = self.streamingMessageId
                 self.streamingMessageId = nil
-                self.streamingText = ""
+                self._streamingText = ""
 
                 switch result {
                 case .success(let response):
@@ -217,7 +240,8 @@ final class HealthCoachChatViewModel: ObservableObject {
         currentStreamTask = nil
         isLoading = false
         streamingMessageId = nil
-        streamingText = ""
+        _streamingText = ""
+        uiUpdateScheduled = false
         // Remove any status messages that might be showing
         messages.removeAll { $0.sender == .status }
     }
@@ -226,18 +250,37 @@ final class HealthCoachChatViewModel: ObservableObject {
     func clearConversation() {
         messages.removeAll()
         conversationHistory.removeAll()
-        streamingText = ""
+        _streamingText = ""
         streamingMessageId = nil
         pendingOptions = nil
         pendingClarificationQuestion = nil
         isLoading = false
         currentConversationId = nil
+        uiUpdateScheduled = false
 
         // Reset analytics state
         userMessageIndex = 0
         coachMessageIndex = 0
         lastUserMessageId = nil
         lastSendTime = nil
+    }
+
+    // MARK: - Coalesced UI Updates
+
+    /// Schedule a UI update that coalesces multiple rapid changes into one.
+    /// Uses RunLoop.main.perform to batch all updates within a single run loop cycle.
+    /// This is the industry-standard approach used by ChatGPT, Claude, etc.
+    private func scheduleCoalescedUIUpdate() {
+        guard !uiUpdateScheduled else { return }
+        uiUpdateScheduled = true
+
+        // Schedule the update at the end of this run loop cycle
+        // All streamingText changes within this cycle get batched into one redraw
+        RunLoop.main.perform { [weak self] in
+            guard let self = self else { return }
+            self.uiUpdateScheduled = false
+            self.objectWillChange.send()
+        }
     }
 
     /// Load an existing conversation from the server

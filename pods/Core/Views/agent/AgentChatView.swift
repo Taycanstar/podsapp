@@ -628,9 +628,9 @@ struct AgentChatView: View {
 
         case .coach:
             VStack(alignment: .leading, spacing: 8) {
-                // Use simple Text during streaming to avoid flicker, full markdown after
+                // Use streamingText directly during streaming to avoid array lookup overhead
                 if isStreaming {
-                    Text(message.text)
+                    Text(viewModel.streamingText)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
                     MarkdownMessageView(
