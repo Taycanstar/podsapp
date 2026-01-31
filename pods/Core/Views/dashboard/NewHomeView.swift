@@ -2194,15 +2194,9 @@ private extension NewHomeView {
 
         private var frontCard: some View {
             VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text("Muscle Recovery")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(.primary)
-                    Spacer()
-                    Image(systemName: "info.circle")
-                        .font(.system(size: 16))
-                        .foregroundColor(.secondary)
-                }
+                Text("Muscle Recovery")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(.primary)
 
                 if recoveryData.isEmpty {
                     Text("Complete workouts to see recovery insights.")
@@ -2231,34 +2225,32 @@ private extension NewHomeView {
         }
 
         private var backCard: some View {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text("What is Muscle Recovery?")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(.primary)
-                    Spacer()
-                    Image(systemName: "xmark.circle")
-                        .font(.system(size: 16))
-                        .foregroundColor(.secondary)
-                }
+            VStack(alignment: .leading, spacing: 16) {
+                Text("About Muscle Recovery")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(.primary)
 
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Muscle recovery tracks how rested each muscle group is based on your recent workouts.")
-                        .font(.system(size: 14))
-                        .foregroundColor(.primary)
+                Text("Tracks how rested each muscle group is based on your recent workout history and exercise volume.")
+                    .font(.system(size: 15))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
 
-                    HStack(spacing: 16) {
-                        recoveryLegendItem(color: Color(red: 0.19, green: 0.82, blue: 0.34), label: "75%+", description: "Fully recovered")
-                        recoveryLegendItem(color: Color(red: 1.0, green: 0.84, blue: 0.04), label: "50-74%", description: "Recovering")
-                        recoveryLegendItem(color: Color(red: 1.0, green: 0.27, blue: 0.23), label: "<50%", description: "Fatigued")
-                    }
-                    .padding(.top, 4)
-
-                    Text("Tap to flip back")
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.top, 8)
+                VStack(spacing: 12) {
+                    RecoveryLegendRow(
+                        color: Color(red: 0.19, green: 0.82, blue: 0.34),
+                        title: "Recovered",
+                        subtitle: "75% or higher — ready to train"
+                    )
+                    RecoveryLegendRow(
+                        color: Color(red: 1.0, green: 0.84, blue: 0.04),
+                        title: "Recovering",
+                        subtitle: "50–74% — light work okay"
+                    )
+                    RecoveryLegendRow(
+                        color: Color(red: 1.0, green: 0.27, blue: 0.23),
+                        title: "Fatigued",
+                        subtitle: "Under 50% — consider rest"
+                    )
                 }
             }
             .padding(.horizontal, 20)
@@ -2268,19 +2260,29 @@ private extension NewHomeView {
             .frame(height: height, alignment: .top)
             .modifier(IntakeCardStyle())
         }
+    }
 
-        private func recoveryLegendItem(color: Color, label: String, description: String) -> some View {
-            VStack(spacing: 4) {
-                Circle()
+    private struct RecoveryLegendRow: View {
+        let color: Color
+        let title: String
+        let subtitle: String
+
+        var body: some View {
+            HStack(spacing: 12) {
+                RoundedRectangle(cornerRadius: 3)
                     .fill(color)
-                    .frame(width: 12, height: 12)
-                Text(label)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(.primary)
-                Text(description)
-                    .font(.system(size: 10))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
+                    .frame(width: 4, height: 32)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(.primary)
+                    Text(subtitle)
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
             }
         }
     }

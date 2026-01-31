@@ -564,9 +564,9 @@ struct FoodLogAgentView: View {
             description: chatFood.name ?? "Unknown",
             brandOwner: nil,
             brandName: nil,
-            servingSize: 1.0,
+            servingSize: chatFood.servingSize ?? 1.0,
             numberOfServings: chatFood.numberOfServings ?? 1.0,
-            servingSizeUnit: "serving",
+            servingSizeUnit: chatFood.servingSizeUnit ?? "serving",
             householdServingFullText: chatFood.servingSizeText,
             foodNutrients: nutrients,
             foodMeasures: [measure]

@@ -225,12 +225,16 @@ struct HealthCoachFood: Codable {
     let carbs: Double?
     let fat: Double?
     let servingSizeText: String?
+    let servingSize: Double?
+    let servingSizeUnit: String?
     let numberOfServings: Double?
     let foodNutrients: [HealthCoachNutrient]?
 
     enum CodingKeys: String, CodingKey {
         case id, name, calories, protein, carbs, fat, foodNutrients
         case servingSizeText = "serving_size_text"
+        case servingSize = "serving_size"
+        case servingSizeUnit = "serving_size_unit"
         case numberOfServings = "number_of_servings"
     }
 }
