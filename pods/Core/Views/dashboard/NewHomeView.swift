@@ -2225,33 +2225,18 @@ private extension NewHomeView {
         }
 
         private var backCard: some View {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 14) {
                 Text("About Muscle Recovery")
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(.primary)
 
                 Text("Tracks how rested each muscle group is based on your recent workout history and exercise volume.")
                     .font(.system(size: 15))
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .foregroundColor(.primary)
 
-                VStack(spacing: 12) {
-                    RecoveryLegendRow(
-                        color: Color(red: 0.19, green: 0.82, blue: 0.34),
-                        title: "Recovered",
-                        subtitle: "75% or higher — ready to train"
-                    )
-                    RecoveryLegendRow(
-                        color: Color(red: 1.0, green: 0.84, blue: 0.04),
-                        title: "Recovering",
-                        subtitle: "50–74% — light work okay"
-                    )
-                    RecoveryLegendRow(
-                        color: Color(red: 1.0, green: 0.27, blue: 0.23),
-                        title: "Fatigued",
-                        subtitle: "Under 50% — consider rest"
-                    )
-                }
+                Text("Green means recovered and ready to train. Yellow indicates still recovering. Red means fatigued and may need rest.")
+                    .font(.system(size: 15))
+                    .foregroundColor(.primary)
             }
             .padding(.horizontal, 20)
             .padding(.top, 20)
@@ -2259,31 +2244,6 @@ private extension NewHomeView {
             .frame(maxWidth: .infinity, alignment: .top)
             .frame(height: height, alignment: .top)
             .modifier(IntakeCardStyle())
-        }
-    }
-
-    private struct RecoveryLegendRow: View {
-        let color: Color
-        let title: String
-        let subtitle: String
-
-        var body: some View {
-            HStack(spacing: 12) {
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(color)
-                    .frame(width: 4, height: 32)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(.primary)
-                    Text(subtitle)
-                        .font(.system(size: 13))
-                        .foregroundColor(.secondary)
-                }
-
-                Spacer()
-            }
         }
     }
 
