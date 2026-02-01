@@ -41,6 +41,10 @@ struct AddIngredientsScanner: View {
     @State private var showAddedToast = false
     @State private var toastMessage = ""
 
+    // Text description input state
+    @State private var showDescriptionSheet = false
+    @State private var foodDescription: String = ""
+
     enum ScanMode {
         case food, nutritionLabel, barcode, gallery
     }
@@ -95,13 +99,19 @@ struct AddIngredientsScanner: View {
 
                 Spacer()
 
+                // Description bubble (shows when user has entered a description)
+                if !foodDescription.isEmpty && (selectedMode == .food || selectedMode == .gallery) {
+                    descriptionBubble
+                        .transition(.scale.combined(with: .opacity))
+                        .padding(.bottom, 8)
+                }
+
                 // Bottom controls
                 VStack(spacing: 24) {
                     // Shutter row with gallery button on right
                     HStack(spacing: 24) {
-                        // Empty spacer for balance (same size as gallery button)
-                        Color.clear
-                            .frame(width: 50, height: 50)
+                        // Text description button (left) - only in Food/Gallery mode
+                        descriptionButton
 
                         Spacer()
 
@@ -146,6 +156,10 @@ struct AddIngredientsScanner: View {
         .sheet(isPresented: $showPhotosPicker) {
             PhotosPickerView(selectedImages: $selectedImages, selectionLimit: 0)
                 .ignoresSafeArea()
+        }
+        .sheet(isPresented: $showDescriptionSheet) {
+            FoodDescriptionSheet(description: $foodDescription)
+                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showIngredientSummary, onDismiss: {
             // Show toast when ingredient was added
@@ -250,6 +264,67 @@ struct AddIngredientsScanner: View {
                     .background(Color.black.opacity(0.7))
                     .clipShape(Circle())
             }
+        }
+    }
+
+    @ViewBuilder
+    private var descriptionButton: some View {
+        if selectedMode == .food || selectedMode == .gallery {
+            if #available(iOS 26.0, *) {
+                Button {
+                    showDescriptionSheet = true
+                } label: {
+                    Image(systemName: foodDescription.isEmpty ? "text.bubble" : "text.bubble.fill")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.primary)
+                }
+                .frame(width: 50, height: 50)
+                .glassEffect(.regular.interactive())
+                .clipShape(Circle())
+            } else {
+                Button {
+                    showDescriptionSheet = true
+                } label: {
+                    Image(systemName: foodDescription.isEmpty ? "text.bubble" : "text.bubble.fill")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 50, height: 50)
+                        .background(Color.black.opacity(0.7))
+                        .clipShape(Circle())
+                }
+            }
+        } else {
+            // Empty spacer for non-food modes
+            Color.clear
+                .frame(width: 50, height: 50)
+        }
+    }
+
+    /// Bubble showing the user's description above the shutter
+    private var descriptionBubble: some View {
+        Button {
+            showDescriptionSheet = true
+        } label: {
+            HStack(spacing: 6) {
+                Text(foodDescription)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+
+                Image(systemName: "pencil")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.7))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(
+                Capsule()
+                    .fill(Color.black.opacity(0.7))
+                    .overlay(
+                        Capsule()
+                            .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                    )
+            )
         }
     }
 
@@ -420,6 +495,11 @@ struct AddIngredientsScanner: View {
     private func analyzeImage(_ image: UIImage) {
         guard !isAnalyzing, let userEmail = currentUserEmail else { return }
 
+        // Capture description before clearing it
+        let description = foodDescription.isEmpty ? nil : foodDescription
+        // Clear the description after capturing
+        foodDescription = ""
+
         isAnalyzing = true
 
         Task { @MainActor in
@@ -428,7 +508,8 @@ struct AddIngredientsScanner: View {
                 // Use fast pipeline (MacroFactor-style, 2-4 seconds) instead of legacy GPT-5
                 let fastResult = try await foodManager.analyzeFoodImageFast(
                     image: image,
-                    userEmail: userEmail
+                    userEmail: userEmail,
+                    userDescription: description
                 )
 
                 if fastResult.foods.count == 1, let food = fastResult.foods.first {

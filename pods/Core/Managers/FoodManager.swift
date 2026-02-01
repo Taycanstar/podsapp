@@ -882,14 +882,16 @@ class FoodManager: ObservableObject {
         image: UIImage,
         userEmail: String,
         mealType: String = "Lunch",
-        logDate: String? = nil
+        logDate: String? = nil,
+        userDescription: String? = nil
     ) async throws -> AgentFoodImageResult {
         try await withCheckedThrowingContinuation { continuation in
             networkManager.analyzeFoodImageViaAgent(
                 image: image,
                 userEmail: userEmail,
                 mealType: mealType,
-                logDate: logDate
+                logDate: logDate,
+                userDescription: userDescription
             ) { success, response, errorMessage in
                 if success, let response = response {
                     let foods = response.foods ?? []
@@ -916,12 +918,14 @@ class FoodManager: ObservableObject {
     /// Ultra-fast food image analysis using minimal vision + async Nutritionix
     func analyzeFoodImageFast(
         image: UIImage,
-        userEmail: String
+        userEmail: String,
+        userDescription: String? = nil
     ) async throws -> FastFoodImageResult {
         try await withCheckedThrowingContinuation { continuation in
             networkManager.analyzeFoodImageFast(
                 image: image,
-                userEmail: userEmail
+                userEmail: userEmail,
+                userDescription: userDescription
             ) { success, response, errorMessage in
                 if success, let response = response {
                     let foods = response.foods ?? []

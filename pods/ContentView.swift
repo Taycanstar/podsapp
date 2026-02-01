@@ -402,16 +402,24 @@ struct ContentView: View {
                 .publisher(for: NSNotification.Name("ShowMultiFoodLog"))
                 .receive(on: RunLoop.main)
         ) { notification in
+            print("[ContentView] ShowMultiFoodLog notification received")
             if let userInfo = notification.userInfo {
                 if let foods = userInfo["foods"] as? [Food] {
                     multiFoods = foods
+                    print("[ContentView] Received \(foods.count) foods")
                 } else {
                     multiFoods = []
+                    print("[ContentView] No foods in notification")
                 }
                 if let items = userInfo["mealItems"] as? [MealItem] {
                     multiMealItems = items
+                    print("[ContentView] Received \(items.count) mealItems")
+                    for mi in items {
+                        print("[ContentView] MealItem: '\(mi.name)' serving=\(mi.serving)")
+                    }
                 } else {
                     multiMealItems = []
+                    print("[ContentView] mealItems cast FAILED - type is: \(type(of: userInfo["mealItems"]))")
                 }
                 showMultiFoodView = true
             }

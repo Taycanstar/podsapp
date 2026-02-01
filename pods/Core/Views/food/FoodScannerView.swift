@@ -55,6 +55,10 @@ struct FoodScannerView: View {
     @State private var multiMealItems: [MealItem] = []
     @State private var selectedFoodMode: FoodScanMode = .auto
 
+    // Text description input state
+    @State private var showDescriptionSheet = false
+    @State private var foodDescription: String = ""
+
     enum ScanMode {
         case food, nutritionLabel, barcode, gallery
     }
@@ -319,13 +323,20 @@ struct FoodScannerView: View {
                     
                     Spacer()
 
+                    // Description bubble (shows when user has entered a description)
+                    if !foodDescription.isEmpty && (selectedMode == .food || selectedMode == .gallery) {
+                        descriptionBubble
+                            .transition(.scale.combined(with: .opacity))
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 8)
+                    }
+
                     // Bottom controls
                     VStack(spacing: 24) {
                         // Shutter row with gallery button on right
                         HStack(spacing: 24) {
-                            // Empty spacer for balance (same size as gallery button)
-                            Color.clear
-                                .frame(width: 50, height: 50)
+                            // Text description button (left) - only in Food/Gallery mode
+                            descriptionButton
 
                             Spacer()
 
@@ -361,6 +372,10 @@ struct FoodScannerView: View {
                 PhotosPickerView(selectedImages: $selectedImages,
                                  selectionLimit: 0)
                     .ignoresSafeArea()
+            }
+            .sheet(isPresented: $showDescriptionSheet) {
+                FoodDescriptionSheet(description: $foodDescription)
+                    .presentationDragIndicator(.visible)
             }
             // Note: Upgrade sheet is presented from MainContentView to avoid conflicts
             .onChange(of: selectedImages) { images in
@@ -445,6 +460,67 @@ struct FoodScannerView: View {
                     .background(Color.black.opacity(0.7))
                     .clipShape(Circle())
             }
+        }
+    }
+
+    @ViewBuilder
+    private var descriptionButton: some View {
+        if selectedMode == .food || selectedMode == .gallery {
+            if #available(iOS 26.0, *) {
+                Button {
+                    showDescriptionSheet = true
+                } label: {
+                    Image(systemName: foodDescription.isEmpty ? "text.bubble" : "text.bubble.fill")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.primary)
+                }
+                .frame(width: 50, height: 50)
+                .glassEffect(.regular.interactive())
+                .clipShape(Circle())
+            } else {
+                Button {
+                    showDescriptionSheet = true
+                } label: {
+                    Image(systemName: foodDescription.isEmpty ? "text.bubble" : "text.bubble.fill")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 50, height: 50)
+                        .background(Color.black.opacity(0.7))
+                        .clipShape(Circle())
+                }
+            }
+        } else {
+            // Empty spacer for non-food modes
+            Color.clear
+                .frame(width: 50, height: 50)
+        }
+    }
+
+    /// Bubble showing the user's description above the shutter
+    private var descriptionBubble: some View {
+        Button {
+            showDescriptionSheet = true
+        } label: {
+            HStack(spacing: 6) {
+                Text(foodDescription)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+
+                Image(systemName: "pencil")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.7))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(
+                Capsule()
+                    .fill(Color.black.opacity(0.7))
+                    .overlay(
+                        Capsule()
+                            .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                    )
+            )
         }
     }
 
@@ -610,16 +686,21 @@ private func handleNutritionLabelError(_ error: Error) {
 
 private func analyzeImageForPreview(_ image: UIImage) {
     guard !isAnalyzing, let userEmail = currentUserEmail else { return }
+    // Capture description before clearing it
+    let description = foodDescription.isEmpty ? nil : foodDescription
+    // Clear the description after capturing
+    foodDescription = ""
+
     proFeatureGate.checkAccess(for: .foodScans,
                                userEmail: userEmail,
                                increment: true,
                                onAllowed: {
-        performAnalyzeImageForPreview(image, userEmail: userEmail)
+        performAnalyzeImageForPreview(image, userEmail: userEmail, userDescription: description)
     },
                                onBlocked: nil)
 }
 
-private func performAnalyzeImageForPreview(_ image: UIImage, userEmail: String) {
+private func performAnalyzeImageForPreview(_ image: UIImage, userEmail: String, userDescription: String? = nil) {
     isAnalyzing = true
     Task { @MainActor in
         self.isPresented = false
@@ -640,12 +721,17 @@ private func performAnalyzeImageForPreview(_ image: UIImage, userEmail: String) 
             // Try ultra-fast path first (MacroFactor-style, 2-4 seconds)
             if let fastResult = try? await foodManager.analyzeFoodImageFast(
                 image: image,
-                userEmail: userEmail
+                userEmail: userEmail,
+                userDescription: userDescription
             ) {
                 foodManager.updateFoodScanningState(.processing)
 
                 let embeddedItems = fastResult.foods.first?.mealItems ?? []
                 let resolvedMealItems = !fastResult.mealItems.isEmpty ? fastResult.mealItems : embeddedItems
+                print("[FoodScanner] fastResult.mealItems: \(fastResult.mealItems.count), resolved: \(resolvedMealItems.count)")
+                for mi in resolvedMealItems {
+                    print("[FoodScanner] MealItem: '\(mi.name)' serving=\(mi.serving) unit=\(mi.servingUnit ?? "nil")")
+                }
                 if resolvedMealItems.count > 1 || fastResult.foods.count > 1 {
                     NotificationCenter.default.post(
                         name: NSNotification.Name("ShowMultiFoodLog"),
@@ -680,7 +766,8 @@ private func performAnalyzeImageForPreview(_ image: UIImage, userEmail: String) 
             if let agentResult = try? await foodManager.analyzeFoodImageWithAgent(
                 image: image,
                 userEmail: userEmail,
-                mealType: selectedMeal
+                mealType: selectedMeal,
+                userDescription: userDescription
             ) {
                 foodManager.updateFoodScanningState(.processing)
                 let embeddedItems = agentResult.foods.first?.mealItems ?? []
@@ -746,16 +833,21 @@ private func performAnalyzeImageForPreview(_ image: UIImage, userEmail: String) 
 
 private func analyzeImageDirectly(_ image: UIImage) {
     guard !isAnalyzing, let userEmail = currentUserEmail else { return }
+    // Capture description before clearing it
+    let description = foodDescription.isEmpty ? nil : foodDescription
+    // Clear the description after capturing
+    foodDescription = ""
+
     proFeatureGate.checkAccess(for: .foodScans,
                                userEmail: userEmail,
                                increment: true,
                                onAllowed: {
-        performAnalyzeImageDirectly(image, userEmail: userEmail)
+        performAnalyzeImageDirectly(image, userEmail: userEmail, userDescription: description)
     },
                                onBlocked: nil)
 }
 
-private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
+private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String, userDescription: String? = nil) {
     isAnalyzing = true
     Task { @MainActor in
         self.isPresented = false
@@ -776,12 +868,17 @@ private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
             // Try ultra-fast path first (MacroFactor-style, 2-4 seconds)
             if let fastResult = try? await foodManager.analyzeFoodImageFast(
                 image: image,
-                userEmail: userEmail
+                userEmail: userEmail,
+                userDescription: userDescription
             ) {
                 foodManager.updateFoodScanningState(.processing)
 
                 let embeddedItems = fastResult.foods.first?.mealItems ?? []
                 let resolvedMealItems = !fastResult.mealItems.isEmpty ? fastResult.mealItems : embeddedItems
+                print("[FoodScanner] fastResult.mealItems: \(fastResult.mealItems.count), resolved: \(resolvedMealItems.count)")
+                for mi in resolvedMealItems {
+                    print("[FoodScanner] MealItem: '\(mi.name)' serving=\(mi.serving) unit=\(mi.servingUnit ?? "nil")")
+                }
                 if resolvedMealItems.count > 1 || fastResult.foods.count > 1 {
                     NotificationCenter.default.post(
                         name: NSNotification.Name("ShowMultiFoodLog"),
@@ -816,7 +913,8 @@ private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
             if let agentResult = try? await foodManager.analyzeFoodImageWithAgent(
                 image: image,
                 userEmail: userEmail,
-                mealType: selectedMeal
+                mealType: selectedMeal,
+                userDescription: userDescription
             ) {
                 foodManager.updateFoodScanningState(.processing)
                 let embeddedItems = agentResult.foods.first?.mealItems ?? []
@@ -1461,6 +1559,57 @@ struct CameraPreviewView: UIViewRepresentable {
                 }
             } else {
                 parent.onCapture(nil)
+            }
+        }
+    }
+}
+
+// MARK: - Food Description Sheet
+
+struct FoodDescriptionSheet: View {
+    @Binding var description: String
+    @Environment(\.dismiss) private var dismiss
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                TextField("Describe your food...", text: $description, axis: .vertical)
+                    .textFieldStyle(.plain)
+                    .font(.body)
+                    .padding()
+                    .focused($isFocused)
+
+                Spacer()
+            }
+            .navigationTitle("Add Details")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        description = ""
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .foregroundColor(.primary)
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "checkmark")
+                            .fontWeight(.semibold)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .buttonBorderShape(.circle)
+                }
+            }
+        }
+        .onAppear {
+            // Delay focus to ensure sheet is fully presented
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                isFocused = true
             }
         }
     }

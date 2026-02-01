@@ -31,6 +31,7 @@ struct ProfileView: View {
                 dataSharingSection
                 preferencesSection
                 supportSection
+                followUsSection
                 logoutSection
             }
             .scrollContentBackground(.hidden)
@@ -81,9 +82,11 @@ struct ProfileView: View {
         Section(header: Text("Account")) {
             HStack {
                 Label("Email", systemImage: "envelope")
+                    .font(.system(size: 15))
                     .foregroundColor(iconColor)
                 Spacer()
                 Text(viewModel.email)
+                    .font(.system(size: 15))
                     .foregroundColor(iconColor)
             }
             .listRowBackground(rowBackgroundColor)
@@ -91,9 +94,11 @@ struct ProfileView: View {
             NavigationLink(destination: EditNameView()) {
                 HStack {
                     Label("Name", systemImage: "person.text.rectangle")
+                        .font(.system(size: 15))
                         .foregroundColor(iconColor)
                     Spacer()
                     Text(displayName)
+                        .font(.system(size: 15))
                         .foregroundColor(iconColor)
                 }
             }
@@ -102,9 +107,11 @@ struct ProfileView: View {
             NavigationLink(destination: EditUsernameView()) {
                 HStack {
                     Label("Username", systemImage: "person")
+                        .font(.system(size: 15))
                         .foregroundColor(iconColor)
                     Spacer()
                     Text(viewModel.username)
+                        .font(.system(size: 15))
                         .foregroundColor(iconColor)
                 }
             }
@@ -112,6 +119,7 @@ struct ProfileView: View {
 
             NavigationLink(destination: ManageGoalsView()) {
                 Label("Goals and Weight", systemImage: "scalemass")
+                    .font(.system(size: 15))
                     .foregroundColor(iconColor)
             }
             .listRowBackground(rowBackgroundColor)
@@ -125,9 +133,11 @@ struct ProfileView: View {
             } label: {
                 HStack {
                     Label("Subscription", systemImage: "plus.app")
+                        .font(.system(size: 15))
                         .foregroundColor(iconColor)
                     Spacer()
                     Text(subscriptionLabelText)
+                        .font(.system(size: 15))
                         .foregroundColor(.secondary)
                 }
             }
@@ -140,6 +150,7 @@ struct ProfileView: View {
                 } label: {
                     HStack {
                         Label("Upgrade to Metryc Pro", systemImage: "arrow.up.circle")
+                            .font(.system(size: 15))
                             .foregroundColor(iconColor)
                         Spacer()
                     }
@@ -152,6 +163,7 @@ struct ProfileView: View {
 
             NavigationLink(destination: DataControlsView(isAuthenticated: $isAuthenticated)) {
                 Label("Data Controls", systemImage: "tablecells.badge.ellipsis")
+                    .font(.system(size: 15))
                     .foregroundColor(iconColor)
             }
             .listRowBackground(rowBackgroundColor)
@@ -162,18 +174,21 @@ struct ProfileView: View {
         Section(header: Text("Data Sharing")) {
             NavigationLink(destination: AppleHealthSettingsView()) {
                 Label("Apple Health", systemImage: "heart.text.square")
+                    .font(.system(size: 15))
                     .foregroundColor(iconColor)
             }
             .listRowBackground(rowBackgroundColor)
 
             NavigationLink(destination: OuraSettingsView()) {
                 Label("Oura Ring", systemImage: "circle")
+                    .font(.system(size: 15))
                     .foregroundColor(iconColor)
             }
             .listRowBackground(rowBackgroundColor)
 
             NavigationLink(destination: DataSourcesView()) {
                 Label("Data Sources", systemImage: "square.3.layers.3d")
+                    .font(.system(size: 15))
                     .foregroundColor(iconColor)
             }
             .listRowBackground(rowBackgroundColor)
@@ -184,6 +199,7 @@ struct ProfileView: View {
         Section(header: Text("Preferences")) {
             HStack {
                 Label("Theme", systemImage: "paintbrush")
+                    .font(.system(size: 15))
                     .foregroundColor(iconColor)
                 Spacer()
                 Menu {
@@ -202,6 +218,7 @@ struct ProfileView: View {
                 } label: {
                     HStack {
                         Text(themeManager.currentTheme.rawValue)
+                            .font(.system(size: 15))
                             .foregroundColor(.secondary)
                         Image(systemName: "chevron.up.chevron.down")
                             .font(.caption2)
@@ -213,12 +230,14 @@ struct ProfileView: View {
 
             NavigationLink(destination: NotificationSettingsView()) {
                 Label("Notifications", systemImage: "bell")
+                    .font(.system(size: 15))
                     .foregroundColor(iconColor)
             }
             .listRowBackground(rowBackgroundColor)
 
             HStack {
                 Label("Units", systemImage: "globe")
+                    .font(.system(size: 15))
                     .foregroundColor(iconColor)
                 Spacer()
                 Menu {
@@ -237,6 +256,7 @@ struct ProfileView: View {
                 } label: {
                     HStack {
                         Text(viewModel.unitsSystem.displayName)
+                            .font(.system(size: 15))
                             .foregroundColor(.secondary)
                         Image(systemName: "chevron.up.chevron.down")
                             .font(.caption2)
@@ -248,12 +268,14 @@ struct ProfileView: View {
 
             NavigationLink(destination: ManageExercisesView()) {
                 Label("Manage Exercises", systemImage: "figure.run.square.stack")
+                    .font(.system(size: 15))
                     .foregroundColor(iconColor)
             }
             .listRowBackground(rowBackgroundColor)
 
             NavigationLink(destination: WorkoutScheduleSettingsView()) {
                 Label("Workout Frequency", systemImage: "calendar.badge.clock")
+                    .font(.system(size: 15))
                     .foregroundColor(iconColor)
             }
             .listRowBackground(rowBackgroundColor)
@@ -261,8 +283,7 @@ struct ProfileView: View {
             HStack {
                 HStack(spacing: 12) {
                     Image(systemName: "target")
-                        .font(.system(size: 16))
-                        .fontWeight(.semibold)
+                        .font(.system(size: 15))
                         .foregroundColor(iconColor)
                     Text("Fitness Goal")
                         .font(.system(size: 15))
@@ -285,6 +306,7 @@ struct ProfileView: View {
                 } label: {
                     HStack {
                         Text(currentFitnessGoal.displayName)
+                            .font(.system(size: 15))
                             .foregroundColor(.secondary)
                         Image(systemName: "chevron.up.chevron.down")
                             .font(.caption2)
@@ -302,18 +324,39 @@ struct ProfileView: View {
                 showingMail = true
             } label: {
                 Label("Send feedback", systemImage: "message")
+                    .font(.system(size: 15))
                     .foregroundColor(iconColor)
             }
             .listRowBackground(rowBackgroundColor)
 
-            Link(destination: URL(string: "https://www.humuli.com/policies/terms")!) {
+            Link(destination: URL(string: "https://www.metryc.ai/terms-of-use")!) {
                 Label("Terms of Use", systemImage: "doc.plaintext")
+                    .font(.system(size: 15))
                     .foregroundColor(iconColor)
             }
             .listRowBackground(rowBackgroundColor)
 
-            Link(destination: URL(string: "https://www.humuli.com/policies/privacy-policy")!) {
+            Link(destination: URL(string: "https://www.metryc.ai/privacy-policy")!) {
                 Label("Privacy Policy", systemImage: "lock")
+                    .font(.system(size: 15))
+                    .foregroundColor(iconColor)
+            }
+            .listRowBackground(rowBackgroundColor)
+        }
+    }
+
+    private var followUsSection: some View {
+        Section(header: Text("Follow Us")) {
+            Link(destination: URL(string: "https://x.com/metryc_ai")!) {
+                Text("X")
+                    .font(.system(size: 15))
+                    .foregroundColor(iconColor)
+            }
+            .listRowBackground(rowBackgroundColor)
+
+            Link(destination: URL(string: "https://discord.gg/Ufd96fDQ")!) {
+                Text("Discord")
+                    .font(.system(size: 15))
                     .foregroundColor(iconColor)
             }
             .listRowBackground(rowBackgroundColor)
@@ -326,6 +369,7 @@ struct ProfileView: View {
                 logOut()
             } label: {
                 Label("Log out", systemImage: "rectangle.portrait.and.arrow.right")
+                    .font(.system(size: 15))
                     .foregroundColor(.red)
             }
             .listRowBackground(rowBackgroundColor)

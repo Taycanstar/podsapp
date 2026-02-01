@@ -60,22 +60,12 @@ struct MultiFoodLogView: View {
     // MARK: - Display Foods Logic
     /// All foods derived from input (before filtering deleted items)
     private var allDisplayFoods: [Food] {
-        if foods.count > 1 {
-            return foods
-        }
-        // PRIORITY: Use top-level mealItems if available (has full nutrients from fast_food_image)
-        // Fall back to embedded food.mealItems only if top-level is empty
+        // PRIORITY: Use top-level mealItems if available (has correct serving info from backend)
         if !mealItems.isEmpty {
-            print("[MultiFoodLogView] Using top-level mealItems (\(mealItems.count) items)")
             return mealItems.map { item in
-                print("[MultiFoodLogView] Item '\(item.name)': foodNutrients count = \(item.foodNutrients?.count ?? 0)")
-                if let first = item.foodNutrients?.first {
-                    print("[MultiFoodLogView] Sample nutrient: \(first.nutrientName) = \(first.value ?? 0) \(first.unitName)")
-                }
-
                 let unitLabel = item.servingUnit ?? "serving"
                 let defaultMeasure = FoodMeasure(
-                    disseminationText: unitLabel,
+                    disseminationText: "\(Int(item.serving)) \(unitLabel)",
                     gramWeight: item.serving,
                     id: 0,
                     modifier: unitLabel,
@@ -84,10 +74,8 @@ struct MultiFoodLogView: View {
                 )
                 let nutrients: [Nutrient]
                 if let fullNutrients = item.foodNutrients, !fullNutrients.isEmpty {
-                    print("[MultiFoodLogView] Using \(fullNutrients.count) full nutrients for '\(item.name)'")
                     nutrients = fullNutrients
                 } else {
-                    print("[MultiFoodLogView] Using 4 basic macros fallback for '\(item.name)'")
                     nutrients = [
                         Nutrient(nutrientName: "Energy", value: item.calories, unitName: "kcal"),
                         Nutrient(nutrientName: "Protein", value: item.protein, unitName: "g"),
@@ -101,7 +89,7 @@ struct MultiFoodLogView: View {
                     brandOwner: nil,
                     brandName: nil,
                     servingSize: item.serving,
-                    numberOfServings: 1,
+                    numberOfServings: item.serving,  // Use mealItem's serving (e.g., 4 eggs)
                     servingSizeUnit: item.servingUnit,
                     householdServingFullText: item.originalServing?.resolvedText ?? "\(Int(item.serving)) \(item.servingUnit ?? "serving")",
                     foodNutrients: nutrients,
@@ -115,7 +103,6 @@ struct MultiFoodLogView: View {
         }
         // Fallback: Use embedded mealItems from Food object (legacy path)
         if let first = foods.first, let items = first.mealItems, !items.isEmpty {
-            print("[MultiFoodLogView] Using embedded food.mealItems (\(items.count) items)")
             return items.map { item in
                 // Create a default measure with the item's serving unit
                 let unitLabel = item.servingUnit ?? "serving"
@@ -145,7 +132,7 @@ struct MultiFoodLogView: View {
                     brandOwner: nil,
                     brandName: nil,
                     servingSize: item.serving,
-                    numberOfServings: 1,
+                    numberOfServings: item.serving,  // Use mealItem's serving (e.g., 4 eggs)
                     servingSizeUnit: item.servingUnit,
                     householdServingFullText: item.originalServing?.resolvedText ?? "\(Int(item.serving)) \(item.servingUnit ?? "serving")",
                     foodNutrients: nutrients,
@@ -157,7 +144,10 @@ struct MultiFoodLogView: View {
                 )
             }
         }
-        // Final fallback: return empty array
+        // Final fallback: return foods directly (legacy path without mealItems)
+        if !foods.isEmpty {
+            return foods
+        }
         return []
     }
 
@@ -334,18 +324,20 @@ struct MultiFoodLogView: View {
     }
 
     private func initializeEditableItems() {
-        guard editableItems.isEmpty else { return }
+        // Re-initialize if we have mealItems but editableItems was created without them
+        let needsReinit = !editableItems.isEmpty && !mealItems.isEmpty &&
+            editableItems.values.first.map { $0.servingAmount == 1 && mealItems.first?.serving != 1 } ?? false
 
-        // Initialize editable state for each food item
+        guard editableItems.isEmpty || needsReinit else { return }
+
+        if needsReinit {
+            editableItems.removeAll()
+        }
+
+        // Initialize editable state for each food item from displayFoods
+        // displayFoods (via allDisplayFoods) already has correct serving values from mealItems
         for (index, food) in displayFoods.enumerated() {
-            // Check if this food came from a MealItem with measures
-            if let mealItem = mealItems.first(where: { $0.name == food.displayName }) {
-                editableItems[index] = EditableFoodItem(from: mealItem)
-            } else if let mealItem = food.mealItems?.first {
-                editableItems[index] = EditableFoodItem(from: mealItem)
-            } else {
-                editableItems[index] = EditableFoodItem(from: food, index: index)
-            }
+            editableItems[index] = EditableFoodItem(from: food, index: index)
         }
     }
 
@@ -1249,10 +1241,15 @@ struct MultiFoodLogView: View {
         }
         let perServingScale = perServingScale(for: editableItem)
         let servings = max(editableItem.servingAmount, 0.0001)
-        let totalScale = perServingScale * servings
+
+        // The food's foodNutrients already contain TOTAL nutrition for the baseline serving
+        // (e.g., 364 cal for 4 eggs). We need to scale by the user's CHANGE ratio.
+        let baselineServing = max(food.numberOfServings ?? 1, 0.0001)
+        let userChangeRatio = servings / baselineServing  // 1.0 if unchanged, 1.5 if 4→6
+        let totalScale = perServingScale * userChangeRatio
 
         var updatedFood = food
-        updatedFood.foodNutrients = scaledNutrients(food.foodNutrients, scale: perServingScale)
+        updatedFood.foodNutrients = scaledNutrients(food.foodNutrients, scale: totalScale)
         updatedFood.numberOfServings = servings
         updatedFood.householdServingFullText = servingText(for: editableItem)
         updatedFood.servingSize = 1
@@ -1263,7 +1260,10 @@ struct MultiFoodLogView: View {
         if let mealItems = updatedFood.mealItems, !mealItems.isEmpty {
             updatedFood.mealItems = mealItems.map { $0.scaled(by: totalScale) }
         }
-        return (updatedFood, servings)
+        // Return servings=1 because the foodNutrients contain the TOTAL nutrition
+        // (already scaled above). The server's FoodLog.calories property multiplies
+        // by servings, so we send 1 to prevent double multiplication.
+        return (updatedFood, 1.0)
     }
 
     private func upsertCombinedLog(_ log: CombinedLog, replacing identifier: String? = nil) {

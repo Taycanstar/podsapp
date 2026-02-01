@@ -9005,6 +9005,7 @@ class NetworkManager {
         userEmail: String,
         mealType: String = "Lunch",
         logDate: String? = nil,
+        userDescription: String? = nil,
         completion: @escaping (Bool, AgentFoodImageResponse?, String?) -> Void
     ) {
         guard let url = URL(string: "\(baseUrl)/agent_food_image/") else {
@@ -9026,6 +9027,7 @@ class NetworkManager {
             "timezone_offset_minutes": tzOffsetMinutes
         ]
         if let logDate = logDate { parameters["date"] = logDate }
+        if let desc = userDescription, !desc.isEmpty { parameters["user_description"] = desc }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -9072,6 +9074,7 @@ class NetworkManager {
     func analyzeFoodImageFast(
         image: UIImage,
         userEmail: String,
+        userDescription: String? = nil,
         completion: @escaping (Bool, FastFoodImageResponse?, String?) -> Void
     ) {
         guard let url = URL(string: "\(baseUrl)/fast_food_image/") else {
@@ -9085,10 +9088,13 @@ class NetworkManager {
         }
 
         let base64Image = imageData.base64EncodedString()
-        let parameters: [String: Any] = [
+        var parameters: [String: Any] = [
             "user_email": userEmail,
             "image_data": base64Image
         ]
+        if let desc = userDescription, !desc.isEmpty {
+            parameters["user_description"] = desc
+        }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"

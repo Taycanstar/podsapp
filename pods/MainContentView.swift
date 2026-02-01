@@ -222,13 +222,20 @@ struct MainContentView: View {
             if let userInfo = notification.userInfo {
                 if let foods = userInfo["foods"] as? [Food] {
                     multiFoods = foods
+                    print("[MainContentView] Received \(foods.count) foods")
                 } else {
                     multiFoods = []
+                    print("[MainContentView] No foods in notification")
                 }
                 if let items = userInfo["mealItems"] as? [MealItem] {
                     multiMealItems = items
+                    print("[MainContentView] Received \(items.count) mealItems")
+                    for mi in items {
+                        print("[MainContentView] MealItem: '\(mi.name)' serving=\(mi.serving)")
+                    }
                 } else {
                     multiMealItems = []
+                    print("[MainContentView] mealItems cast FAILED - type is: \(type(of: userInfo["mealItems"]))")
                 }
                 // Extract existing PlateViewModel if scanning from PlateView
                 existingPlateViewModel = userInfo["plateViewModel"] as? PlateViewModel
